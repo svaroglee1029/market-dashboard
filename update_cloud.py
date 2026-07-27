@@ -112,9 +112,13 @@ def git_push():
     print("\n" + "=" * 50)
     print("[4/4] 推送到 GitHub ...")
     print("=" * 50)
+    # 走系统代理（国内直连github常被阻断）
+    env = os.environ.copy()
+    env["HTTPS_PROXY"] = "http://127.0.0.1:7897"
+    env["HTTP_PROXY"] = "http://127.0.0.1:7897"
     # GitHub 网络偶发不稳定，重试3次
     for i in range(3):
-        r = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True, cwd=SCRIPT_DIR)
+        r = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True, cwd=SCRIPT_DIR, env=env)
         if r.returncode == 0:
             print("  ✅ 推送成功！")
             print(f"  {r.stdout.strip()}")
