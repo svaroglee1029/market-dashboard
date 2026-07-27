@@ -1,6 +1,6 @@
-streamlit==1.60.0
-pandas==2.3.3
-numpy==2.2.6
-SQLAlchemy==2.0.49
-plotly==6.9.0
-mysql-connector-python==9.7.0
+streamlit>=1.40
+pandas>=2.2
+numpy>=2.0
+SQLAlchemy>=2.0
+plotly>=5.20
+mysql-connector-python>=9.0
