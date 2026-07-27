@@ -173,13 +173,8 @@ brand_df = _downcast_df(load_table("brand"))
 dist_df = _downcast_df(load_table("brand_distribution_rate"))
 df_ind = _downcast_df(load_industry())
 
-# 内存优化：清理解压的 db 文件（数据已加载到内存）
+# 注意：不要在 engine 连接存活时删除 db 文件，否则会导致 "database disk image is malformed"
 import gc
-if os.path.exists(_DB_PATH) and os.path.exists(_DB_GZ_PATH):
-    try:
-        os.remove(_DB_PATH)
-    except Exception:
-        pass
 gc.collect()
 
 if df_ind.empty:
