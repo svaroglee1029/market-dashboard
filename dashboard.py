@@ -16,6 +16,16 @@ import json
 
 st.set_page_config(page_title="市场分析综合仪表盘", layout="wide")
 
+# 隐藏 Streamlit Cloud 右下角浮窗（头像/反馈按钮）
+st.markdown("""
+<style>
+#st-bottom { display: none !important; }
+.stDeployButton { display: none !important; }
+[data-testid="stToolbar"] { display: none !important; }
+footer { display: none !important; }
+</style>
+""", unsafe_allow_html=True)
+
 # ====================== 2. Constants ======================
 # --- 来自 merged_dashboard 的常量 ---
 SALES_COL = "销售额('000 RMB)"
