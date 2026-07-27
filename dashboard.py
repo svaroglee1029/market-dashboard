@@ -77,14 +77,15 @@ BAR_B_END   = "#3B82F6"
 import os
 import gzip
 import shutil
+import tempfile
 
 _DB_DIR = os.path.dirname(os.path.abspath(__file__))
-_DB_PATH = os.path.join(_DB_DIR, "dashboard_data.db")
 _DB_GZ_PATH = os.path.join(_DB_DIR, "dashboard_data.db.gz")
+# 解压到系统临时目录（Streamlit Cloud 的 /tmp 始终可写且有足够空间）
+_DB_PATH = os.path.join(tempfile.gettempdir(), "market_dashboard_data.db")
 
-# 云端部署：每次启动都从 gz 重新解压，避免旧残留 db 文件损坏
+# 每次启动都从 gz 重新解压到临时目录，避免磁盘空间不足或残留损坏
 if os.path.exists(_DB_GZ_PATH):
-    # 先删除可能存在的旧 db 文件（在创建 engine 之前，安全）
     if os.path.exists(_DB_PATH):
         try:
             os.remove(_DB_PATH)
