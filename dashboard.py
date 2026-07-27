@@ -32,9 +32,10 @@ SALES_COL = "销售额('000 RMB)"
 QTY_COL = "销售量-Pack('00))"
 DIST_COL = "加权铺货率"
 
-SKU_COLS = ["year_month", "品类", "品牌", "品牌产品", "产品包装", "品名(含属性)", SALES_COL, QTY_COL, DIST_COL]
+SKU_COLS = ["year_month", "品类", "品牌", "品牌产品", "产品包装", "品名(含属性)", "集团权益", SALES_COL, QTY_COL, DIST_COL]
 BRAND_COLS = ["year_month", "品类", "品牌", "品牌产品", SALES_COL, QTY_COL, DIST_COL]
 DIST_COLS = ["year_month", "品牌_NEW", DIST_COL, SALES_COL]
+IND_COLS = ["year_month", "品类", "品牌", SALES_COL, QTY_COL]
 
 # --- 来自 combined_dashboard 的颜色常量 ---
 C_BG   = "#F5F7FA"
@@ -100,7 +101,8 @@ engine = create_engine(f"sqlite:///{_DB_PATH}", echo=False)
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_sku_df():
     """sku_df：全量 sku 表，三个 section 共享。"""
-    df = pd.read_sql(text("SELECT * FROM sku;"), con=engine)
+    col_sql = ", ".join(f"`{c}`" for c in SKU_COLS)
+    df = pd.read_sql(text(f"SELECT {col_sql} FROM sku;"), con=engine)
     df.columns = [str(c).strip() for c in df.columns]
     for col in [SALES_COL, QTY_COL, DIST_COL]:
         if col in df.columns:
@@ -146,13 +148,14 @@ def load_table(table_name):
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_industry():
     """industry 表，Part A (page1-page4) 专用。"""
-    df = pd.read_sql(text("SELECT * FROM `industry`;"), con=engine)
+    col_sql = ", ".join(f"`{c}`" for c in IND_COLS)
+    df = pd.read_sql(text(f"SELECT {col_sql} FROM `industry`;"), con=engine)
     if SALES_COL in df.columns:
         df[SALES_COL] = pd.to_numeric(df[SALES_COL], errors="coerce")
     if "year_month" in df.columns:
         df["year_month"] = df["year_month"].astype(str)
-    if "销售量-Pack('00))" in df.columns:
-        df["销售量-Pack('00))"] = pd.to_numeric(df["销售量-Pack('00))"], errors="coerce")
+    if QTY_COL in df.columns:
+        df[QTY_COL] = pd.to_numeric(df[QTY_COL], errors="coerce")
     df["year"] = df["year_month"].str[:4].astype(int)
     df["mon"] = df["year_month"].str[4:].astype(int)
     df["ym_id"] = df["year"] * 12 + df["mon"]
