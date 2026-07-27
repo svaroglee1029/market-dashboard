@@ -112,7 +112,6 @@ def load_sku_df():
 def load_table(table_name):
     """brand / brand_distribution_rate 表，按需列读取。"""
     try:
-        raw_conn = engine.raw_connection()
         if table_name == "brand":
             cols = BRAND_COLS
         elif table_name == "brand_distribution_rate":
@@ -124,8 +123,7 @@ def load_table(table_name):
             sql = f"SELECT {col_sql} FROM `{table_name}`"
         else:
             sql = f"SELECT * FROM `{table_name}`"
-        df = pd.read_sql(sql, con=raw_conn)
-        raw_conn.close()
+        df = pd.read_sql(text(sql), con=engine)
     except Exception as e:
         st.error(f"读取 test.{table_name} 失败：{e}")
         st.stop()
@@ -154,11 +152,26 @@ def load_industry():
     return df
 
 
+def _downcast_df(df):
+    """压缩 DataFrame 内存：int64→int32, float64→float32, 低基数字符串→category。"""
+    for col in df.columns:
+        dt = df[col].dtype
+        if pd.api.types.is_integer_dtype(dt):
+            df[col] = pd.to_numeric(df[col], downcast="integer")
+        elif pd.api.types.is_float_dtype(dt):
+            df[col] = pd.to_numeric(df[col], downcast="float")
+        elif pd.api.types.is_object_dtype(dt):
+            nunique = df[col].nunique()
+            if nunique > 0 and nunique < len(df) * 0.5:
+                df[col] = df[col].astype("category")
+    return df
+
+
 # 模块级加载
-sku_df = load_sku_df()
-brand_df = load_table("brand")
-dist_df = load_table("brand_distribution_rate")
-df_ind = load_industry()
+sku_df = _downcast_df(load_sku_df())
+brand_df = _downcast_df(load_table("brand"))
+dist_df = _downcast_df(load_table("brand_distribution_rate"))
+df_ind = _downcast_df(load_industry())
 
 # 内存优化：清理解压的 db 文件（数据已加载到内存）
 import gc
@@ -958,7 +971,7 @@ def page1(sel_ym, SEL_M):
             f1.update_layout(**BASE,
                 title=dict(text="品类销售额<br><sup>(亿元)</sup>", font_size=13),
                 barmode="stack", bargap=0.30, showlegend=False)
-            st.plotly_chart(f1, use_container_width=True)
+            st.plotly_chart(f1, width='stretch')
 
         with cc2:
             f2 = go.Figure()
@@ -978,7 +991,7 @@ def page1(sel_ym, SEL_M):
             f2.update_layout(**BASE,
                 title=dict(text="品类销售量<br><sup>(亿盒)</sup>", font_size=13),
                 barmode="stack", bargap=0.30, showlegend=False)
-            st.plotly_chart(f2, use_container_width=True)
+            st.plotly_chart(f2, width='stretch')
 
         with cc3:
             f3 = go.Figure()
@@ -997,7 +1010,7 @@ def page1(sel_ym, SEL_M):
             f3.update_layout(**BASE,
                 title=dict(text="品类平均单价<br><sup>(元/盒)</sup>", font_size=13),
                 barmode="group", bargap=0.30, bargroupgap=0.08, showlegend=False)
-            st.plotly_chart(f3, use_container_width=True)
+            st.plotly_chart(f3, width='stretch')
 
         st.markdown(f"<b class='chart-title'>YTD 同比增速</b>", unsafe_allow_html=True)
         st.markdown(f"""
@@ -1071,7 +1084,7 @@ def page1(sel_ym, SEL_M):
                 fm.update_layout(**BASE, barmode="stack", bargap=0.15, showlegend=False,
                                  title=dict(text="品类销售额by月度<br><sup>(单位：亿元)</sup>", font_size=13),
                                  xaxis=dict(tickangle=-45, tickfont=dict(size=13)))
-                st.plotly_chart(fm, use_container_width=True)
+                st.plotly_chart(fm, width='stretch')
 
                 st.markdown(f"<b class='chart-title'>月度同比明细</b>", unsafe_allow_html=True)
                 mlst = mm["lb"].tolist()
@@ -1208,7 +1221,7 @@ def page2(sel_month, trend_months):
                 showlegend=False,
                 uniformtext=dict(mode="show", minsize=11),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         with cL_table:
             st.markdown("<b class='chart-title'>YTD 规模同比 & 份额变化</b>", unsafe_allow_html=True)
@@ -1282,7 +1295,7 @@ def page2(sel_month, trend_months):
                         font=dict(size=11), itemsizing="constant",
                         itemwidth=30, tracegroupgap=5),
         )
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width='stretch')
 
     st.divider()
     st.caption("数据来源：中康全国零售药店")
@@ -1462,7 +1475,7 @@ def page3(SEL_MONTHS):
     </div>
     """, unsafe_allow_html=True)
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     st.markdown("<b class='chart-title'>销售同比增速</b>", unsafe_allow_html=True)
 
@@ -2038,7 +2051,7 @@ def render_first_page(selected_cat, selected_month, display_months):
         for tr in fig.data:
             if tr.showlegend is None:
                 tr.showlegend = False
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
         # 下方增长率表
         growth_rows = []
@@ -2460,10 +2473,10 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
 
     left_col, right_col = st.columns([0.28, 0.72], gap="medium")
     with left_col:
-        st.plotly_chart(make_top10_share_chart(selected_cat, source_cat, top10_brands, selected_month, left_chart_height), use_container_width=True)
+        st.plotly_chart(make_top10_share_chart(selected_cat, source_cat, top10_brands, selected_month, left_chart_height), width='stretch')
     with right_col:
         st.markdown(build_table_html(selected_cat, source_cat, table_brands, selected_month), unsafe_allow_html=True)
-        st.plotly_chart(make_trend_chart(selected_cat, source_cat, config["focus"], display_months), use_container_width=True)
+        st.plotly_chart(make_trend_chart(selected_cat, source_cat, config["focus"], display_months), width='stretch')
 
 
 # ====================== Part B SA_CATEGORY_CONFIG, TITLE_MAP, SA_COLORS, SHARE_YMAX, SHARE_DECIMALS, CHART_NAMES ======================
@@ -2934,16 +2947,16 @@ def render_charts(metric_df, cat_label):
         bar_names = cfg.get("bar", all_names)
         share_ymax = SHARE_YMAX.get(cat_label, 100)
         share_dec = SHARE_DECIMALS.get(cat_label, 0)
-        st.plotly_chart(make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=380), use_container_width=True)
-        st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=380, y_max=share_ymax), use_container_width=True)
+        st.plotly_chart(make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=380), width='stretch')
+        st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=380, y_max=share_ymax), width='stretch')
     with mid:
         price_names = cfg.get("price", all_names)
-        st.plotly_chart(make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=760, label_mode="endpoints"), use_container_width=True)
+        st.plotly_chart(make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=760, label_mode="endpoints"), width='stretch')
     with right:
         dist_names = cfg.get("dist", all_names)
         power_names = cfg.get("power", dist_names)
-        st.plotly_chart(make_line_chart(metric_df, "dist", "动销铺货率（%）", dist_names, colors, decimals=0, height=380, label_mode="endpoints"), use_container_width=True)
-        st.plotly_chart(make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=380, label_mode="endpoints"), use_container_width=True)
+        st.plotly_chart(make_line_chart(metric_df, "dist", "动销铺货率（%）", dist_names, colors, decimals=0, height=380, label_mode="endpoints"), width='stretch')
+        st.plotly_chart(make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=380, label_mode="endpoints"), width='stretch')
         st.markdown("<p style='font-size:11px;color:#E53935;font-style:italic;margin-top:4px'>*单点卖力 = 销售额份额 / 动销铺货率 * 100</p>", unsafe_allow_html=True)
 
 
@@ -3032,7 +3045,7 @@ with tab_b:
     for i, cat in enumerate(cat_names):
         with btn_cols[i]:
             is_sel = (st.session_state.selected_cat == cat)
-            if st.button(cat, key=f"cat_btn_{i}", type="primary" if is_sel else "secondary", use_container_width=True):
+            if st.button(cat, key=f"cat_btn_{i}", type="primary" if is_sel else "secondary", width='stretch'):
                 st.session_state.selected_cat = cat
                 st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
