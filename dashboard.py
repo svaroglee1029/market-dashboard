@@ -101,8 +101,7 @@ engine = create_engine(f"sqlite:///{_DB_PATH}", echo=False)
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_sku_df():
     """sku_df：全量 sku 表，三个 section 共享。"""
-    col_sql = ", ".join(f"`{c}`" for c in SKU_COLS)
-    df = pd.read_sql(text(f"SELECT {col_sql} FROM sku;"), con=engine)
+    df = pd.read_sql(text("SELECT * FROM sku;"), con=engine)
     df.columns = [str(c).strip() for c in df.columns]
     for col in [SALES_COL, QTY_COL, DIST_COL]:
         if col in df.columns:
@@ -148,8 +147,7 @@ def load_table(table_name):
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_industry():
     """industry 表，Part A (page1-page4) 专用。"""
-    col_sql = ", ".join(f"`{c}`" for c in IND_COLS)
-    df = pd.read_sql(text(f"SELECT {col_sql} FROM `industry`;"), con=engine)
+    df = pd.read_sql(text("SELECT * FROM `industry`;"), con=engine)
     if SALES_COL in df.columns:
         df[SALES_COL] = pd.to_numeric(df[SALES_COL], errors="coerce")
     if "year_month" in df.columns:
