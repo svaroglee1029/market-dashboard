@@ -32,7 +32,7 @@ SALES_COL = "销售额('000 RMB)"
 QTY_COL = "销售量-Pack('00))"
 DIST_COL = "加权铺货率"
 
-SKU_COLS = ["year_month", "品类", "品牌", "品牌产品", "产品包装", "品名(含属性)", "集团权益", SALES_COL, QTY_COL, DIST_COL]
+SKU_COLS = ["year_month", "品类", "品牌", "品牌产品", "产品包装", "品名(含属性)", "集团权益", "处方性质", SALES_COL, QTY_COL, DIST_COL]
 BRAND_COLS = ["year_month", "品类", "品牌", "品牌产品", SALES_COL, QTY_COL, DIST_COL]
 DIST_COLS = ["year_month", "品牌_NEW", DIST_COL, SALES_COL]
 IND_COLS = ["year_month", "品类", "品牌", SALES_COL, QTY_COL]
