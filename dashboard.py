@@ -160,6 +160,15 @@ brand_df = load_table("brand")
 dist_df = load_table("brand_distribution_rate")
 df_ind = load_industry()
 
+# 内存优化：清理解压的 db 文件（数据已加载到内存）
+import gc
+if os.path.exists(_DB_PATH) and os.path.exists(_DB_GZ_PATH):
+    try:
+        os.remove(_DB_PATH)
+    except Exception:
+        pass
+gc.collect()
+
 if df_ind.empty:
     st.error("industry 表中没有数据，请检查数据源。")
     st.stop()
