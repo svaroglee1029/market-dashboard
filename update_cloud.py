@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 一键更新云端看板数据
 用法：python update_cloud.py
@@ -28,7 +28,7 @@ DB_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.db")
 DB_GZ_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.db.gz")
 
 # 导出的表 + 起始月份（保留2021年起，覆盖默认范围和同比）
-year="年份"
+year = "年份"
 TABLES = ["sku", "brand", "brand_distribution_rate", "industry","area"]
 MIN_YM = 2021
 
@@ -98,12 +98,12 @@ def git_commit():
         ["git", "commit", "-m", f"chore: 更新数据快照 {time.strftime('%Y-%m-%d %H:%M')}"],
     ]
     for c in cmds:
-        r = subprocess.run(c, capture_output=True, text=True, cwd=SCRIPT_DIR)
-        if r.stdout.strip():
+        r = subprocess.run(c, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=SCRIPT_DIR)
+        if r.stdout and r.stdout.strip():
             print(f"  {r.stdout.strip()}")
-        if r.returncode != 0 and "nothing to commit" not in r.stdout and "no changes" not in r.stdout:
+        if r.returncode != 0 and r.stdout and "nothing to commit" not in r.stdout and "no changes" not in r.stdout:
             # commit 无变更不算错
-            if c[1] == "commit" and "nothing to commit" in (r.stdout + r.stderr):
+            if c[1] == "commit" and "nothing to commit" in ((r.stdout or "") + (r.stderr or "")):
                 print("  无数据变更，跳过推送")
                 return False
     return True
@@ -119,7 +119,7 @@ def git_push():
     env["HTTP_PROXY"] = "http://127.0.0.1:7897"
     # GitHub 网络偶发不稳定，重试3次
     for i in range(3):
-        r = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True, cwd=SCRIPT_DIR, env=env)
+        r = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=SCRIPT_DIR, env=env)
         if r.returncode == 0:
             print("  ✅ 推送成功！")
             print(f"  {r.stdout.strip()}")
