@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 一键更新云端看板数据
 用法：python update_cloud.py
@@ -27,9 +27,9 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.db")
 DB_GZ_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.db.gz")
 
-# 导出的表 + 起始月份（保留2024年起，覆盖默认范围和同比）
+# 导出的表 + 起始月份（保留2021年起，覆盖默认范围和同比）
 TABLES = ["sku", "brand", "brand_distribution_rate", "industry"]
-MIN_YM = 202401
+MIN_YM = 202101
 
 # ====================== 步骤1：导出数据 ======================
 def export_data():
