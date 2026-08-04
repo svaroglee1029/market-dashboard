@@ -14,4 +14,4 @@ pinned: false
 Tab 1: 全国药店VDS市场表现
 Tab 2: 重点品类汤臣市场表现
 
-数据来源：本地 MySQL 数据快照（2024-2026），内嵌于 dashboard_data.db.gz，启动时自动解压。
+数据来源：本地 MySQL 数据快照（2023-2026），内嵌于 dashboard_data.db.gz，启动时自动解压。
