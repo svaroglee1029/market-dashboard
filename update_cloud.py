@@ -28,8 +28,9 @@ DB_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.db")
 DB_GZ_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.db.gz")
 
 # 导出的表 + 起始月份（保留2021年起，覆盖默认范围和同比）
-TABLES = ["sku", "brand", "brand_distribution_rate", "industry"]
-MIN_YM = 202101
+year="年份"
+TABLES = ["sku", "brand", "brand_distribution_rate", "industry","area"]
+MIN_YM = 2021
 
 # ====================== 步骤1：导出数据 ======================
 def export_data():
