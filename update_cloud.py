@@ -29,7 +29,7 @@ DB_GZ_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.db.gz")
 
 # 导出的表 + 起始月份（保留2024年起，覆盖默认范围和同比）
 TABLES = ["sku", "brand", "brand_distribution_rate", "industry"]
-MIN_YM = 202401
+MIN_YM = 202301
 
 # ====================== 步骤1：导出数据 ======================
 def export_data():
