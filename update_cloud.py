@@ -89,10 +89,29 @@ def gzip_db():
     return True
 
 # ====================== 步骤3：git提交 ======================
+def _check_lfs():
+    """检查 Git LFS 是否已安装并配置。"""
+    r = subprocess.run(["git", "lfs", "version"], capture_output=True, text=True, cwd=SCRIPT_DIR)
+    if r.returncode != 0:
+        print("  ⚠️ 警告：Git LFS 未安装！大文件推送可能失败。")
+        print("  请安装 Git LFS: https://git-lfs.com/")
+        return False
+    # 检查 .gitattributes 中是否配置了 LFS 跟踪
+    lfs_check = subprocess.run(["git", "lfs", "ls-files"], capture_output=True, text=True, cwd=SCRIPT_DIR)
+    if "dashboard_data.db.gz" not in (lfs_check.stdout or ""):
+        print("  ⚠️ 警告：dashboard_data.db.gz 未被 LFS 跟踪。")
+        print("  运行: git lfs install && git lfs track '*.db.gz' && git add .gitattributes")
+        return False
+    print("  ✅ Git LFS 已配置")
+    return True
+
+
 def git_commit():
     print("\n" + "=" * 50)
     print("[3/4] git 提交 ...")
     print("=" * 50)
+    # 检查 LFS
+    _check_lfs()
     cmds = [
         ["git", "add", "dashboard_data.db.gz"],
         ["git", "commit", "-m", f"chore: 更新数据快照 {time.strftime('%Y-%m-%d %H:%M')}"],
