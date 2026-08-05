@@ -1,6 +1,3 @@
-# 忽略解压出来的大 db 文件（从 gz 自动解压生成）
-dashboard_data.db
-
 # Python
 __pycache__/
 *.py[cod]

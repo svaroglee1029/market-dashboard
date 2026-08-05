@@ -8,7 +8,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine, text
+
 import plotly.graph_objects as go
 from datetime import datetime
 import calendar
@@ -63,117 +63,21 @@ BAR_A_END   = "#F59E0B"
 BAR_B_START = "#BFDBFE"
 BAR_B_END   = "#3B82F6"
 
-# ====================== 3. Engine (SQLite) ======================
+# ====================== 3. Data Dir ======================
 import os
-import gzip
-import shutil
-import sqlite3
 
-_DB_DIR = os.path.dirname(os.path.abspath(__file__))
-_DB_PATH = os.path.join(_DB_DIR, "dashboard_data.db")
-_DB_GZ_PATH = os.path.join(_DB_DIR, "dashboard_data.db.gz")
+_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 
-def _verify_db_integrity(db_path):
-    """检查 SQLite 数据库完整性，返回 True/False。"""
-    try:
-        conn = sqlite3.connect(db_path)
-        cur = conn.execute("PRAGMA integrity_check;")
-        result = cur.fetchone()[0]
-        conn.close()
-        return result == "ok"
-    except Exception:
-        return False
+def _data_path(filename):
+    return os.path.join(_DATA_DIR, filename)
 
-
-def _decompress_db():
-    """从 gz 解压 db 文件。"""
-    with gzip.open(_DB_GZ_PATH, "rb") as f_in, open(_DB_PATH, "wb") as f_out:
-        shutil.copyfileobj(f_in, f_out)
-
-
-def _verify_gz_integrity():
-    """校验 gz 文件完整性（通过尝试解压前1MB）。"""
-    if not os.path.exists(_DB_GZ_PATH):
-        return False
-    try:
-        with gzip.open(_DB_GZ_PATH, "rb") as f:
-            f.read(1024 * 1024)
-        return True
-    except Exception:
-        return False
-
-
-def _ensure_db():
-    """
-    确保 dashboard_data.db 存在且完整。
-    - 不存在则从 gz 解压
-    - 存在但损坏则删除重新解压
-    - 重新解压后仍损坏则报错
-    """
-    # 校验 gz 文件
-    if os.path.exists(_DB_GZ_PATH) and not _verify_gz_integrity():
-        st.error(
-            "dashboard_data.db.gz 文件已损坏（可能是 Git 传输导致）。\n\n"
-            "请在本地运行 `python update_cloud.py` 重新生成并推送数据。"
-        )
-        st.stop()
-
-    # 情况1：db 不存在，从 gz 解压
-    if not os.path.exists(_DB_PATH):
-        if not os.path.exists(_DB_GZ_PATH):
-            st.error("数据库文件缺失：dashboard_data.db 和 dashboard_data.db.gz 均不存在。")
-            st.stop()
-        with st.spinner("正在解压数据库 (首次启动约需30秒)..."):
-            _decompress_db()
-
-    # 情况2：db 存在，校验完整性
-    if not _verify_db_integrity(_DB_PATH):
-        st.warning("数据库文件损坏，正在从 gz 重新解压 ...")
-        try:
-            os.remove(_DB_PATH)
-        except Exception:
-            pass
-        if os.path.exists(_DB_GZ_PATH):
-            with st.spinner("重新解压数据库中 ..."):
-                _decompress_db()
-            if not _verify_db_integrity(_DB_PATH):
-                st.error(
-                    "数据库重新解压后仍然损坏。\n\n"
-                    "可能原因：\n"
-                    "1. dashboard_data.db.gz 文件在 Git 传输中损坏\n"
-                    "2. 磁盘空间不足\n\n"
-                    "解决方法：在本地运行 `python update_cloud.py` 重新推送数据"
-                )
-                st.stop()
-        else:
-            st.error("数据库损坏且 gz 备份不存在，无法恢复。")
-            st.stop()
-
-
-# 启动时确保数据库可用
-_ensure_db()
-
-engine = create_engine(f"sqlite:///{_DB_PATH}", echo=False)
 
 # ====================== 4. Data Loading ======================
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_sku_df():
     """sku_df：全量 sku 表，三个 section 共享。"""
-    try:
-        df = pd.read_sql(text("SELECT * FROM sku;"), con=engine)
-    except Exception as e:
-        st.error(f"读取 sku 表失败：{e}")
-        st.cache_data.clear()
-        try:
-            df = pd.read_sql(text("SELECT * FROM sku;"), con=engine)
-        except Exception as e2:
-            st.error(
-                f"重试仍然失败：{e2}\n\n"
-                "数据库可能已损坏。请删除 dashboard_data.db 后重启，"
-                "或在本地运行 `python update_cloud.py` 重新推送数据。"
-            )
-            st.stop()
+    df = pd.read_parquet(_data_path("sku.parquet"))
     df.columns = [str(c).strip() for c in df.columns]
     for col in [SALES_COL, QTY_COL, DIST_COL]:
         if col in df.columns:
@@ -190,25 +94,8 @@ def load_sku_df():
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_table(table_name):
-    """brand / brand_distribution_rate 表，按需列读取。"""
-    try:
-        raw_conn = engine.raw_connection()
-        if table_name == "brand":
-            cols = BRAND_COLS
-        elif table_name == "brand_distribution_rate":
-            cols = DIST_COLS
-        else:
-            cols = None
-        if cols:
-            col_sql = ", ".join(f"`{c}`" for c in cols)
-            sql = f"SELECT {col_sql} FROM `{table_name}`"
-        else:
-            sql = f"SELECT * FROM `{table_name}`"
-        df = pd.read_sql(sql, con=raw_conn)
-        raw_conn.close()
-    except Exception as e:
-        st.error(f"读取 test.{table_name} 失败：{e}")
-        st.stop()
+    """brand / brand_distribution_rate 表。"""
+    df = pd.read_parquet(_data_path(f"{table_name}.parquet"))
     df.columns = [str(c).strip() for c in df.columns]
     if "year_month" in df.columns:
         df["year_month"] = df["year_month"].astype(str).str.replace(r"\.0$", "", regex=True).str.zfill(6)
@@ -221,11 +108,7 @@ def load_table(table_name):
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_industry():
     """industry 表，Part A (page1-page4) 专用。"""
-    try:
-        df = pd.read_sql(text("SELECT * FROM `industry`;"), con=engine)
-    except Exception as e:
-        st.error(f"读取 industry 表失败：{e}")
-        st.stop()
+    df = pd.read_parquet(_data_path("industry.parquet"))
     if SALES_COL in df.columns:
         df[SALES_COL] = pd.to_numeric(df[SALES_COL], errors="coerce")
     if "year_month" in df.columns:
@@ -238,7 +121,7 @@ def load_industry():
     return df
 
 
-# 模块级加载（带容错）
+# 模块级加载
 try:
     sku_df = load_sku_df()
     brand_df = load_table("brand")

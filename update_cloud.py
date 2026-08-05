@@ -4,19 +4,15 @@
 用法：python update_cloud.py
 
 功能：
-1. 从本地 MySQL 导出最新数据到 SQLite
-2. 压缩为 dashboard_data.db.gz
-3. git 提交并推送到 GitHub
-4. Streamlit Cloud 检测到仓库更新后自动重新构建（约3-5分钟）
+1. 从本地 MySQL 导出最新数据到 Parquet 文件
+2. git 提交并推送到 GitHub
+3. Streamlit Cloud 检测到仓库更新后自动重新构建（约3-5分钟）
 
 前提：本地 MySQL 运行中，git 已配置好远程仓库
 """
 import os
 import sys
 import time
-import gzip
-import shutil
-import sqlite3
 import subprocess
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -24,8 +20,7 @@ from sqlalchemy import create_engine, text
 # ====================== 配置 ======================
 MYSQL_URL = "mysql+mysqlconnector://root:123456@127.0.0.1:3306/test"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.db")
-DB_GZ_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.db.gz")
+DATA_DIR = os.path.join(SCRIPT_DIR, "data")
 
 # 导出的表 + 起始月份（保留2021年起，覆盖默认范围和同比）
 year = "年份"
@@ -47,16 +42,13 @@ KEEP_COLS = {
 # ====================== 步骤1：导出数据 ======================
 def export_data():
     print("=" * 50)
-    print("[1/4] 从 MySQL 导出数据到 SQLite ...")
+    print("[1/3] 从 MySQL 导出数据到 Parquet ...")
     print("=" * 50)
     engine = create_engine(MYSQL_URL, pool_recycle=1800, pool_pre_ping=True, echo=False)
 
-    # 删除旧 db，全新导出
-    if os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
-        print(f"  已删除旧文件: {os.path.basename(DB_PATH)}")
+    # 创建 data 目录
+    os.makedirs(DATA_DIR, exist_ok=True)
 
-    conn = sqlite3.connect(DB_PATH)
     total = 0
     for t in TABLES:
         t0 = time.time()
@@ -68,70 +60,22 @@ def export_data():
             sql = f"SELECT * FROM `{t}` WHERE `year_month` >= {MIN_YM};"
         print(f"  [{t}] 读取 MySQL (year_month>={MIN_YM}, {len(cols) if cols else 'all'}列) ...", end="", flush=True)
         df = pd.read_sql(text(sql), con=engine)
-        df.to_sql(t, conn, if_exists="replace", index=False)
-        conn.commit()
-        # 建索引
-        try:
-            conn.execute(f"CREATE INDEX IF NOT EXISTS idx_{t}_ym ON `{t}`(year_month)")
-            conn.commit()
-        except Exception:
-            pass
+        parquet_path = os.path.join(DATA_DIR, f"{t}.parquet")
+        df.to_parquet(parquet_path, index=False, engine="pyarrow", compression="snappy")
         cost = time.time() - t0
-        print(f" {len(df)} 行 ({cost:.1f}s)")
+        size_mb = os.path.getsize(parquet_path) / 1024 / 1024
+        print(f" {len(df)} 行 → {size_mb:.1f}MB ({cost:.1f}s)")
         total += len(df)
-    conn.close()
-
-    # VACUUM 压缩
-    print("  VACUUM 压缩中 ...", end="", flush=True)
-    vc = sqlite3.connect(DB_PATH)
-    vc.execute("VACUUM")
-    vc.close()
-    db_mb = os.path.getsize(DB_PATH) / 1024 / 1024
-    print(f" 完成 ({db_mb:.1f}MB)")
     print(f"  合计 {total} 行")
     return total
 
-# ====================== 步骤2：gzip压缩 ======================
-def gzip_db():
-    print("\n" + "=" * 50)
-    print("[2/4] 压缩为 gzip ...")
-    print("=" * 50)
-    with open(DB_PATH, "rb") as f_in, gzip.open(DB_GZ_PATH, "wb", compresslevel=9) as f_out:
-        shutil.copyfileobj(f_in, f_out)
-    gz_mb = os.path.getsize(DB_GZ_PATH) / 1024 / 1024
-    print(f"  {os.path.basename(DB_GZ_PATH)} = {gz_mb:.1f}MB")
-    if gz_mb > 100:
-        print(f"  ⚠️ 警告：文件超过 GitHub 100MB 限制 ({gz_mb:.1f}MB)！")
-        print(f"  建议：增大 MIN_YM 或减少导出的表")
-        return False
-    return True
-
-# ====================== 步骤3：git提交 ======================
-def _check_lfs():
-    """检查 Git LFS 是否已安装并配置。"""
-    r = subprocess.run(["git", "lfs", "version"], capture_output=True, text=True, cwd=SCRIPT_DIR)
-    if r.returncode != 0:
-        print("  ⚠️ 警告：Git LFS 未安装！大文件推送可能失败。")
-        print("  请安装 Git LFS: https://git-lfs.com/")
-        return False
-    # 检查 .gitattributes 中是否配置了 LFS 跟踪
-    lfs_check = subprocess.run(["git", "lfs", "ls-files"], capture_output=True, text=True, cwd=SCRIPT_DIR)
-    if "dashboard_data.db.gz" not in (lfs_check.stdout or ""):
-        print("  ⚠️ 警告：dashboard_data.db.gz 未被 LFS 跟踪。")
-        print("  运行: git lfs install && git lfs track '*.db.gz' && git add .gitattributes")
-        return False
-    print("  ✅ Git LFS 已配置")
-    return True
-
-
+# ====================== 步骤2：git提交 ======================
 def git_commit():
     print("\n" + "=" * 50)
-    print("[3/4] git 提交 ...")
+    print("[2/3] git 提交 ...")
     print("=" * 50)
-    # 检查 LFS
-    _check_lfs()
     cmds = [
-        ["git", "add", "dashboard_data.db.gz"],
+        ["git", "add", "data/"],
         ["git", "commit", "-m", f"chore: 更新数据快照 {time.strftime('%Y-%m-%d %H:%M')}"],
     ]
     for c in cmds:
@@ -139,22 +83,19 @@ def git_commit():
         if r.stdout and r.stdout.strip():
             print(f"  {r.stdout.strip()}")
         if r.returncode != 0 and r.stdout and "nothing to commit" not in r.stdout and "no changes" not in r.stdout:
-            # commit 无变更不算错
             if c[1] == "commit" and "nothing to commit" in ((r.stdout or "") + (r.stderr or "")):
                 print("  无数据变更，跳过推送")
                 return False
     return True
 
-# ====================== 步骤4：git推送 ======================
+# ====================== 步骤3：git推送 ======================
 def git_push():
     print("\n" + "=" * 50)
-    print("[4/4] 推送到 GitHub ...")
+    print("[3/3] 推送到 GitHub ...")
     print("=" * 50)
-    # 走系统代理（国内直连github常被阻断）
     env = os.environ.copy()
     env["HTTPS_PROXY"] = "http://127.0.0.1:7897"
     env["HTTP_PROXY"] = "http://127.0.0.1:7897"
-    # GitHub 网络偶发不稳定，重试3次
     for i in range(3):
         r = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=SCRIPT_DIR, env=env)
         if r.returncode == 0:
@@ -180,8 +121,6 @@ def main():
 
     try:
         export_data()
-        if not gzip_db():
-            return
         if not git_commit():
             print("\n✅ 数据已是最新，无需更新云端")
             return
