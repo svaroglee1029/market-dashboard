@@ -29,8 +29,20 @@ DB_GZ_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.db.gz")
 
 # 导出的表 + 起始月份（保留2021年起，覆盖默认范围和同比）
 year = "年份"
-TABLES = ["sku", "brand", "brand_distribution_rate", "industry","area"]
+TABLES = ["sku", "brand", "brand_distribution_rate", "industry"]
 MIN_YM = 2021
+
+# 各表只导出 app.py 实际使用的列（精简数据量约70%）
+KEEP_COLS = {
+    "sku": ["year_month", "品类", "品牌", "品牌产品", "产品包装", "品名(含属性)",
+            "集团权益", "处方性质",
+            "销售额('000 RMB)", "销售量-Pack('00))", "加权铺货率"],
+    "brand": ["year_month", "品类", "品牌", "品牌产品",
+              "销售额('000 RMB)", "销售量-Pack('00))", "加权铺货率"],
+    "brand_distribution_rate": ["year_month", "品牌_NEW", "加权铺货率", "销售额('000 RMB)"],
+    "industry": ["year_month", "品类", "品牌",
+                 "销售额('000 RMB)", "销售量-Pack('00))"],
+}
 
 # ====================== 步骤1：导出数据 ======================
 def export_data():
@@ -48,8 +60,14 @@ def export_data():
     total = 0
     for t in TABLES:
         t0 = time.time()
-        print(f"  [{t}] 读取 MySQL (year_month>={MIN_YM}) ...", end="", flush=True)
-        df = pd.read_sql(text(f"SELECT * FROM `{t}` WHERE `year_month` >= {MIN_YM};"), con=engine)
+        cols = KEEP_COLS.get(t)
+        if cols:
+            col_sql = ", ".join(f"`{c}`" for c in cols)
+            sql = f"SELECT {col_sql} FROM `{t}` WHERE `year_month` >= {MIN_YM};"
+        else:
+            sql = f"SELECT * FROM `{t}` WHERE `year_month` >= {MIN_YM};"
+        print(f"  [{t}] 读取 MySQL (year_month>={MIN_YM}, {len(cols) if cols else 'all'}列) ...", end="", flush=True)
+        df = pd.read_sql(text(sql), con=engine)
         df.to_sql(t, conn, if_exists="replace", index=False)
         conn.commit()
         # 建索引
