@@ -8,7 +8,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine, text
 import plotly.graph_objects as go
 from datetime import datetime
 import calendar
@@ -74,34 +73,16 @@ BAR_A_END   = "#F59E0B"
 BAR_B_START = "#BFDBFE"
 BAR_B_END   = "#3B82F6"
 
-# ====================== 3. Engine (SQLite) ======================
+# ====================== 3. Data Directory (Parquet) ======================
 import os
-import gzip
-import shutil
-import tempfile
 
-_DB_DIR = os.path.dirname(os.path.abspath(__file__))
-_DB_GZ_PATH = os.path.join(_DB_DIR, "dashboard_data.db.gz")
-# 解压到系统临时目录（Streamlit Cloud 的 /tmp 始终可写且有足够空间）
-_DB_PATH = os.path.join(tempfile.gettempdir(), "market_dashboard_data.db")
-
-# 每次启动都从 gz 重新解压到临时目录，避免磁盘空间不足或残留损坏
-if os.path.exists(_DB_GZ_PATH):
-    if os.path.exists(_DB_PATH):
-        try:
-            os.remove(_DB_PATH)
-        except Exception:
-            pass
-    with gzip.open(_DB_GZ_PATH, "rb") as _f_in, open(_DB_PATH, "wb") as _f_out:
-        shutil.copyfileobj(_f_in, _f_out)
-
-engine = create_engine(f"sqlite:///{_DB_PATH}", echo=False)
+_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 # ====================== 4. Data Loading ======================
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_sku_df():
     """sku_df：全量 sku 表，三个 section 共享。"""
-    df = pd.read_sql(text("SELECT * FROM sku;"), con=engine)
+    df = pd.read_parquet(os.path.join(_DATA_DIR, "sku.parquet"))
     df.columns = [str(c).strip() for c in df.columns]
     for col in [SALES_COL, QTY_COL, DIST_COL]:
         if col in df.columns:
@@ -126,14 +107,11 @@ def load_table(table_name):
             cols = DIST_COLS
         else:
             cols = None
+        df = pd.read_parquet(os.path.join(_DATA_DIR, f"{table_name}.parquet"))
         if cols:
-            col_sql = ", ".join(f"`{c}`" for c in cols)
-            sql = f"SELECT {col_sql} FROM `{table_name}`"
-        else:
-            sql = f"SELECT * FROM `{table_name}`"
-        df = pd.read_sql(text(sql), con=engine)
+            df = df[[c for c in cols if c in df.columns]]
     except Exception as e:
-        st.error(f"读取 test.{table_name} 失败：{e}")
+        st.error(f"读取 {table_name}.parquet 失败：{e}")
         st.stop()
     df.columns = [str(c).strip() for c in df.columns]
     if "year_month" in df.columns:
@@ -147,7 +125,7 @@ def load_table(table_name):
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_industry():
     """industry 表，Part A (page1-page4) 专用。"""
-    df = pd.read_sql(text("SELECT * FROM `industry`;"), con=engine)
+    df = pd.read_parquet(os.path.join(_DATA_DIR, "industry.parquet"))
     if SALES_COL in df.columns:
         df[SALES_COL] = pd.to_numeric(df[SALES_COL], errors="coerce")
     if "year_month" in df.columns:
@@ -181,7 +159,6 @@ brand_df = _downcast_df(load_table("brand"))
 dist_df = _downcast_df(load_table("brand_distribution_rate"))
 df_ind = _downcast_df(load_industry())
 
-# 注意：不要在 engine 连接存活时删除 db 文件，否则会导致 "database disk image is malformed"
 import gc
 gc.collect()
 
