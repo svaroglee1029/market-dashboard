@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # 市场分析综合仪表盘 - 合并版
 # Tab 1: 全国药店VDS市场表现 (page1-page4)
 # Tab 2: 重点品类汤臣市场表现 (render_first_page/render_brand_analysis/render_sku_analysis)
@@ -3322,7 +3322,7 @@ _latest_label_a = ym_lab(_latest_month_a)
 # 顶部主标题（使用最新月份）
 st.markdown(f"""
 <div class="main-header">
-    <span>{_latest_label_a} 线下药店市场监测报告 (Y25起)</span>
+    <span>{_latest_label_a} 线下药店市场监测报告 </span>
     <span class="badge">中康全国零售药店数据</span>
 </div>
 """, unsafe_allow_html=True)
