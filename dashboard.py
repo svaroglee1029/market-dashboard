@@ -568,9 +568,9 @@ st.markdown("""
         vertical-align: middle;
         white-space: nowrap;
     }
-    .metric-table th { line-height: 1.5; background: #EEF2FA; font-weight: 700; color: #1A1A2E; font-size: 16px; padding: 12px 6px; }
-    .metric-table td { line-height: 1.5; padding: 28px 6px; font-size: 16px; }
-    .metric-table.compact td { line-height: 1.5; padding: 36px 6px; font-size: 16px; }
+    .metric-table th { line-height: 1.5; background: #EEF2FA; font-weight: 700; color: #1A1A2E; font-size: 16px; padding: 8px 6px; }
+    .metric-table td { line-height: 1.5; padding: 18px 6px; font-size: 16px; }
+    .metric-table.compact td { line-height: 1.5; padding: 24px 6px; font-size: 16px; }
     .metric-table td:first-child { text-align: left; font-weight: 700; padding-left: 12px; min-width: 126px; }
     .metric-table .value { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .metric-table tbody tr:hover td { background: #F0F4FF; }
@@ -579,13 +579,11 @@ st.markdown("""
     .metric-table .vds-h { background: #FFEBC1; color: #1A1A2E; }
     .metric-table .brand-h { background: #D6EAF8; color: #1A1A2E; }
     .left-content-wrap {
-        height: 590px;
         display: flex;
         flex-direction: column;
     }
     .left-content-wrap .metric-table {
-        flex: 1 1 auto;
-        height: 100%;
+        flex: 0 0 auto;
     }
     .chart-title {
         font-size: 14px;
