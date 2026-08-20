@@ -1425,16 +1425,17 @@ def page2(sel_month, trend_months):
                                    xshift=14, yshift=22)
                 fig.update_layout(xaxis=dict(range=[-0.5, 1.5]))
 
+            _y_max = max(cr5_ly, cr5_ytd) * 1.12
             fig.update_layout(
                 height=460,
                 barmode="stack",
                 bargap=0.35,
-                margin=dict(t=55, b=25, l=10, r=55),
+                margin=dict(t=30, b=25, l=10, r=55),
                 paper_bgcolor="white",
                 plot_bgcolor="white",
                 font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
                 xaxis=dict(showgrid=False, tickfont=dict(size=13)),
-                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[0, _y_max]),
                 showlegend=False,
                 uniformtext=dict(mode="show", minsize=16),
             )
