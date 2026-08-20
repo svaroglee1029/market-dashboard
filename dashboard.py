@@ -569,8 +569,8 @@ st.markdown("""
         white-space: nowrap;
     }
     .metric-table th { line-height: 1.5; background: #EEF2FA; font-weight: 700; color: #1A1A2E; font-size: 16px; padding: 12px 6px; }
-    .metric-table td { line-height: 1.5; padding: 42px 6px; font-size: 16px; }
-    .metric-table.compact td { line-height: 1.5; padding: 54px 6px; font-size: 16px; }
+    .metric-table td { line-height: 1.5; padding: 28px 6px; font-size: 16px; }
+    .metric-table.compact td { line-height: 1.5; padding: 36px 6px; font-size: 16px; }
     .metric-table td:first-child { text-align: left; font-weight: 700; padding-left: 12px; min-width: 126px; }
     .metric-table .value { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .metric-table tbody tr:hover td { background: #F0F4FF; }
