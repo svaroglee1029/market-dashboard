@@ -1434,7 +1434,7 @@ def page2(sel_month, trend_months):
                 paper_bgcolor="white",
                 plot_bgcolor="white",
                 font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-                xaxis=dict(showgrid=False, tickfont=dict(size=13)),
+                xaxis=dict(showgrid=False, tickfont=dict(size=11)),
                 yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[0, _y_max]),
                 showlegend=False,
                 uniformtext=dict(mode="show", minsize=16),
