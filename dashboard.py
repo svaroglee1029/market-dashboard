@@ -1757,6 +1757,12 @@ def page4(selected_month):
             "brand_source": "industry", "brand_filter": {"品类": "CHC(营养补充剂)", "品牌": "汤臣倍健"},
             "brand_display": "汤臣倍健集团", "has_bar": False,
         },
+        {
+            "name": "VDS", "sub": "",
+            "cat_source": "industry", "cat_filter": {"品类": "VDS"},
+            "brand_source": "industry", "brand_filter": {"品类": "VDS", "品牌": "汤臣倍健"},
+            "brand_display": "汤臣倍健集团", "has_bar": False,
+        },
         {"name": "蛋白粉", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "蛋白粉"}, "brand_source": "sku", "brand_filter": {"品类": "蛋白粉", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
         {"name": "成人钙", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "钙-成人"}, "brand_source": "sku", "brand_filter": {"品类": "钙-成人", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
         {"name": "儿童钙", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "钙-儿童"}, "brand_source": "sku", "brand_filter": {"品类": "钙-儿童", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
