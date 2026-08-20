@@ -1426,10 +1426,10 @@ def page2(sel_month, trend_months):
                 fig.update_layout(xaxis=dict(range=[-0.5, 1.5]))
 
             fig.update_layout(
-                height=420,
+                height=460,
                 barmode="stack",
                 bargap=0.35,
-                margin=dict(t=40, b=10, l=10, r=55),
+                margin=dict(t=55, b=25, l=10, r=55),
                 paper_bgcolor="white",
                 plot_bgcolor="white",
                 font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
@@ -1501,8 +1501,8 @@ def page2(sel_month, trend_months):
             ))
 
         fig2.update_layout(
-            height=420,
-            margin=dict(t=40, b=10, l=40, r=20),
+            height=460,
+            margin=dict(t=55, b=25, l=40, r=20),
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
