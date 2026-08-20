@@ -955,7 +955,9 @@ def total_vds_sales(df, months):
     return df.loc[mask, SALES_COL].sum()
 
 def brand_sales(df, months, brand=None):
-    mask = (df["品类"] == "VDS") & (df["year_month"].isin(months))
+    # 汤臣倍健用CHC(营养补充剂)代表VDS（含OTC），其他品牌用VDS
+    cat = "CHC(营养补充剂)" if brand == "汤臣倍健" else "VDS"
+    mask = (df["品类"] == cat) & (df["year_month"].isin(months))
     if brand:
         mask = mask & (df["品牌"] == brand)
     return df.loc[mask, SALES_COL].sum()
@@ -1334,6 +1336,11 @@ def page2(sel_month, trend_months):
 
     brand_ytd = df_ind[(df_ind["品类"] == "VDS") & (df_ind["year_month"].isin(ytd_months)) &
                        (~df_ind["品牌"].str.contains("others|其他", case=False, na=False))].groupby("品牌")[SALES_COL].sum().sort_values(ascending=False)
+    # 汤臣倍健用CHC(营养补充剂)替代VDS
+    if "汤臣倍健" in brand_ytd.index:
+        _tang_chc = df_ind[(df_ind["品类"] == "CHC(营养补充剂)") & (df_ind["品牌"] == "汤臣倍健") & (df_ind["year_month"].isin(ytd_months))][SALES_COL].sum()
+        brand_ytd["汤臣倍健"] = _tang_chc
+        brand_ytd = brand_ytd.sort_values(ascending=False)
     top5_brands = brand_ytd.head(5).index.tolist()
 
     if vds_ytd_total == 0 or vds_curr_total == 0:
@@ -1532,7 +1539,7 @@ def page3(sel_ym, SEL_MONTHS):
     all_records = []
     for m in ind_months:
         vds_total = ind_sales(m, {"品类": "VDS"})
-        tang_group_total = ind_sales(m, {"品类": "VDS", "品牌": "汤臣倍健"})
+        tang_group_total = ind_sales(m, {"品类": "CHC(营养补充剂)", "品牌": "汤臣倍健"})
         tang_key = sku_sales(m, {"集团权益": "汤臣倍健"})
         tang_other = tang_group_total - tang_key
         share = (tang_group_total / vds_total * 100) if vds_total > 0 else np.nan
@@ -1750,20 +1757,14 @@ def page4(selected_month):
             "brand_source": "industry", "brand_filter": {"品类": "CHC(营养补充剂)", "品牌": "汤臣倍健"},
             "brand_display": "汤臣倍健集团", "has_bar": False,
         },
-        {
-            "name": "VDS", "sub": "",
-            "cat_source": "industry", "cat_filter": {"品类": "VDS"},
-            "brand_source": "industry", "brand_filter": {"品类": "VDS", "品牌": "汤臣倍健"},
-            "brand_display": "汤臣倍健集团", "has_bar": False,
-        },
-        {"name": "蛋白粉", "sub": "（不含OTC）", "cat_source": "sku", "cat_filter": {"品类": "蛋白粉"}, "brand_source": "sku", "brand_filter": {"品类": "蛋白粉", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "成人钙", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "钙-成人"}, "brand_source": "sku", "brand_filter": {"品类": "钙-成人", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "儿童钙", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "钙-儿童"}, "brand_source": "sku", "brand_filter": {"品类": "钙-儿童", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "成人多维", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "多维-成人"}, "brand_source": "sku", "brand_filter": {"品类": "多维-成人", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "儿童多维", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "多维-儿童"}, "brand_source": "sku", "brand_filter": {"品类": "多维-儿童", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "鱼油", "sub": "（不含OTC）", "cat_source": "sku", "cat_filter": {"品类": "鱼油"}, "brand_source": "sku", "brand_filter": {"品类": "鱼油", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "氨糖", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "关节护理"}, "brand_source": "sku", "brand_filter": {"品类": "关节护理", "品牌": "健力多"}, "brand_display": "健力多", "has_bar": True},
-        {"name": "益生菌", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "益生菌"}, "brand_source": "sku", "brand_filter": {"品类": "益生菌", "品牌": "Life-Space"}, "brand_display": "Life-Space", "has_bar": True},
+        {"name": "蛋白粉", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "蛋白粉"}, "brand_source": "sku", "brand_filter": {"品类": "蛋白粉", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "成人钙", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "钙-成人"}, "brand_source": "sku", "brand_filter": {"品类": "钙-成人", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "儿童钙", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "钙-儿童"}, "brand_source": "sku", "brand_filter": {"品类": "钙-儿童", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "成人多维", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "多维-成人"}, "brand_source": "sku", "brand_filter": {"品类": "多维-成人", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "儿童多维", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "多维-儿童"}, "brand_source": "sku", "brand_filter": {"品类": "多维-儿童", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "鱼油", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "鱼油"}, "brand_source": "sku", "brand_filter": {"品类": "鱼油", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "氨糖", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "关节护理"}, "brand_source": "sku", "brand_filter": {"品类": "关节护理", "品牌": "健力多"}, "brand_display": "健力多", "has_bar": True},
+        {"name": "益生菌", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "益生菌"}, "brand_source": "sku", "brand_filter": {"品类": "益生菌", "品牌": "Life-Space"}, "brand_display": "Life-Space", "has_bar": True},
     ]
 
     table_data = []
@@ -1937,13 +1938,13 @@ def page4(selected_month):
 # ====================== Part B Configs: FP_CATEGORY_CONFIG, FP_COLORS ======================
 FP_CATEGORY_CONFIG = {
     "蛋白粉": {"cat": "蛋白粉", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
-    "成人钙": {"cat": "钙-成人", "brand": "汤臣倍健", "has_otc": True, "brand_label": "汤臣倍健"},
-    "儿童钙": {"cat": "钙-儿童", "brand": "汤臣倍健", "has_otc": True, "brand_label": "汤臣倍健"},
-    "成人多维": {"cat": "多维-成人", "brand": "汤臣倍健", "has_otc": True, "brand_label": "汤臣倍健"},
-    "儿童多维": {"cat": "多维-儿童", "brand": "汤臣倍健", "has_otc": True, "brand_label": "汤臣倍健"},
+    "成人钙": {"cat": "钙-成人", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
+    "儿童钙": {"cat": "钙-儿童", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
+    "成人多维": {"cat": "多维-成人", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
+    "儿童多维": {"cat": "多维-儿童", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
     "鱼油": {"cat": "鱼油", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
-    "氨糖": {"cat": "关节护理", "brand": "健力多", "has_otc": True, "brand_label": "健力多"},
-    "益生菌": {"cat": "益生菌", "brand": "Life-Space", "has_otc": True, "brand_label": "Life-Space"},
+    "氨糖": {"cat": "关节护理", "brand": "健力多", "has_otc": False, "brand_label": "健力多"},
+    "益生菌": {"cat": "益生菌", "brand": "Life-Space", "has_otc": False, "brand_label": "Life-Space"},
 }
 
 FP_COLORS = {
