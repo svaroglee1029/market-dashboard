@@ -1417,12 +1417,12 @@ def page2(sel_month, trend_months):
                 fig.add_annotation(x=0.5, y=_tmax, text=f"<b>{_tarr}</b>",
                                    showarrow=False,
                                    font=dict(size=34, color=_tclr, family="Arial, sans-serif"),
-                                   xshift=-20, yshift=24)
+                                   xshift=-16, yshift=24, xanchor="center")
                 # Value annotation - bold
                 fig.add_annotation(x=0.5, y=_tmax, text=f"<b>{_total_diff:+.1f}</b>",
                                    showarrow=False,
                                    font=dict(size=22, color=_tclr, family="Arial, sans-serif"),
-                                   xshift=14, yshift=22)
+                                   xshift=16, yshift=22, xanchor="center")
                 fig.update_layout(xaxis=dict(range=[-0.5, 1.5]))
 
             _y_max = max(cr5_ly, cr5_ytd) * 1.12
@@ -1434,7 +1434,7 @@ def page2(sel_month, trend_months):
                 paper_bgcolor="white",
                 plot_bgcolor="white",
                 font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-                xaxis=dict(showgrid=False, tickfont=dict(size=11)),
+                xaxis=dict(showgrid=False, tickfont=dict(size=10)),
                 yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[0, _y_max]),
                 showlegend=False,
                 uniformtext=dict(mode="show", minsize=16),
