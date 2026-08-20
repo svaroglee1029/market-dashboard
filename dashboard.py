@@ -372,7 +372,7 @@ st.markdown("""
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         table-layout: fixed;
     }
-    .dt-p3 th, .dt-p3 td { border: 1px solid #E4E9F0; padding: 6px 4px; text-align: center; vertical-align: middle; }
+    .dt-p3 th, .dt-p3 td { border: 1px solid #E4E9F0; padding: 6px 4px; text-align: center; vertical-align: middle; font-size: 13px; }
     .dt-p3 th { background: #EEF2FA; font-weight: 600; color: #1A1A2E; font-size: 13px; }
     .dt-p3 td:first-child { text-align: left; font-weight: 600; padding-left: 10px; }
     .dt-p3 th:first-child { text-align: left; padding-left: 10px; }
@@ -1655,7 +1655,7 @@ def page3(sel_ym, SEL_MONTHS):
         paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(size=15, family="Microsoft YaHei, sans-serif"),
-        xaxis=dict(showgrid=False, tickfont=dict(size=13), dtick=1, tickangle=0, domain=[0.12, 1.0], automargin=False, range=[-0.5, len(df_data) - 0.5]),
+        xaxis=dict(showgrid=False, tickfont=dict(size=13), dtick=1, tickangle=0, domain=[0.08, 1.0], automargin=False, range=[-0.5, len(df_data) - 0.5]),
         yaxis=dict(
             title="",
             showgrid=False,
@@ -1714,7 +1714,7 @@ def page3(sel_ym, SEL_MONTHS):
         table_rows.append("<tr>" + "".join(cells) + "</tr>")
 
     _n_p3 = len(SEL_MONTHS)
-    _label_w = 12  # Must match xaxis domain left value (0.12)
+    _label_w = 8  # Must match xaxis domain left value (0.08)
     _data_w = round((100 - _label_w) / _n_p3, 2) if _n_p3 > 0 else 0
     header_cells = [f"<th style='text-align:center;padding:6px 4px'>{ym_lab(m)}</th>" for m in SEL_MONTHS]
     _p3_cols = f"<colgroup><col style='width:{_label_w}%'>" + "".join(f"<col style='width:{_data_w}%'>" for _ in range(_n_p3)) + "</colgroup>"
