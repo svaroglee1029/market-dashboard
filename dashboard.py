@@ -569,8 +569,8 @@ st.markdown("""
         white-space: nowrap;
     }
     .metric-table th { line-height: 1.5; background: #EEF2FA; font-weight: 700; color: #1A1A2E; font-size: 16px; padding: 8px 6px; }
-    .metric-table td { line-height: 1.5; padding: 18px 6px; font-size: 16px; }
-    .metric-table.compact td { line-height: 1.5; padding: 24px 6px; font-size: 16px; }
+    .metric-table td { line-height: 1.5; padding: 8px 6px; font-size: 16px; }
+    .metric-table.compact td { line-height: 1.5; padding: 8px 6px; font-size: 16px; }
     .metric-table td:first-child { text-align: left; font-weight: 700; padding-left: 12px; min-width: 126px; }
     .metric-table .value { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .metric-table tbody tr:hover td { background: #F0F4FF; }
@@ -583,7 +583,9 @@ st.markdown("""
         flex-direction: column;
     }
     .left-content-wrap .metric-table {
-        flex: 0 0 auto;
+        flex: 1 1 auto;
+        height: 100%;
+        width: 100%;
     }
     .chart-title {
         font-size: 14px;
@@ -2091,13 +2093,19 @@ def render_first_page(selected_cat, selected_month, display_months):
     monthly_df = fp_build_monthly_data(display_months, config["cat"], config["brand"], has_otc)
     is_kids_ca = (selected_cat == "儿童钙")
 
-    left_content_height = 680 if has_otc else 620
     if is_kids_ca:
         right_chart_height = 440
     elif has_otc:
         right_chart_height = 420
     else:
         right_chart_height = 440
+    # Calculate left content height to match right side (chart + gap + growth table)
+    n_growth_data_rows = (4 if has_otc else 2)
+    n_growth_total_rows = n_growth_data_rows + 1  # +1 for header
+    growth_row_h = 22  # estimated px per growth table row (font ~11px + padding 8px + border 1px)
+    growth_table_est = n_growth_total_rows * growth_row_h
+    streamlit_gap = 14  # vertical gap between plotly chart and markdown table
+    left_content_height = right_chart_height + streamlit_gap + growth_table_est
 
     cL, cR = st.columns([0.49, 0.51], gap="medium")
     with cL:
