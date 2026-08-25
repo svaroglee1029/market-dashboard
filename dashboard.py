@@ -2252,11 +2252,11 @@ def render_first_page(selected_cat, selected_month, display_months):
             barmode="stack",
             bargap=0.15,
             height=right_chart_height,
-            margin=dict(t=42, b=55, l=10, r=10),
+            margin=dict(t=42, b=55, l=0, r=0),
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.12, 1.0]),
+            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.0, 1.0]),
             uniformtext=dict(minsize=13, mode="show"),
             yaxis=dict(
                 showgrid=False, showticklabels=False, zeroline=False,
@@ -2315,7 +2315,7 @@ def render_first_page(selected_cat, selected_month, display_months):
         for gr in growth_rows:
             cells = [f"<td style='white-space:nowrap;font-size:11px;padding:4px 2px'>{gr['label']}</td>"]
             for v in gr["values"]:
-                cells.append(f"<td style='color:{fp_growth_color(v)};white-space:nowrap;font-size:11px;padding:4px 1px;text-align:left;padding-left:4px'>{fp_fmt_pct(v)}</td>")
+                cells.append(f"<td style='color:{fp_growth_color(v)};white-space:nowrap;font-size:11px;padding:4px 1px;text-align:center'>{fp_fmt_pct(v)}</td>")
             body += "<tr>" + "".join(cells) + "</tr>"
 
         growth_html = f"<table class='growth-table' style='font-size:12px;table-layout:fixed;width:100%'>{_cols}" + header + body + "</table>"
@@ -2532,12 +2532,14 @@ def get_brand_attribute(cat, brand, ytd_months):
     if total == 0:
         return "-"
     if otc_sales == 0:
-        return "VDS"
+        return ("VDS", None)
     if vds_sales == 0:
-        return "OTC"
+        return ("OTC", None)
     # Mixed: show OTC percentage
     otc_pct = otc_sales / total * 100
-    return f"OTC({otc_pct:.0f}%)"
+    if otc_pct >= 99.5:
+        return ("OTC", None)
+    return ("OTC", otc_pct)
 
 
 def build_table_html(cat_label, cat, table_brands, current_ym):
@@ -2563,7 +2565,15 @@ def build_table_html(cat_label, cat, table_brands, current_ym):
         html.append(f"<tr class='{' '.join(classes)}'>")
         html.append(td(r["label"], "plain"))
         attr = get_brand_attribute(cat, r["brand"], ytd_months)
-        html.append(td(attr, "plain"))
+        if isinstance(attr, tuple):
+            attr_type, attr_pct = attr
+            if attr_pct is not None:
+                attr_html = f"{attr_type}<br><span style='color:#E53935;font-size:10px'>{attr_pct:.0f}%</span>"
+            else:
+                attr_html = attr_type
+        else:
+            attr_html = str(attr)
+        html.append(td(attr_html, "plain"))
         html.append(td(fmt_num(r["sales_ytd"])))
         for key in ["sales_yoy", "qty_yoy", "price_yoy", "m_sales_yoy", "m_sales_mom"]:
             raw = r[key]
@@ -2742,7 +2752,7 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
             table_brands.append("汤臣倍健")
     # Calculate left chart height to match right side (table + gap + trend chart)
     n_table_rows = len(table_brands) + 3  # +1 category row, +2 header rows
-    table_row_h = 32  # brand-table row height (height 29px + border 2px + padding adjustment)
+    table_row_h = 36  # brand-table row height - increased to match right side
     table_height = n_table_rows * table_row_h
     trend_chart_h = 315  # make_trend_chart height
     streamlit_gap_ba = 18  # gap between table and trend chart
@@ -3303,7 +3313,7 @@ def render_charts(metric_df, cat_label):
         st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax), width='stretch')
     with mid:
         price_names = cfg.get("price", all_names)
-        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=860, label_mode="alternate", cat_label=cat_label)
+        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=880, label_mode="alternate", cat_label=cat_label)
         _mid_fig.update_layout(title=dict(y=0.965))
         st.plotly_chart(_mid_fig, width='stretch')
     with right:
