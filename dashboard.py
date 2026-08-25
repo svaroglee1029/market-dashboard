@@ -1022,10 +1022,22 @@ def get_months(year, month, count=1):
     return sorted(months)
 
 def sales_by_source(source, months, filters):
-    df = df_ind if source == "industry" else sku_df
-    mask = df["year_month"].isin(months)
+    if source == "brand":
+        df = brand_df
+        half_periods = set()
+        for m in months:
+            y = int(m[:4])
+            mo = int(m[4:])
+            half_periods.add(f"{y}H1" if mo <= 6 else f"{y}H2")
+        mask = df["year_month"].isin(half_periods)
+    else:
+        df = df_ind if source == "industry" else sku_df
+        mask = df["year_month"].isin(months)
     for k, v in filters.items():
-        mask = mask & (df[k] == v)
+        if isinstance(v, list):
+            mask = mask & df[k].isin(v)
+        else:
+            mask = mask & (df[k] == v)
     return df.loc[mask, SALES_COL].sum() / 1000
 
 def growth_rate(curr, ly):
@@ -1774,25 +1786,43 @@ def page4(selected_month):
         {"name": "鱼油", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "鱼油"}, "brand_source": "sku", "brand_filter": {"品类": "鱼油", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
         {"name": "氨糖", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "关节护理"}, "brand_source": "sku", "brand_filter": {"品类": "关节护理", "品牌": "健力多"}, "brand_display": "健力多", "has_bar": True},
         {"name": "益生菌", "sub": "", "cat_source": "sku", "cat_filter": {"品类": "益生菌"}, "brand_source": "sku", "brand_filter": {"品类": "益生菌", "品牌": "Life-Space"}, "brand_display": "Life-Space", "has_bar": True},
+        {"name": "维生素C", "sub": "", "cat_source": "brand", "cat_filter": {"品类": "维生素C"}, "brand_source": "brand", "brand_filter": {"品类": "维生素C", "品牌": ["汤臣倍健", "维满C"]}, "brand_display": "汤臣倍健(含维满)", "has_bar": True, "semi_annual": True},
+        {"name": "维生素B", "sub": "", "cat_source": "brand", "cat_filter": {"品类": "维生素B"}, "brand_source": "brand", "brand_filter": {"品类": "维生素B", "品牌": ["汤臣倍健", "维满B"]}, "brand_display": "汤臣倍健(含维满)", "has_bar": True, "semi_annual": True},
+        {"name": "褪黑素", "sub": "", "cat_source": "brand", "cat_filter": {"品类": "褪黑素"}, "brand_source": "brand", "brand_filter": {"品类": "褪黑素", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True, "semi_annual": True},
     ]
 
     table_data = []
     for r in ROWS:
+        is_semi = r.get("semi_annual", False)
         cat_ytd = sales_by_source(r["cat_source"], YTD_MONTHS, r["cat_filter"])
-        cat_l3m = sales_by_source(r["cat_source"], L3M_MONTHS, r["cat_filter"])
-        cat_m4 = sales_by_source(r["cat_source"], [CUR_MONTH_STR], r["cat_filter"])
-        cat_m3 = sales_by_source(r["cat_source"], [PRE_MONTH_STR], r["cat_filter"])
         cat_ytd_ly = sales_by_source(r["cat_source"], YTD_LY_MONTHS, r["cat_filter"])
-        cat_l3m_ly = sales_by_source(r["cat_source"], L3M_LY_MONTHS, r["cat_filter"])
-        cat_m4_ly = sales_by_source(r["cat_source"], [CUR_LY_MONTH_STR], r["cat_filter"])
+        if is_semi:
+            cat_l3m = np.nan
+            cat_m4 = np.nan
+            cat_m3 = np.nan
+            cat_l3m_ly = np.nan
+            cat_m4_ly = np.nan
+        else:
+            cat_l3m = sales_by_source(r["cat_source"], L3M_MONTHS, r["cat_filter"])
+            cat_m4 = sales_by_source(r["cat_source"], [CUR_MONTH_STR], r["cat_filter"])
+            cat_m3 = sales_by_source(r["cat_source"], [PRE_MONTH_STR], r["cat_filter"])
+            cat_l3m_ly = sales_by_source(r["cat_source"], L3M_LY_MONTHS, r["cat_filter"])
+            cat_m4_ly = sales_by_source(r["cat_source"], [CUR_LY_MONTH_STR], r["cat_filter"])
 
         brand_ytd = sales_by_source(r["brand_source"], YTD_MONTHS, r["brand_filter"])
-        brand_l3m = sales_by_source(r["brand_source"], L3M_MONTHS, r["brand_filter"])
-        brand_m4 = sales_by_source(r["brand_source"], [CUR_MONTH_STR], r["brand_filter"])
-        brand_m3 = sales_by_source(r["brand_source"], [PRE_MONTH_STR], r["brand_filter"])
         brand_ytd_ly = sales_by_source(r["brand_source"], YTD_LY_MONTHS, r["brand_filter"])
-        brand_l3m_ly = sales_by_source(r["brand_source"], L3M_LY_MONTHS, r["brand_filter"])
-        brand_m4_ly = sales_by_source(r["brand_source"], [CUR_LY_MONTH_STR], r["brand_filter"])
+        if is_semi:
+            brand_l3m = np.nan
+            brand_m4 = np.nan
+            brand_m3 = np.nan
+            brand_l3m_ly = np.nan
+            brand_m4_ly = np.nan
+        else:
+            brand_l3m = sales_by_source(r["brand_source"], L3M_MONTHS, r["brand_filter"])
+            brand_m4 = sales_by_source(r["brand_source"], [CUR_MONTH_STR], r["brand_filter"])
+            brand_m3 = sales_by_source(r["brand_source"], [PRE_MONTH_STR], r["brand_filter"])
+            brand_l3m_ly = sales_by_source(r["brand_source"], L3M_LY_MONTHS, r["brand_filter"])
+            brand_m4_ly = sales_by_source(r["brand_source"], [CUR_LY_MONTH_STR], r["brand_filter"])
 
         share_ytd = (brand_ytd / cat_ytd * 100) if cat_ytd > 0 else np.nan
         share_l3m = (brand_l3m / cat_l3m * 100) if cat_l3m > 0 else np.nan
