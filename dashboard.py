@@ -1791,6 +1791,10 @@ def page4(selected_month):
         {"name": "褪黑素", "sub": "", "cat_source": "brand", "cat_filter": {"品类": "褪黑素"}, "brand_source": "brand", "brand_filter": {"品类": "褪黑素", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True, "semi_annual": True},
     ]
 
+    # Semi-annual categories only show at half-year boundaries (June or December)
+    is_half_year = CUR_MONTH in (6, 12)
+    ROWS = [r for r in ROWS if not r.get('semi_annual', False) or is_half_year]
+
     table_data = []
     for r in ROWS:
         is_semi = r.get("semi_annual", False)
