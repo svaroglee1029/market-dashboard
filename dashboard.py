@@ -635,7 +635,7 @@ st.markdown("""
     .brand-table th, .brand-table td { border: 1px solid #D6DDE8; padding: 6px 4px; text-align: center; vertical-align: middle !important; white-space: nowrap; line-height: 1.35; height: 29px; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .brand-table th { background: #B0B0B0; color: #111827; font-weight: 800; }
     .brand-table .brand-col { width: 88px; }
-    .brand-table .attr-col { width: 50px; font-size: 12px; }
+    .brand-table .attr-col { width: 70px; font-size: 12px; }
     .brand-table .group-head { background: #B0B0B0; font-size: 13px; font-weight: 800; }
     .brand-table .sub-head { background: #B0B0B0; font-size: 12px; }
     .brand-table .cat-row td { background: #F2F2F2; font-weight: 800; }
@@ -2256,7 +2256,7 @@ def render_first_page(selected_cat, selected_month, display_months):
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.0, 1.0]),
+            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.12, 1.0]),
             uniformtext=dict(minsize=13, mode="show"),
             yaxis=dict(
                 showgrid=False, showticklabels=False, zeroline=False,
@@ -2315,7 +2315,7 @@ def render_first_page(selected_cat, selected_month, display_months):
         for gr in growth_rows:
             cells = [f"<td style='white-space:nowrap;font-size:11px;padding:4px 2px'>{gr['label']}</td>"]
             for v in gr["values"]:
-                cells.append(f"<td style='color:{fp_growth_color(v)};white-space:nowrap;font-size:11px;padding:4px 1px'>{fp_fmt_pct(v)}</td>")
+                cells.append(f"<td style='color:{fp_growth_color(v)};white-space:nowrap;font-size:11px;padding:4px 1px;text-align:left;padding-left:4px'>{fp_fmt_pct(v)}</td>")
             body += "<tr>" + "".join(cells) + "</tr>"
 
         growth_html = f"<table class='growth-table' style='font-size:12px;table-layout:fixed;width:100%'>{_cols}" + header + body + "</table>"
@@ -2742,7 +2742,7 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
             table_brands.append("汤臣倍健")
     # Calculate left chart height to match right side (table + gap + trend chart)
     n_table_rows = len(table_brands) + 3  # +1 category row, +2 header rows
-    table_row_h = 30  # brand-table row height (padding 6px*2 + line-height ~18px + border)
+    table_row_h = 32  # brand-table row height (height 29px + border 2px + padding adjustment)
     table_height = n_table_rows * table_row_h
     trend_chart_h = 315  # make_trend_chart height
     streamlit_gap_ba = 18  # gap between table and trend chart
@@ -3299,17 +3299,19 @@ def render_charts(metric_df, cat_label):
         bar_names = cfg.get("bar", all_names)
         share_ymax = SHARE_YMAX.get(cat_label, 100)
         share_dec = SHARE_DECIMALS.get(cat_label, 0)
-        st.plotly_chart(make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=423), width='stretch')
-        st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=423, y_max=share_ymax), width='stretch')
+        st.plotly_chart(make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=437), width='stretch')
+        st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax), width='stretch')
     with mid:
         price_names = cfg.get("price", all_names)
-        st.plotly_chart(make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=860, label_mode="alternate", cat_label=cat_label), width='stretch')
+        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=860, label_mode="alternate", cat_label=cat_label)
+        _mid_fig.update_layout(title=dict(y=0.965))
+        st.plotly_chart(_mid_fig, width='stretch')
     with right:
         dist_names = cfg.get("dist", all_names)
         power_names = cfg.get("power", dist_names)
-        st.plotly_chart(make_line_chart(metric_df, "dist", "动销铺货率（%）", dist_names, colors, decimals=0, height=413, label_mode="alternate", cat_label=cat_label), width='stretch')
-        st.plotly_chart(make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=413, label_mode="alternate", cat_label=cat_label), width='stretch')
-        st.markdown("<p style='font-size:11px;color:#E53935;font-style:italic;margin-top:2px'>*单点卖力 = 销售额份额 / 动销铺货率 * 100</p>", unsafe_allow_html=True)
+        st.plotly_chart(make_line_chart(metric_df, "dist", "动销铺货率（%）", dist_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label), width='stretch')
+        st.plotly_chart(make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label), width='stretch')
+        st.markdown("<p style='font-size:11px;color:#E53935;font-style:italic;margin-top:8px'>*单点卖力 = 销售额份额 / 动销铺货率 * 100</p>", unsafe_allow_html=True)
     with left:
         st.markdown("<p style='font-size:11px;color:#999;margin-top:2px'>&nbsp;</p>", unsafe_allow_html=True)
     with mid:
