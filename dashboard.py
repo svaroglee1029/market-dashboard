@@ -2095,11 +2095,11 @@ def render_first_page(selected_cat, selected_month, display_months):
     is_kids_ca = (selected_cat == "儿童钙")
 
     if is_kids_ca:
-        right_chart_height = 440
+        right_chart_height = 470
     elif has_otc:
-        right_chart_height = 420
+        right_chart_height = 450
     else:
-        right_chart_height = 440
+        right_chart_height = 470
     # Calculate left content height to match right side (chart + gap + growth table)
     n_growth_data_rows = (4 if has_otc else 2)
     n_growth_total_rows = n_growth_data_rows + 1  # +1 for header
@@ -2250,13 +2250,13 @@ def render_first_page(selected_cat, selected_month, display_months):
         ))
         fig.update_layout(
             barmode="stack",
-            bargap=0.25,
+            bargap=0.15,
             height=right_chart_height,
-            margin=dict(t=42, b=22, l=10, r=10),
+            margin=dict(t=42, b=55, l=10, r=10),
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-            xaxis=dict(showgrid=False, tickfont=dict(size=11), tickangle=-45, automargin=False, domain=[0.12, 0.98]),
+            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.0, 1.0]),
             uniformtext=dict(minsize=13, mode="show"),
             yaxis=dict(
                 showgrid=False, showticklabels=False, zeroline=False,
