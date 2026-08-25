@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # 市场分析综合仪表盘 - 合并版
 # Tab 1: 全国药店VDS市场表现 (page1-page4)
 # Tab 2: 重点品类汤臣市场表现 (render_first_page/render_brand_analysis/render_sku_analysis)
@@ -625,7 +625,7 @@ st.markdown("""
     div[data-testid="stPlotlyChart"] {
         margin-top: 0 !important;
         margin-bottom: 0 !important;
-        margin-right: -8px !important;
+        margin-right: -46px !important;
     }
     /* Tighten gap between consecutive plotly charts only (not text/table elements) */
     div[data-testid="stColumn"] > div[data-testid="stVerticalBlock"] > div[data-testid="stPlotlyChart"] + div[data-testid="stPlotlyChart"] {
