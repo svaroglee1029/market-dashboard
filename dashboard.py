@@ -2078,7 +2078,7 @@ def render_first_page(selected_cat, selected_month, display_months):
     <b>口径：</b>当前月 = {CUR_M_STR}（{ym_lab(CUR_M_STR)}）&nbsp;|&nbsp;
     YTD = {CUR_YEAR}年1-{CUR_MONTH}月累计 &nbsp;|&nbsp;
     同比 = 本期 / 去年同期 - 1 &nbsp;|&nbsp;
-    销售额单位：百万元；销售量单位：百盒；单价单位：元/盒
+    销售额单位：百万元
     </div>
     """, unsafe_allow_html=True)
     render_conclusion(f"fp_{selected_cat}", selected_month)
@@ -2102,9 +2102,9 @@ def render_first_page(selected_cat, selected_month, display_months):
     # Calculate left content height to match right side (chart + gap + growth table)
     n_growth_data_rows = (4 if has_otc else 2)
     n_growth_total_rows = n_growth_data_rows + 1  # +1 for header
-    growth_row_h = 22  # estimated px per growth table row (font ~11px + padding 8px + border 1px)
+    growth_row_h = 26  # estimated px per growth table row (font 12px + padding 10px + border 2px)
     growth_table_est = n_growth_total_rows * growth_row_h
-    streamlit_gap = 14  # vertical gap between plotly chart and markdown table
+    streamlit_gap = 18  # vertical gap between plotly chart and markdown table
     left_content_height = right_chart_height + streamlit_gap + growth_table_est
 
     cL, cR = st.columns([0.49, 0.51], gap="medium")
@@ -2700,7 +2700,7 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
         <div class="note-bar">
         <b>口径：</b>数据来自 <b>test.sku</b>；当前月 = {selected_month}（{ym_lab(selected_month)}）；
         YTD = 当年1月至当前月；MAT = 含当期向上滚动12个月；L3M = 含当期过去3个月；
-        销售额单位由千元换算为百万元，销售量单位为百盒，平均单价 = 销售额 / 销售量 × 10。
+        销售额单位由千元换算为百万元，平均单价 = 销售额 / 销售量 × 10。
         </div>
         """,
         unsafe_allow_html=True,
@@ -2716,7 +2716,13 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
     else:
         if "汤臣倍健" not in table_brands and ba_calc_agg(ytd_months, cat=source_cat, brand="汤臣倍健")["sales"] > 0:
             table_brands.append("汤臣倍健")
-    left_chart_height = 760 + max(0, len(table_brands) - 10) * 28
+    # Calculate left chart height to match right side (table + gap + trend chart)
+    n_table_rows = len(table_brands) + 3  # +1 category row, +2 header rows
+    table_row_h = 30  # brand-table row height (padding 6px*2 + line-height ~18px + border)
+    table_height = n_table_rows * table_row_h
+    trend_chart_h = 315  # make_trend_chart height
+    streamlit_gap_ba = 18  # gap between table and trend chart
+    left_chart_height = table_height + streamlit_gap_ba + trend_chart_h
 
     left_col, right_col = st.columns([0.28, 0.72], gap="medium")
     with left_col:
@@ -3269,16 +3275,16 @@ def render_charts(metric_df, cat_label):
         bar_names = cfg.get("bar", all_names)
         share_ymax = SHARE_YMAX.get(cat_label, 100)
         share_dec = SHARE_DECIMALS.get(cat_label, 0)
-        st.plotly_chart(make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=420), width='stretch')
-        st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=420, y_max=share_ymax), width='stretch')
+        st.plotly_chart(make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=423), width='stretch')
+        st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=423, y_max=share_ymax), width='stretch')
     with mid:
         price_names = cfg.get("price", all_names)
         st.plotly_chart(make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=860, label_mode="alternate", cat_label=cat_label), width='stretch')
     with right:
         dist_names = cfg.get("dist", all_names)
         power_names = cfg.get("power", dist_names)
-        st.plotly_chart(make_line_chart(metric_df, "dist", "动销铺货率（%）", dist_names, colors, decimals=0, height=420, label_mode="alternate", cat_label=cat_label), width='stretch')
-        st.plotly_chart(make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=420, label_mode="alternate", cat_label=cat_label), width='stretch')
+        st.plotly_chart(make_line_chart(metric_df, "dist", "动销铺货率（%）", dist_names, colors, decimals=0, height=413, label_mode="alternate", cat_label=cat_label), width='stretch')
+        st.plotly_chart(make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=413, label_mode="alternate", cat_label=cat_label), width='stretch')
         st.markdown("<p style='font-size:11px;color:#E53935;font-style:italic;margin-top:2px'>*单点卖力 = 销售额份额 / 动销铺货率 * 100</p>", unsafe_allow_html=True)
     with left:
         st.markdown("<p style='font-size:11px;color:#999;margin-top:2px'>&nbsp;</p>", unsafe_allow_html=True)
@@ -3291,7 +3297,7 @@ def render_sku_analysis(selected_cat, selected_month, display_months):
     config = SA_CATEGORY_CONFIG[selected_cat]
 
     st.markdown(
-        f"<div class='note-bar'><b>数据来源：</b>test.sku、test.brand、test.brand_distribution_rate；当前月 = {selected_month}（{ym_lab(selected_month)}）</div>",
+        f"<div class='note-bar'><b>口径：</b>当前月 = {selected_month}（{ym_lab(selected_month)}）&nbsp;|&nbsp;YTD = 当年1月至当前月累计 &nbsp;|&nbsp; 同比 = 本期/去年同期-1</div>",
         unsafe_allow_html=True,
     )
     render_conclusion(f"sa_{selected_cat}", selected_month)
@@ -3303,7 +3309,7 @@ def render_sku_analysis(selected_cat, selected_month, display_months):
         metric_df = build_metrics_cached(config["cat"], row_keys_json, months_json)
         st.markdown(f"<h3 style='text-align:center;margin:12px 0 18px;color:#111'>{TITLE_MAP.get(selected_cat, selected_cat)}</h3>", unsafe_allow_html=True)
         render_charts(metric_df, selected_cat)
-        st.markdown("<p style='font-size:12px;color:#666'><i>数据源：中康全国零售药店</i></p>", unsafe_allow_html=True)
+
 
 
 # ====================== 主入口：顶部标题 + 双 Tab 导航 ======================
