@@ -635,6 +635,7 @@ st.markdown("""
     .brand-table th, .brand-table td { border: 1px solid #D6DDE8; padding: 6px 4px; text-align: center; vertical-align: middle !important; white-space: nowrap; line-height: 1.35; height: 29px; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .brand-table th { background: #B0B0B0; color: #111827; font-weight: 800; }
     .brand-table .brand-col { width: 88px; }
+    .brand-table .attr-col { width: 50px; font-size: 12px; }
     .brand-table .group-head { background: #B0B0B0; font-size: 13px; font-weight: 800; }
     .brand-table .sub-head { background: #B0B0B0; font-size: 12px; }
     .brand-table .cat-row td { background: #F2F2F2; font-weight: 800; }
@@ -1945,13 +1946,13 @@ def page4(selected_month):
 # ====================== Part B Configs: FP_CATEGORY_CONFIG, FP_COLORS ======================
 FP_CATEGORY_CONFIG = {
     "蛋白粉": {"cat": "蛋白粉", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
-    "成人钙": {"cat": "钙-成人", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
-    "儿童钙": {"cat": "钙-儿童", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
-    "成人多维": {"cat": "多维-成人", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
-    "儿童多维": {"cat": "多维-儿童", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
+    "成人钙": {"cat": "钙-成人", "brand": "汤臣倍健", "has_otc": True, "brand_label": "汤臣倍健"},
+    "儿童钙": {"cat": "钙-儿童", "brand": "汤臣倍健", "has_otc": True, "brand_label": "汤臣倍健"},
+    "成人多维": {"cat": "多维-成人", "brand": "汤臣倍健", "has_otc": True, "brand_label": "汤臣倍健"},
+    "儿童多维": {"cat": "多维-儿童", "brand": "汤臣倍健", "has_otc": True, "brand_label": "汤臣倍健"},
     "鱼油": {"cat": "鱼油", "brand": "汤臣倍健", "has_otc": False, "brand_label": "汤臣倍健"},
-    "氨糖": {"cat": "关节护理", "brand": "健力多", "has_otc": False, "brand_label": "健力多"},
-    "益生菌": {"cat": "益生菌", "brand": "Life-Space", "has_otc": False, "brand_label": "Life-Space"},
+    "氨糖": {"cat": "关节护理", "brand": "健力多", "has_otc": True, "brand_label": "健力多"},
+    "益生菌": {"cat": "益生菌", "brand": "Life-Space", "has_otc": True, "brand_label": "Life-Space"},
 }
 
 FP_COLORS = {
@@ -2519,14 +2520,35 @@ def row_metrics(label, cat, brand, current_ym):
     }
 
 
+def get_brand_attribute(cat, brand, ytd_months):
+    """Get brand attribute (VDS/OTC/mixed) based on 处方性质 distribution."""
+    if brand is None:
+        return "-"
+    mask = sku_df["year_month"].isin(ytd_months) & sku_df["品类"].eq(cat) & sku_df["品牌"].isin(brand_filter_values(brand))
+    sub = sku_df.loc[mask]
+    otc_sales = sub[sub["处方性质"] == "OTC"]["sales_m"].sum()
+    vds_sales = sub[sub["处方性质"] != "OTC"]["sales_m"].sum()
+    total = otc_sales + vds_sales
+    if total == 0:
+        return "-"
+    if otc_sales == 0:
+        return "VDS"
+    if vds_sales == 0:
+        return "OTC"
+    # Mixed: show OTC percentage
+    otc_pct = otc_sales / total * 100
+    return f"OTC({otc_pct:.0f}%)"
+
+
 def build_table_html(cat_label, cat, table_brands, current_ym):
     rows = [row_metrics(cat_label, cat, None, current_ym)]
     rows.extend([row_metrics(brand_name(b), cat, b, current_ym) for b in table_brands])
     html = [
         "<table class='brand-table'>",
-        "<tr><th rowspan='2' class='brand-col'>TOP品牌</th><th colspan='1' class='group-head'>销售额<br>百万元</th><th colspan='3' class='group-head'>同比增长率</th><th colspan='2' class='group-head'>销售额增长率</th><th colspan='5' class='group-head'>市场份额(%)</th></tr>",
+        "<tr><th rowspan='2' class='brand-col'>TOP品牌</th><th rowspan='2' class='attr-col'>属性</th><th colspan='1' class='group-head'>销售额<br>百万元</th><th colspan='3' class='group-head'>同比增长率</th><th colspan='2' class='group-head'>销售额增长率</th><th colspan='5' class='group-head'>市场份额(%)</th></tr>",
         f"<tr><th class='sub-head'>YTD</th><th class='sub-head'>销售额</th><th class='sub-head'>销售量</th><th class='sub-head'>单盒均价</th><th class='sub-head'>{ym_lab(current_ym)}<br>同比</th><th class='sub-head'>{ym_lab(current_ym)}<br>环比</th><th class='sub-head'>{ym_lab(current_ym)}</th><th class='sub-head'>同比</th><th class='sub-head'>环比</th><th class='sub-head'>YTD</th><th class='sub-head'>同比</th></tr>",
     ]
+    ytd_months = period_months("YTD", current_ym)
     for idx, r in enumerate(rows):
         classes = []
         if idx == 0:
@@ -2540,6 +2562,8 @@ def build_table_html(cat_label, cat, table_brands, current_ym):
             classes.append("share-growth-row")
         html.append(f"<tr class='{' '.join(classes)}'>")
         html.append(td(r["label"], "plain"))
+        attr = get_brand_attribute(cat, r["brand"], ytd_months)
+        html.append(td(attr, "plain"))
         html.append(td(fmt_num(r["sales_ytd"])))
         for key in ["sales_yoy", "qty_yoy", "price_yoy", "m_sales_yoy", "m_sales_mom"]:
             raw = r[key]
@@ -2700,7 +2724,7 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
         <div class="note-bar">
         <b>口径：</b>数据来自 <b>test.sku</b>；当前月 = {selected_month}（{ym_lab(selected_month)}）；
         YTD = 当年1月至当前月；MAT = 含当期向上滚动12个月；L3M = 含当期过去3个月；
-        销售额单位由千元换算为百万元，平均单价 = 销售额 / 销售量 × 10。
+        销售额单位由千元换算为百万元。
         </div>
         """,
         unsafe_allow_html=True,
