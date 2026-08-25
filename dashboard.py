@@ -2250,7 +2250,7 @@ def render_first_page(selected_cat, selected_month, display_months):
         ))
         fig.update_layout(
             barmode="stack",
-            bargap=0.15,
+            bargap=0.0,
             height=right_chart_height,
             margin=dict(t=42, b=55, l=0, r=0),
             paper_bgcolor="white",
@@ -2535,11 +2535,17 @@ def get_brand_attribute(cat, brand, ytd_months):
         return ("VDS", None)
     if vds_sales == 0:
         return ("OTC", None)
-    # Mixed: show OTC percentage
+    # Mixed: show the LARGER attribute with its percentage
     otc_pct = otc_sales / total * 100
+    vds_pct = vds_sales / total * 100
     if otc_pct >= 99.5:
         return ("OTC", None)
-    return ("OTC", otc_pct)
+    if vds_pct >= 99.5:
+        return ("VDS", None)
+    if otc_pct >= vds_pct:
+        return ("OTC", otc_pct)
+    else:
+        return ("VDS", vds_pct)
 
 
 def build_table_html(cat_label, cat, table_brands, current_ym):
@@ -2568,7 +2574,7 @@ def build_table_html(cat_label, cat, table_brands, current_ym):
         if isinstance(attr, tuple):
             attr_type, attr_pct = attr
             if attr_pct is not None:
-                attr_html = f"{attr_type}<br><span style='color:#E53935;font-size:10px'>{attr_pct:.0f}%</span>"
+                attr_html = f"{attr_type} <span style='color:#E53935;font-size:9px'>{attr_pct:.0f}%</span>"
             else:
                 attr_html = attr_type
         else:
@@ -2752,7 +2758,7 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
             table_brands.append("汤臣倍健")
     # Calculate left chart height to match right side (table + gap + trend chart)
     n_table_rows = len(table_brands) + 3  # +1 category row, +2 header rows
-    table_row_h = 36  # brand-table row height - increased to match right side
+    table_row_h = 30  # brand-table row height - reduced to align with trend chart bottom
     table_height = n_table_rows * table_row_h
     trend_chart_h = 315  # make_trend_chart height
     streamlit_gap_ba = 18  # gap between table and trend chart
@@ -3313,7 +3319,7 @@ def render_charts(metric_df, cat_label):
         st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax), width='stretch')
     with mid:
         price_names = cfg.get("price", all_names)
-        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=880, label_mode="alternate", cat_label=cat_label)
+        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=900, label_mode="alternate", cat_label=cat_label)
         _mid_fig.update_layout(title=dict(y=0.965))
         st.plotly_chart(_mid_fig, width='stretch')
     with right:
