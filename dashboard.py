@@ -2252,7 +2252,7 @@ def render_first_page(selected_cat, selected_month, display_months):
             barmode="stack",
             bargap=0.15,
             height=right_chart_height,
-            margin=dict(t=42, b=55, l=0, r=0),
+            margin=dict(t=42, b=55, l=0, r=-10),
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
