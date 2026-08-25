@@ -2256,7 +2256,7 @@ def render_first_page(selected_cat, selected_month, display_months):
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.06, 1.005]),
+            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.05, 1.0]),
             uniformtext=dict(minsize=13, mode="show"),
             yaxis=dict(
                 showgrid=False, showticklabels=False, zeroline=False,
