@@ -2256,7 +2256,7 @@ def render_first_page(selected_cat, selected_month, display_months):
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.0, 1.0]),
+            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.08, 1.0]),
             uniformtext=dict(minsize=13, mode="show"),
             yaxis=dict(
                 showgrid=False, showticklabels=False, zeroline=False,
@@ -2307,7 +2307,7 @@ def render_first_page(selected_cat, selected_month, display_months):
             "values": [fp_calc_yoy(r["brand"], r["brand_ly"]) for _, r in monthly_df.iterrows()]
         })
         n_months = len(display_months)
-        label_w = 12  # percentage for label column
+        label_w = 8  # percentage for label column (reduced for alignment)
         data_w = round((100 - label_w) / n_months, 2) if n_months > 0 else 0
         _cols = f"<colgroup><col style='width:{label_w}%'>" + "".join(f"<col style='width:{data_w}%'>" for _ in range(n_months)) + "</colgroup>"
         header = "<tr><th style='white-space:nowrap;font-size:12px'>增长率</th>" + "".join([f"<th style='font-size:10px;white-space:nowrap;padding:4px 1px'>{ym_lab(m)}</th>" for m in display_months]) + "</tr>"
