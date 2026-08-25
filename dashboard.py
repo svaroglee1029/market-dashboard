@@ -625,7 +625,7 @@ st.markdown("""
     div[data-testid="stPlotlyChart"] {
         margin-top: 0 !important;
         margin-bottom: 0 !important;
-        margin-right: -46px !important;
+        margin-right: -8px !important;
     }
     /* Tighten gap between consecutive plotly charts only (not text/table elements) */
     div[data-testid="stColumn"] > div[data-testid="stVerticalBlock"] > div[data-testid="stPlotlyChart"] + div[data-testid="stPlotlyChart"] {
@@ -2251,7 +2251,7 @@ def render_first_page(selected_cat, selected_month, display_months):
         ))
         fig.update_layout(
             barmode="stack",
-            bargap=0.15,
+            bargap=0.20,
             height=right_chart_height,
             margin=dict(t=42, b=55, l=0, r=0),
             paper_bgcolor="white",
