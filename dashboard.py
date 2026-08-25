@@ -2250,7 +2250,7 @@ def render_first_page(selected_cat, selected_month, display_months):
         ))
         fig.update_layout(
             barmode="stack",
-            bargap=0.0,
+            bargap=0.1,
             height=right_chart_height,
             margin=dict(t=42, b=55, l=0, r=0),
             paper_bgcolor="white",
