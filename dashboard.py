@@ -2250,13 +2250,13 @@ def render_first_page(selected_cat, selected_month, display_months):
         ))
         fig.update_layout(
             barmode="stack",
-            bargap=0.1,
+            bargap=0.15,
             height=right_chart_height,
             margin=dict(t=42, b=55, l=0, r=0),
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.08, 1.0]),
+            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.06, 1.0]),
             uniformtext=dict(minsize=13, mode="show"),
             yaxis=dict(
                 showgrid=False, showticklabels=False, zeroline=False,
