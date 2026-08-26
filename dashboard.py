@@ -2407,20 +2407,20 @@ def render_first_page(selected_cat, selected_month, display_months):
         # 下方增长率表
         growth_rows = []
         growth_rows.append({
-            "label": f"{selected_cat}同比",
+            "label": "品类同比",
             "values": [fp_calc_yoy(r["cat"], r["cat_ly"]) for _, r in monthly_df.iterrows()]
         })
         if has_otc:
             growth_rows.append({
-                "label": "OTC同比",
+                "label": "OTC",
                 "values": [fp_calc_yoy(r["otc"], r["otc_ly"]) for _, r in monthly_df.iterrows()]
             })
             growth_rows.append({
-                "label": "VDS同比",
+                "label": "VDS",
                 "values": [fp_calc_yoy(r["vds"], r["vds_ly"]) for _, r in monthly_df.iterrows()]
             })
         growth_rows.append({
-            "label": f"{config['brand_label']}同比",
+            "label": "汤臣同比",
             "values": [fp_calc_yoy(r["brand"], r["brand_ly"]) for _, r in monthly_df.iterrows()]
         })
         n_months = len(display_months)
@@ -2430,7 +2430,8 @@ def render_first_page(selected_cat, selected_month, display_months):
         header = "<tr><th style='white-space:nowrap;font-size:12px'>增长率</th>" + "".join([f"<th style='font-size:10px;white-space:nowrap;padding:4px 1px'>{ym_lab(m)}</th>" for m in display_months]) + "</tr>"
         body = ""
         for gr in growth_rows:
-            cells = [f"<td style='white-space:nowrap;font-size:11px;padding:4px 2px'>{gr['label']}</td>"]
+            _align = "text-align:right" if gr['label'] in ("OTC", "VDS") else "text-align:left"
+            cells = [f"<td style='white-space:nowrap;font-size:11px;padding:4px 2px;{_align}'>{gr['label']}</td>"]
             for v in gr["values"]:
                 cells.append(f"<td style='color:{fp_growth_color(v)};white-space:nowrap;font-size:11px;padding:4px 1px;text-align:center'>{fp_fmt_pct(v)}</td>")
             body += "<tr>" + "".join(cells) + "</tr>"
@@ -3050,51 +3051,79 @@ CHART_NAMES = {
         },
     },
     "成人钙": {
-        "bar":    ["200粒x2", "120粒", "焕动力120粒", "其他"],
+        "bar":    ["其他", "200粒x2", "120粒", "焕动力120粒"],
         "price":  ["200粒x2", "120粒", "焕动力120粒", "钙尔奇D600 60片"],
         "dist":   ["200粒x2", "120粒", "焕动力120粒", "汤臣钙DK整体", "钙尔奇D600 60片"],
         "power":  ["200粒x2", "120粒", "焕动力120粒", "汤臣钙DK整体", "钙尔奇D600 60片"],
-        "bar_colors": {"200粒x2": "#4472C4", "120粒": "#FFC000", "焕动力120粒": "#ED7D31", "其他": "#A6A6A6"},
+        "bar_colors": {
+            "200粒x2": "#4472C4", "120粒": "#FFC000", "焕动力120粒": "#92D050", "其他": "#A6A6A6",
+            "汤臣钙DK整体": "#7030A0", "钙尔奇D600 60片": "#7F6000",
+        },
     },
     "儿童钙": {
         "bar":    ["牛初乳60片*2", "钙铁锌60片", "钙镁90片", "液体钙12袋"],
         "price":  ["牛初乳60片*2", "钙镁90片", "液体钙12袋", "钙铁锌60片", "锌钙特葡萄糖酸钙锌口服液24袋"],
         "dist":   ["牛初乳60片*2", "钙镁90片", "液体钙12袋", "钙铁锌60片", "锌钙特葡萄糖酸钙锌口服液24袋"],
         "power":  ["牛初乳60片*2", "钙镁90片", "液体钙12袋", "钙铁锌60片", "锌钙特葡萄糖酸钙锌口服液24袋"],
-        "bar_colors": {"牛初乳60片*2": "#9C6ADE", "钙铁锌60片": "#FFC000", "钙镁90片": "#ED7D31", "液体钙12袋": "#92D050"},
+        "bar_colors": {
+            "牛初乳60片*2": "#4472C4", "钙铁锌60片": "#FFC000", "钙镁90片": "#5B9BD5", "液体钙12袋": "#92D050",
+            "锌钙特葡萄糖酸钙锌口服液24袋": "#7F6000",
+        },
     },
     "成人多维": {
         "bar":    ["女维120片", "女维60片", "男维120片", "男维60片"],
         "price":  ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
         "dist":   ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
         "power":  ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
+        "bar_colors": {
+            "女维120片": "#4472C4", "女维60片": "#5B9BD5",
+            "男维120片": "#FFC000", "男维60片": "#FFD966",
+            "银善存91sx2p": "#7F6000", "善存多维元素片(29)91sx2p": "#BF9000",
+        },
     },
     "儿童多维": {
         "bar":    ["汤臣倍健多维咀嚼片60片"],
         "price":  ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "dist":   ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "power":  ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
-        "bar_colors": {"汤臣倍健多维咀嚼片60片": "#4472C4"},
+        "bar_colors": {
+            "汤臣倍健多维咀嚼片60片": "#4472C4",
+            "仁合堂药业五维赖氨酸口服液12袋": "#7F6000",
+            "草仙药业五维赖氨酸片36片": "#BF9000",
+            "小施尔康多维咀嚼片(10)30片": "#A6A6A6",
+        },
     },
     "鱼油": {
         "bar":    ["200粒", "100粒", "晶纯60粒"],
         "price":  ["200粒", "100粒", "晶纯60粒"],
         "dist":   ["200粒", "100粒", "晶纯60粒", "汤臣鱼油总体"],
         "power":  ["200粒", "100粒", "晶纯60粒", "汤臣鱼油总体"],
-        "bar_colors": {"200粒": "#4472C4", "100粒": "#FFC000", "晶纯60粒": "#ED7D31"},
+        "bar_colors": {
+            "200粒": "#4472C4", "100粒": "#FFC000", "晶纯60粒": "#92D050",
+            "汤臣鱼油总体": "#7030A0",
+        },
     },
     "氨糖": {
         "bar":    ["旧品", "金装", "白金", "OTC"],
         "price":  ["金装280片礼盒装", "白金150片", "OTC60粒", "蓝氨糖120片"],
         "dist":   ["旧品", "金装", "白金", "OTC"],
         "power":  ["旧品", "金装", "白金", "OTC"],
+        "bar_colors": {
+            "旧品": "#A6A6A6", "金装": "#4472C4", "白金": "#FFC000", "OTC": "#92D050",
+            "金装280片礼盒装": "#5B9BD5", "白金150片": "#FFD966",
+            "OTC60粒": "#00B050", "蓝氨糖120片": "#A6A6A6",
+        },
     },
     "益生菌": {
-        "bar":    ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "其他"],
+        "bar":    ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "其他", "B420 20袋"],
         "price":  ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益君康30片"],
         "dist":   ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益倍适总体", "益君康30片"],
         "power":  ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益倍适总体", "益君康30片"],
-        "bar_colors": {"蓝帽20袋": "#4472C4", "蓝帽48袋": "#FFC000", "畅护10袋": "#ED7D31", "B420 20袋": "#92D050", "其他": "#A6A6A6"},
+        "bar_colors": {
+            "蓝帽20袋": "#4472C4", "蓝帽48袋": "#5B9BD5", "畅护10袋": "#FFC000",
+            "B420 20袋": "#92D050", "其他": "#A6A6A6",
+            "益倍适总体": "#7030A0", "益君康30片": "#7F6000",
+        },
     },
 }
 
@@ -3345,15 +3374,17 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                 val = float(last_v.iloc[0]); base = float(prev_v.iloc[0])
                 diff = val - base
                 y_center = y_cursor + val / 2
-                # Stagger annotations vertically to avoid overlap for small segments
-                _hb_yshift = 0
-                if val < (ymax * 0.08):
-                    _hb_yshift = 10 if idx % 2 == 0 else -10
-                fig.add_annotation(
-                    x=last_label, y=y_center, text=f"{diff:+.1f}", showarrow=False,
-                    xshift=36, yshift=_hb_yshift,
-                    font=dict(size=15, color="#00A85A" if diff >= 0 else "#E53935", family="Microsoft YaHei", weight="bold"),
-                )
+                # Skip 环比 annotation if share is too small (<1%)
+                if val >= 1.0:
+                    # Stagger annotations vertically to avoid overlap for small segments
+                    _hb_yshift = 0
+                    if val < (ymax * 0.08):
+                        _hb_yshift = 10 if idx % 2 == 0 else -10
+                    fig.add_annotation(
+                        x=last_label, y=y_center, text=f"{diff:+.1f}", showarrow=False,
+                        xshift=36, yshift=_hb_yshift,
+                        font=dict(size=15, color="#00A85A" if diff >= 0 else "#E53935", family="Microsoft YaHei", weight="bold"),
+                    )
                 y_cursor += val
             else:
                 y_cursor += float(last_v.iloc[0]) if last_v.notna().any() else 0
