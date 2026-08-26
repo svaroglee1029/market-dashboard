@@ -2746,7 +2746,7 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
                 text=[fmt_share(ly_val) if show_text else "", fmt_share(ytd_val) if show_text else ""],
                 textposition="inside",
                 insidetextanchor="middle",
-                textfont=dict(color="white", size=13 if show_text else 9, family="Arial, sans-serif"),
+                textfont=dict(color="white", size=14 if show_text else 9, family="Arial, sans-serif"),
                 hovertemplate="%{fullData.name}<br>%{x}份额：%{y:.3f}%<extra></extra>",
                 showlegend=False,
             )
@@ -2798,7 +2798,7 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
         paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(family="Microsoft YaHei", size=14),
-        xaxis=dict(showgrid=False, tickfont=dict(size=16)),
+        xaxis=dict(showgrid=False, tickfont=dict(size=10)),
         yaxis=dict(showgrid=False, showticklabels=False, range=[0, max(total_ly, total_ytd) + 3]),
         showlegend=False,
     )
@@ -3287,13 +3287,13 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
         for v in vals:
             if v <= 0:
                 text_labels.append("")
-                _bar_font_sizes.append(10)
+                _bar_font_sizes.append(12)
             elif v < 1:
                 text_labels.append(f"{v:.{text_decimals}f}")
-                _bar_font_sizes.append(10)
+                _bar_font_sizes.append(12)
             else:
                 text_labels.append(f"{v:.{text_decimals}f}")
-                _bar_font_sizes.append(13 if v >= 3 else 11)
+                _bar_font_sizes.append(12)
         fig.add_bar(
             x=labels, y=vals, name=name, marker_color=c,
             text=text_labels,
