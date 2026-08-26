@@ -171,6 +171,28 @@ def ym_lab(ym):
     return f"{str(ym)[2:4]}M{int(str(ym)[4:])}"
 
 
+def period_labels(ym_str):
+    """Return (ytd_label, ly_label, l3m_label, yy, lyy) for a given YYYYMM string.
+    At quarter-end months (M3/M6/M9/M12), labels reflect accumulated periods.
+    """
+    yr = int(ym_str[:4])
+    mo = int(ym_str[4:])
+    yy = str(yr)[2:]
+    lyy = str(yr - 1)[2:]
+
+    if mo == 3:
+        ytd = f"{yy}Q1"; ly = f"{lyy}Q1"; l3m = f"{lyy}Q4"
+    elif mo == 6:
+        ytd = f"{yy}H1"; ly = f"{lyy}H1"; l3m = f"{yy}Q1"
+    elif mo == 9:
+        ytd = f"{yy}Q1-Q3"; ly = f"{lyy}Q1-Q3"; l3m = f"{yy}Q2"
+    elif mo == 12:
+        ytd = f"{yy}H2"; ly = f"{lyy}H2"; l3m = f"{yy}Q3"
+    else:
+        ytd = "YTD"; ly = "LY"; l3m = "L3M"
+    return ytd, ly, l3m, yy, lyy
+
+
 # ====================== 结论持久化存储 ======================
 _CONCLUSION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "conclusions.json")
 
@@ -1082,6 +1104,7 @@ def circle_svg(color):
 
 # ====================== Part A PAGE 1: VDS+OTC 品类市场规模 ======================
 def page1(sel_ym, SEL_M):
+    ytd_label, ly_label, l3m_label, yy, lyy = period_labels(sel_ym)
     sl_l = ym_lab(SEL_M[0])
     sl_r = ym_lab(SEL_M[-1])
     st.markdown(f"""
@@ -1159,14 +1182,14 @@ def page1(sel_ym, SEL_M):
         with cc1:
             f1 = go.Figure()
             if show_otc:
-                f1.add_bar(x=["LY", "YTD"], y=[low, cow], name="OTC",
+                f1.add_bar(x=[ly_label, ytd_label], y=[low, cow], name="OTC",
                            marker_color=C_OTC, width=BW,
                            text=[fn(low), fn(cow)], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
                            textangle=0, cliponaxis=False, legendrank=2)
             if show_vds:
                 vds_base = [low, cow] if show_otc else [0, 0]
-                f1.add_bar(x=["LY", "YTD"], y=[lvw, cvw], name="VDS",
+                f1.add_bar(x=[ly_label, ytd_label], y=[lvw, cvw], name="VDS",
                            marker_color=C_VDS, base=vds_base, width=BW,
                            text=[fn(lvw), fn(cvw)], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
@@ -1180,14 +1203,14 @@ def page1(sel_ym, SEL_M):
         with cc2:
             f2 = go.Figure()
             if show_otc:
-                f2.add_bar(x=["LY", "YTD"], y=[lqow, cqow], name="OTC",
+                f2.add_bar(x=[ly_label, ytd_label], y=[lqow, cqow], name="OTC",
                            marker_color=C_OTC, width=BW,
                            text=[fn(lqow), fn(cqow)], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
                            textangle=0, cliponaxis=False, legendrank=2)
             if show_vds:
                 vds_base = [lqow, cqow] if show_otc else [0, 0]
-                f2.add_bar(x=["LY", "YTD"], y=[lqvw, cqvw], name="VDS",
+                f2.add_bar(x=[ly_label, ytd_label], y=[lqvw, cqvw], name="VDS",
                            marker_color=C_VDS, base=vds_base, width=BW,
                            text=[fn(lqvw), fn(cqvw)], textposition="outside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color=C_TXT, family="Arial, sans-serif"),
@@ -1201,13 +1224,13 @@ def page1(sel_ym, SEL_M):
         with cc3:
             f3 = go.Figure()
             if show_vds:
-                f3.add_bar(x=["LY", "YTD"], y=[lpv, cpv], name="VDS",
+                f3.add_bar(x=[ly_label, ytd_label], y=[lpv, cpv], name="VDS",
                            marker_color=C_VDS, width=0.38,
                            text=[f"{lpv}", f"{cpv}"], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
                            cliponaxis=False, legendrank=1)
             if show_otc:
-                f3.add_bar(x=["LY", "YTD"], y=[lpo, cpo], name="OTC",
+                f3.add_bar(x=[ly_label, ytd_label], y=[lpo, cpo], name="OTC",
                            marker_color=C_OTC, width=0.38,
                            text=[f"{lpo}", f"{cpo}"], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
@@ -1218,7 +1241,7 @@ def page1(sel_ym, SEL_M):
                 xaxis=dict(tickfont=dict(size=13)))
             st.plotly_chart(f3, width='stretch')
 
-        st.markdown(f"<b class='chart-title'>YTD 同比增速</b>", unsafe_allow_html=True)
+        st.markdown(f"<b class='chart-title'>{ytd_label} 同比增速</b>", unsafe_allow_html=True)
         st.markdown(f"""
         <table class="dt">
         <tr>
@@ -1321,6 +1344,7 @@ def page1(sel_ym, SEL_M):
 
 # ====================== Part A PAGE 2: VDS 品牌份额 ======================
 def page2(sel_month, trend_months):
+    ytd_label, ly_label, l3m_label, yy, lyy = period_labels(sel_month)
     st.markdown(f"""
     <div class="phdr">
         <h2>VDS-Top5 品牌市场份额</h2>
@@ -1401,14 +1425,14 @@ def page2(sel_month, trend_months):
             for b in top5_brands:
                 m = metrics_df[metrics_df["品牌"] == b].iloc[0]
                 fig.add_trace(go.Bar(
-                    x=["LY"], y=[m["LY份额"]], name=b,
+                    x=[ly_label], y=[m["LY份额"]], name=b,
                     marker_color=color_map[b], width=0.6,
                     text=[f"{m['LY份额']:.1f}"], textposition="inside",
                     insidetextanchor="middle", textfont=dict(size=16, color="white", family="Arial, sans-serif"),
                     showlegend=False
                 ))
                 fig.add_trace(go.Bar(
-                    x=["YTD"], y=[m["YTD份额"]], name=b,
+                    x=[ytd_label], y=[m["YTD份额"]], name=b,
                     marker_color=color_map[b], width=0.6,
                     text=[f"{m['YTD份额']:.1f}"], textposition="inside",
                     insidetextanchor="middle", textfont=dict(size=16, color="white", family="Arial, sans-serif"),
@@ -1417,12 +1441,12 @@ def page2(sel_month, trend_months):
 
             cr5_ly = metrics_df["LY份额"].sum()
             cr5_ytd = metrics_df["YTD份额"].sum()
-            fig.add_annotation(x="LY", y=cr5_ly, text=f"<b>{cr5_ly:.1f}</b>",
+            fig.add_annotation(x=ly_label, y=cr5_ly, text=f"<b>{cr5_ly:.1f}</b>",
                                showarrow=False, font=dict(size=16, color=C_TXT, family="Arial, sans-serif"), yshift=12)
-            fig.add_annotation(x="YTD", y=cr5_ytd, text=f"<b>{cr5_ytd:.1f}</b>",
+            fig.add_annotation(x=ytd_label, y=cr5_ytd, text=f"<b>{cr5_ytd:.1f}</b>",
                                showarrow=False, font=dict(size=16, color=C_TXT, family="Arial, sans-serif"), yshift=12)
 
-            # Single total share change annotation between LY and YTD
+            # Single total share change annotation between LY and YTD (dynamic labels)
             _total_diff = cr5_ytd - cr5_ly
             if not pd.isna(_total_diff):
                 _tclr = "#00B050" if _total_diff >= 0 else "#E53935"
@@ -1457,7 +1481,7 @@ def page2(sel_month, trend_months):
             st.plotly_chart(fig, width='stretch')
 
         with cL_table:
-            st.markdown("<b class='chart-title'>YTD 规模同比 & 份额变化</b>", unsafe_allow_html=True)
+            st.markdown("<b class='chart-title'>{ytd_label} 规模同比 & 份额变化</b>", unsafe_allow_html=True)
             table_rows = []
             for _, r in metrics_df[::-1].iterrows():
                 sy = r["YTD规模同比"]
@@ -1484,7 +1508,7 @@ def page2(sel_month, trend_months):
             table_html = (
                 f"<table class='dt-p2'>"
                 f"<colgroup><col style='width:35%'><col style='width:21.67%'><col style='width:21.67%'><col style='width:21.67%'></colgroup>"
-                f"<thead><tr><th>品牌</th><th>YTD<br>规模同比</th><th>YTD<br>份额同比</th><th>{sel_month[2:4]}M{sel_mon}<br>份额环比</th></tr></thead>"
+                f"<thead><tr><th>品牌</th><th>{ytd_label}<br>规模同比</th><th>{ytd_label}<br>份额同比</th><th>{sel_month[2:4]}M{sel_mon}<br>份额环比</th></tr></thead>"
                 f"<tbody>{''.join(table_rows)}</tbody></table>"
             )
             st.markdown(table_html, unsafe_allow_html=True)
@@ -2162,6 +2186,7 @@ def render_first_page(selected_cat, selected_month, display_months):
     CUR_YEAR = int(selected_month[:4])
     CUR_MONTH = int(selected_month[4:])
     CUR_M_STR = selected_month
+    ytd_label, ly_label, l3m_label, yy, lyy = period_labels(selected_month)
     LY_M_STR = fp_get_ly_month(selected_month)
     YTD_MONTHS = fp_get_ytd_months(CUR_YEAR, CUR_MONTH)
     YTD_LY_MONTHS = fp_get_ytd_months(CUR_YEAR - 1, CUR_MONTH)
@@ -2212,7 +2237,7 @@ def render_first_page(selected_cat, selected_month, display_months):
         top_header += "</tr>"
         sub_header = "<tr>"
         for _ in metric_rows:
-            sub_header += f"<th>{ym_lab(CUR_M_STR)}</th><th>YTD</th>"
+            sub_header += f"<th>{ym_lab(CUR_M_STR)}</th><th>{ytd_label}</th>"
         sub_header += "</tr>"
 
         def metric_tr(label, curr_key, ytd_key, is_pct=True):
@@ -2646,7 +2671,7 @@ def build_table_html(cat_label, cat, table_brands, current_ym):
     html = [
         "<table class='brand-table'>",
         "<tr><th rowspan='2' class='brand-col'>TOP品牌</th><th rowspan='2' class='attr-col'>属性</th><th colspan='1' class='group-head'>销售额<br>百万元</th><th colspan='3' class='group-head'>同比增长率</th><th colspan='2' class='group-head'>销售额增长率</th><th colspan='5' class='group-head'>市场份额(%)</th></tr>",
-        f"<tr><th class='sub-head'>YTD</th><th class='sub-head'>销售额</th><th class='sub-head'>销售量</th><th class='sub-head'>单盒均价</th><th class='sub-head'>{ym_lab(current_ym)}<br>同比</th><th class='sub-head'>{ym_lab(current_ym)}<br>环比</th><th class='sub-head'>{ym_lab(current_ym)}</th><th class='sub-head'>同比</th><th class='sub-head'>环比</th><th class='sub-head'>YTD</th><th class='sub-head'>同比</th></tr>",
+        f"<tr><th class='sub-head'>{ytd_label}</th><th class='sub-head'>销售额</th><th class='sub-head'>销售量</th><th class='sub-head'>单盒均价</th><th class='sub-head'>{ym_lab(current_ym)}<br>同比</th><th class='sub-head'>{ym_lab(current_ym)}<br>环比</th><th class='sub-head'>{ym_lab(current_ym)}</th><th class='sub-head'>同比</th><th class='sub-head'>环比</th><th class='sub-head'>{ytd_label}</th><th class='sub-head'>同比</th></tr>",
     ]
     ytd_months = period_months("YTD", current_ym)
     for idx, r in enumerate(rows):
@@ -2709,7 +2734,7 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
         show_text = True
         fig.add_trace(
             go.Bar(
-                x=["LY", "YTD"],
+                x=[ly_label, ytd_label],
                 y=[0 if pd.isna(ly_val) else ly_val, 0 if pd.isna(ytd_val) else ytd_val],
                 name=brand_name(brand),
                 marker=dict(
@@ -2754,8 +2779,8 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
             font=dict(size=14, color="#333", family="Microsoft YaHei"),
         )
 
-    fig.add_annotation(x="LY", y=total_ly + 1.5, text=f"<b>{fmt_share(total_ly)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
-    fig.add_annotation(x="YTD", y=total_ytd + 1.5, text=f"<b>{fmt_share(total_ytd)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
+    fig.add_annotation(x=ly_label, y=total_ly + 1.5, text=f"<b>{fmt_share(total_ly)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
+    fig.add_annotation(x=ytd_label, y=total_ytd + 1.5, text=f"<b>{fmt_share(total_ytd)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
     fig.add_annotation(
         x=0.5, y=1.02,
         xref="x", yref="paper",
@@ -2826,12 +2851,13 @@ def make_trend_chart(cat_label, cat, brands, months):
 def render_brand_analysis(selected_cat, selected_month, display_months):
     config = BA_CATEGORY_CONFIG[selected_cat]
     source_cat = config["cat"]
+    ytd_label, ly_label, l3m_label, yy, lyy = period_labels(selected_month)
 
     st.markdown(
         f"""
         <div class="note-bar">
         <b>口径：</b>数据来自 <b>test.sku</b>；当前月 = {selected_month}（{ym_lab(selected_month)}）；
-        YTD = 当年1月至当前月；MAT = 含当期向上滚动12个月；L3M = 含当期过去3个月；
+        YTD/L3M = 按季度/半年度口径；MAT = 含当期向上滚动12个月；
         销售额单位由千元换算为百万元。
         </div>
         """,
@@ -3429,9 +3455,10 @@ def render_charts(metric_df, cat_label):
 # ====================== Part B render_sku_analysis() ======================
 def render_sku_analysis(selected_cat, selected_month, display_months):
     config = SA_CATEGORY_CONFIG[selected_cat]
+    ytd_label, ly_label, l3m_label, yy, lyy = period_labels(selected_month)
 
     st.markdown(
-        f"<div class='note-bar'><b>口径：</b>当前月 = {selected_month}（{ym_lab(selected_month)}）&nbsp;|&nbsp;YTD = 当年1月至当前月累计 &nbsp;|&nbsp; 同比 = 本期/去年同期-1</div>",
+        f"<div class='note-bar'><b>口径：</b>当前月 = {selected_month}（{ym_lab(selected_month)}）&nbsp;|&nbsp;YTD/L3M = 按季度/半年度口径 &nbsp;|&nbsp; 同比 = 本期/去年同期-1</div>",
         unsafe_allow_html=True,
     )
     render_conclusion(f"sa_{selected_cat}", selected_month)
