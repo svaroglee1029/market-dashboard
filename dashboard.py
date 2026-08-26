@@ -3360,35 +3360,42 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
     fig.update_layout(barmode="stack")
 
     # --- Add total annotations above each bar ---
-    # Use brand total data if available, otherwise sum of segments
-    _totals = []
+    # Use brand total data for the displayed value, but position at stacked bar top
+    _totals_display = []   # brand total value (for text)
+    _totals_position = []  # stacked bar sum (for y position)
     for _lbl in labels:
+        # Calculate stacked bar sum for positioning
+        _stack_sum = 0.0
+        for _name in names:
+            _sub = df[(df["label"] == _lbl) & (df["name"] == _name)]
+            _v = pd.to_numeric(_sub[metric], errors="coerce").fillna(0)
+            if len(_v) > 0:
+                _stack_sum += float(_v.iloc[0])
+        _totals_position.append(_stack_sum)
+        # Get brand total for display
         if brand_total_name:
             _bt = df[(df["label"] == _lbl) & (df["name"] == brand_total_name)]
             _v = pd.to_numeric(_bt[metric], errors="coerce").fillna(0)
             _t = float(_v.iloc[0]) if len(_v) > 0 else 0.0
         else:
-            _t = 0.0
-            for _name in names:
-                _sub = df[(df["label"] == _lbl) & (df["name"] == _name)]
-                _v = pd.to_numeric(_sub[metric], errors="coerce").fillna(0)
-                if len(_v) > 0:
-                    _t += float(_v.iloc[0])
-        _totals.append(_t)
-    _max_total = max(_totals) if _totals else 0
+            _t = _stack_sum
+        _totals_display.append(_t)
+    _max_pos = max(_totals_position) if _totals_position else 0
+    _decimals = 1 if metric == "share" else 0
     for _i, _lbl in enumerate(labels):
-        _t = _totals[_i]
-        if _t > 0:
+        _t_display = _totals_display[_i]
+        _t_pos = _totals_position[_i]
+        if _t_display > 0:
             fig.add_annotation(
-                x=_lbl, y=_t,
-                text=f"<b>{_t:.0f}</b>",
+                x=_lbl, y=_t_pos,
+                text=f"<b>{_t_display:.{_decimals}f}</b>",
                 showarrow=False,
                 yshift=10,
                 font=dict(size=14, color="#FF0000", family="Arial, sans-serif"),
             )
     # Set y-axis range for sales chart to accommodate annotations
-    if metric != "share" and _max_total > 0:
-        fig.update_layout(yaxis=dict(showgrid=False, zeroline=False, visible=True, range=[0, _max_total * 1.15]))
+    if metric != "share" and _max_pos > 0:
+        fig.update_layout(yaxis=dict(showgrid=False, zeroline=False, visible=True, range=[0, _max_pos * 1.15]))
 
     if metric == "share" and len(labels) >= 2:
         last_label, prev_label = labels[-1], labels[-2]
@@ -3406,8 +3413,10 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                 val = float(last_v.iloc[0]); base = float(prev_v.iloc[0])
                 diff = val - base
                 y_center = y_cursor + val / 2
-                # Skip 环比 annotation only for non-新产品 with share < 1%
-                if val >= 1.0 or name in NEW_PRODUCTS:
+                # Skip 环比 annotation only for non-新产品 with very small share
+                # Use relative threshold: 3% of y-axis max (scales with category)
+                _skip_threshold = ymax * 0.03
+                if val >= _skip_threshold or name in NEW_PRODUCTS:
                     # Stagger annotations vertically to avoid overlap for small segments
                     _hb_yshift = 0
                     if val < (ymax * 0.08):
