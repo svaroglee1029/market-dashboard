@@ -648,7 +648,7 @@ st.markdown("""
     div[data-testid="stPlotlyChart"] {
         margin-top: 0 !important;
         margin-bottom: 0 !important;
-        margin-right: -8px !important;
+        margin-right: -28px !important;
     }
     /* Tighten gap between consecutive plotly charts only (not text/table elements) */
     div[data-testid="stColumn"] > div[data-testid="stVerticalBlock"] > div[data-testid="stPlotlyChart"] + div[data-testid="stPlotlyChart"] {
@@ -2369,7 +2369,7 @@ def render_first_page(selected_cat, selected_month, display_months):
             barmode="stack",
             bargap=0.25,
             height=right_chart_height,
-            margin=dict(t=58, b=55, l=0, r=0),
+            margin=dict(t=72, b=55, l=0, r=0),
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
