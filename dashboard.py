@@ -2829,7 +2829,7 @@ def make_trend_chart(cat_label, cat, brands, months):
                 line=dict(width=3, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], shape="spline", smoothing=1.3),
                 marker=dict(size=6),
                 text=_text,
-                textposition="bottom center" if ((cat_label == "氨糖" and "九力" in _bn) or (cat_label == "成人钙" and "汤臣倍健" in _bn)) else "top center",
+                textposition="bottom center" if ((cat_label == "氨糖" and "九力" in _bn) or (cat_label == "成人钙" and "汤臣倍健" in _bn) or (cat_label == "儿童多维" and "汤臣倍健" in _bn) or (cat_label == "益生菌" and "Life-Space" in _bn)) else "top center",
                 textfont=dict(size=14, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], family="Arial, sans-serif"),
                 hovertemplate="%{fullData.name}<br>%{x}份额：%{y:.3f}%<extra></extra>",
             )
@@ -3099,10 +3099,10 @@ CHART_NAMES = {
         "dist":   ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "power":  ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "bar_colors": {
-            "汤臣倍健多维咀嚼片60片": "#ED7D31",
+            "汤臣倍健多维咀嚼片60片": "#FFD966",
             "仁合堂药业五维赖氨酸口服液12袋": "#7F6000",
             "草仙药业五维赖氨酸片36片": "#BF9000",
-            "小施尔康多维咀嚼片(10)30片": "#A6A6A6", "汤臣儿童多维整体": "#ED7D31",
+            "小施尔康多维咀嚼片(10)30片": "#A6A6A6", "汤臣儿童多维整体": "#FFD966",
         },
     },
     "鱼油": {
@@ -3125,7 +3125,7 @@ CHART_NAMES = {
         "bar_colors": {
             "旧品": "#A6A6A6", "金装": "#4472C4", "白金": "#FFC000", "OTC": "#92D050",
             "金装280片礼盒装": "#5B9BD5", "白金150片": "#FFD966",
-            "OTC60粒": "#00B050", "蓝氨糖120片": "#A6A6A6", "健力多整体": "#7030A0",
+            "OTC60粒": "#00B050", "蓝氨糖120片": "#ED7D31", "健力多整体": "#7030A0",
         },
     },
     "益生菌": {
@@ -3326,6 +3326,7 @@ NEW_PRODUCTS = {
     "晶纯60粒",
     "OTC", "OTC60粒",
     "B420 20袋",
+    "蓝氨糖120片",
 }
 
 
@@ -3470,21 +3471,26 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("成人多维", "dist"):  {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
         ("成人多维", "power"): {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
         # === 鱼油 ===
-        ("鱼油", "power"): {"default": "endpoints"},
-        ("鱼油", "dist"):  {"full_above": ["200粒"], "full_below": ["100粒"], "default": "endpoints"},
+        ("鱼油", "price"): {"full_above": ["200粒", "100粒", "晶纯60粒"], "default": "all"},
+        ("鱼油", "power"): {"default": "alternate"},
+        ("鱼油", "dist"):  {"full_above": ["200粒", "100粒", "晶纯60粒"], "default": "all"},
         # === 氨糖 ===
-        ("氨糖", "power"): {"default": "endpoints"},
+        ("氨糖", "power"): {"full_above": ["OTC", "金装"], "default": "endpoints"},
         ("氨糖", "dist"):  {"full_above": ["金装", "白金"], "full_below": ["旧品", "OTC"], "default": "endpoints"},
         # === 益生菌 ===
-        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋"], "default": "alternate"},
-        ("益生菌", "dist"):  {"default": "endpoints"},
-        ("益生菌", "power"): {"default": "endpoints"},
+        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "default": "alternate"},
+        ("益生菌", "dist"):  {"full_below": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "default": "alternate"},
+        ("益生菌", "power"): {"start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "default": "endpoints"},
+        # === 儿童多维 ===
+        ("儿童多维", "dist"):  {"full_below": ["草仙药业五维赖氨酸片36片"], "default": "endpoints"},
+        ("儿童多维", "power"): {"full_below": ["汤臣倍健多维咀嚼片60片"], "default": "endpoints"},
     }
     cfg = _LC.get((cat_label, metric), {})
     full_above = set(cfg.get("full_above", []))
     full_below = set(cfg.get("full_below", []))
     highpoint_above = set(cfg.get("highpoint_above", []))
     default_mode = cfg.get("default", label_mode)
+    start_from = cfg.get("start_from", {})  # {name: "25M5"} skip labels before this month
 
     for idx, name in enumerate(names):
         sub = df[df["name"] == name].set_index("label").reindex(labels)
@@ -3520,13 +3526,18 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             elif default_mode == "skip_start":
                 annotate_indices = set(valid[1:])
 
+        # --- Apply start_from filter: skip labels before specified month ---
+        if name in start_from:
+            _sf = start_from[name]
+            _sf_idx = next((i for i, lbl in enumerate(labels) if lbl >= _sf), len(labels))
+            annotate_indices = {i for i in annotate_indices if i >= _sf_idx}
+
         # --- Determine yshift: above (positive) or below (negative) ---
-        # Labels close to line but not overlapping; stagger by line index
-        # Closer spacing (base 8px, stagger 3px per index)
+        # Labels close to data point, not overlapping; tight stagger
         if name in full_below:
-            yshift = -(8 + idx * 3)
+            yshift = -(6 + idx * 2)
         else:
-            yshift = 8 + idx * 3
+            yshift = 6 + idx * 2
 
         for i in sorted(annotate_indices):
             fig.add_annotation(
@@ -3536,6 +3547,16 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             )
     fig = _chart_base(fig, title, height, 1.08, legend_below=True)
     fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
+    # Auto-range y-axis for power charts to fit all data + labels
+    if metric == "power":
+        _all_vals = []
+        for name in names:
+            _sub = df[df["name"] == name]
+            _vals = pd.to_numeric(_sub[metric], errors="coerce").dropna()
+            _all_vals.extend(_vals.tolist())
+        if _all_vals:
+            _y_max = max(_all_vals) * 1.15
+            fig.update_layout(yaxis=dict(range=[0, _y_max]))
     return fig
 
 
