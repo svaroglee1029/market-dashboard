@@ -3575,9 +3575,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("氨糖", "power"): {"full_above": ["OTC", "金装"], "month_override": {"OTC": {"26M2": "below"}}, "default": "endpoints"},
         ("氨糖", "dist"):  {"full_above": ["金装", "白金"], "full_below": ["旧品", "OTC"], "default": "endpoints"},
         # === 益生菌 ===
-        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "month_override": {"B420 20袋": {"26M4": "below", "26M6": "above"}}, "month_yshift": {"B420 20袋": {"26M4": -11}}, "default": "alternate"},
-        ("益生菌", "dist"):  {"alternate_above": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "include_months": {"畅护10袋": ["25M4"]}, "month_xshift": {"25M1": -4}, "default": "endpoints"},
-        ("益生菌", "power"): {"alternate_above": ["蓝帽48袋", "益倍适总体", "畅护10袋"], "start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "skip_months": {"畅护10袋": ["25M4"], "B420 20袋": ["25M4"]}, "null_months": {"畅护10袋": ["25M4"], "B420 20袋": ["26M4"]}, "month_yshift": {"B420 20袋": {"26M5": 5}}, "month_xshift": {"25M1": -4, "26M6": 4}, "default": "endpoints"},
+        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "month_override": {"B420 20袋": {"26M4": "below", "26M6": "above"}}, "month_yshift": {"B420 20袋": {"26M4": -7}}, "default": "alternate"},
+        ("益生菌", "dist"):  {"alternate_above": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "include_months": {"畅护10袋": ["25M4"]}, "month_xshift": {"25M1": -4}, "default": "alternate"},
+        ("益生菌", "power"): {"alternate_above": ["蓝帽48袋", "益倍适总体", "畅护10袋"], "start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "skip_months": {"畅护10袋": ["25M4"], "B420 20袋": ["25M4"]}, "null_months": {"畅护10袋": ["25M4"], "B420 20袋": ["26M4"]}, "month_yshift": {"B420 20袋": {"26M5": -3}}, "month_xshift": {"25M1": -4, "26M6": 4}, "default": "endpoints"},
         # === 儿童多维 ===
         ("儿童多维", "dist"):  {"full_below": ["草仙药业五维赖氨酸片36片"], "default": "highlow"},
         ("儿童多维", "power"): {"full_below": ["汤臣倍健多维咀嚼片60片"], "default": "highlow"},
