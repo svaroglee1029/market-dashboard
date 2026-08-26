@@ -3568,8 +3568,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("成人多维", "power"): {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
         # === 鱼油 ===
         ("鱼油", "price"): {"full_above": ["200粒", "100粒", "晶纯60粒"], "default": "all", "yshift_base": 10},
-        ("鱼油", "power"): {"default": "highlow"},
-        ("鱼油", "dist"):  {"full_above": ["200粒", "晶纯60粒"], "full_below": ["100粒"], "default": "all"},
+        ("鱼油", "power"): {"full_above": ["汤臣鱼油总体", "100粒"], "default": "highlow"},
+        ("鱼油", "dist"):  {"full_above": ["200粒"], "full_below": ["100粒", "晶纯60粒"], "product_month_yshift_delta": {"100粒": {"25M1": -19, "25M2": -19, "25M3": 19, "25M4": -19}}, "default": "all"},
         # === 氨糖 ===
         ("氨糖", "price"): {"full_below": ["OTC60粒"], "default": "all"},
         ("氨糖", "power"): {"full_above": ["OTC", "金装"], "month_override": {"OTC": {"26M2": "below"}}, "month_xshift": {"25M1": -8, "26M6": 8}, "product_month_xshift": {"OTC": {"25M9": -8, "25M10": -8}}, "default": "endpoints"},
@@ -3598,6 +3598,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     include_months = cfg.get("include_months", {})  # {"name": ["25M4"]} force include months (overrides start_from)
     product_yshift_offset = cfg.get("product_yshift_offset", {})  # {"name": -8} per-product yshift offset
     product_month_xshift = cfg.get("product_month_xshift", {})  # {"OTC": {"25M9": -8}} per-product per-month xshift
+    product_month_yshift_delta = cfg.get("product_month_yshift_delta", {})  # {"100粒": {"25M1": -19}} per-product per-month yshift delta
 
     for idx, name in enumerate(names):
         sub = df[df["name"] == name].set_index("label").reindex(labels)
@@ -3711,6 +3712,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 if metric == "price":
                     yshift += 2  # Global price label upward shift ~0.05cm
             yshift += product_yshift_offset.get(name, 0)
+            _pmdelta = product_month_yshift_delta.get(name, {})
+            if _lbl in _pmdelta:
+                yshift += _pmdelta[_lbl]
             _xshift = month_xshift.get(_lbl, 0)
             _pxshift = product_month_xshift.get(name, {})
             if _lbl in _pxshift:
