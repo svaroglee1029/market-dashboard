@@ -13,7 +13,7 @@ from datetime import datetime
 import calendar
 import json
 
-st.set_page_config(page_title="市场分析综合仪表盘 v2", layout="wide")
+st.set_page_config(page_title="市场分析综合仪表盘", layout="wide")
 
 # 隐藏 Streamlit Cloud 右下角浮窗（头像/反馈按钮）
 st.markdown("""
@@ -32,7 +32,7 @@ QTY_COL = "销售量-Pack('00))"
 DIST_COL = "加权铺货率"
 
 SKU_COLS = ["year_month", "品类", "品牌", "品牌产品", "产品包装", "品名(含属性)", "集团权益", "处方性质", SALES_COL, QTY_COL, DIST_COL]
-BRAND_COLS = ["year_month", "品类", "品牌", "品牌产品", SALES_COL, QTY_COL, DIST_COL]
+BRAND_COLS = ["year_month", "品类", "品牌", "品牌产品", "处方性质", SALES_COL, QTY_COL, DIST_COL]
 DIST_COLS = ["year_month", "品牌_NEW", DIST_COL, SALES_COL]
 IND_COLS = ["year_month", "品类", "品牌", SALES_COL, QTY_COL]
 
@@ -423,6 +423,7 @@ st.markdown("""
     .cat-name .sub-no-otc { font-size: 13px; color: #000000; font-weight: bold; margin-left: 3px; }
     .cat-name .sub-yes-otc { font-size: 13px; color: #888888; font-weight: normal; margin-left: 3px; }
     .brand-name { font-weight: 600; color: #1B4F8E; width: 100px; }
+    .brand-name .brand-sub { font-size: 13px; color: #888888; font-weight: normal; margin-left: 2px; }
     .num { font-variant-numeric: tabular-nums; width: 68px; position: relative; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .sales-bold { font-weight: 700; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .bar-cell { position: relative; overflow: hidden; }
@@ -1937,7 +1938,12 @@ def page4(selected_month):
             td_growth(row["cat_m4_yoy"]),
             td_growth(row["cat_m4_mom"]),
         ])
-        brand_cell = f'<td class="brand-name">{row["brand_display"]}</td>'
+        _bd = row["brand_display"]
+        if '(" in _bd:
+            _bd_main, _bd_suffix = _bd.split('(', 1)
+            brand_cell = f'<td class="brand-name">{_bd_main}<span class="brand-sub">({_bd_suffix}</span></td>'
+        else:
+            brand_cell = f'<td class="brand-name">{_bd}</td>'
         brand_sales = td_bar_sales(row["brand_ytd"], max_brand_ytd, BAR_B_START, BAR_B_END) if row["has_bar"] else td_sales_plain(row["brand_ytd"])
         brand_growth = "".join([
             td_growth(row["brand_ytd_yoy"]),
