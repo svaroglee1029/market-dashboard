@@ -3303,6 +3303,17 @@ def _chart_base(fig, title, height=380, legend_y=1.08, show_yaxis=False, legend_
     return fig
 
 
+# New products that must always show 环比 annotation even if share is small
+NEW_PRODUCTS = {
+    "E钙", "E钙蛋520g",
+    "焕动力120粒",
+    "液体钙12袋",
+    "晶纯60粒",
+    "OTC", "OTC60粒",
+    "B420 20袋",
+}
+
+
 def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=380, legend_y=1.08, y_max=None):
     fig = go.Figure()
     labels = df["label"].drop_duplicates().tolist()
