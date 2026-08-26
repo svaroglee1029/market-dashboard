@@ -1758,13 +1758,63 @@ def page4(selected_month):
     CUR_MONTH = int(selected_month[4:])
 
     YTD_MONTHS = get_months(CUR_YEAR, CUR_MONTH, CUR_MONTH)
-    L3M_MONTHS = get_months(CUR_YEAR, CUR_MONTH, 3)
     CUR_MONTH_STR = f"{CUR_YEAR}{str(CUR_MONTH).zfill(2)}"
     PRE_MONTH_STR = get_months(CUR_YEAR, CUR_MONTH, 2)[0]
 
     YTD_LY_MONTHS = get_months(CUR_YEAR - 1, CUR_MONTH, CUR_MONTH)
-    L3M_LY_MONTHS = get_months(CUR_YEAR - 1, CUR_MONTH, 3)
     CUR_LY_MONTH_STR = f"{CUR_YEAR - 1}{str(CUR_MONTH).zfill(2)}"
+
+    yy = str(CUR_YEAR)[2:]
+    lyy = str(CUR_YEAR - 1)[2:]
+
+    # Quarter-end: L3M = previous completed quarter, not trailing 3 months
+    q_end = CUR_MONTH in (3, 6, 9, 12)
+    if q_end:
+        if CUR_MONTH == 3:
+            l3m_label = f"{lyy}Q4"
+            L3M_MONTHS = [f"{CUR_YEAR-1}10", f"{CUR_YEAR-1}11", f"{CUR_YEAR-1}12"]
+            L3M_LY_MONTHS = [f"{CUR_YEAR-2}10", f"{CUR_YEAR-2}11", f"{CUR_YEAR-2}12"]
+        elif CUR_MONTH == 6:
+            l3m_label = f"{yy}Q1"
+            L3M_MONTHS = [f"{CUR_YEAR}01", f"{CUR_YEAR}02", f"{CUR_YEAR}03"]
+            L3M_LY_MONTHS = [f"{CUR_YEAR-1}01", f"{CUR_YEAR-1}02", f"{CUR_YEAR-1}03"]
+        elif CUR_MONTH == 9:
+            l3m_label = f"{yy}Q2"
+            L3M_MONTHS = [f"{CUR_YEAR}04", f"{CUR_YEAR}05", f"{CUR_YEAR}06"]
+            L3M_LY_MONTHS = [f"{CUR_YEAR-1}04", f"{CUR_YEAR-1}05", f"{CUR_YEAR-1}06"]
+        elif CUR_MONTH == 12:
+            l3m_label = f"{yy}Q3"
+            L3M_MONTHS = [f"{CUR_YEAR}07", f"{CUR_YEAR}08", f"{CUR_YEAR}09"]
+            L3M_LY_MONTHS = [f"{CUR_YEAR-1}07", f"{CUR_YEAR-1}08", f"{CUR_YEAR-1}09"]
+    else:
+        l3m_label = "L3M"
+        L3M_MONTHS = get_months(CUR_YEAR, CUR_MONTH, 3)
+        L3M_LY_MONTHS = get_months(CUR_YEAR - 1, CUR_MONTH, 3)
+
+    # YTD label: H1 at M6, H2 at M12, Q1 at M3, etc.
+    if CUR_MONTH == 3:
+        ytd_label = f"{yy}Q1"
+    elif CUR_MONTH == 6:
+        ytd_label = f"{yy}H1"
+    elif CUR_MONTH == 9:
+        ytd_label = f"{yy}Q1-Q3"
+    elif CUR_MONTH == 12:
+        ytd_label = f"{yy}H2"
+    else:
+        ytd_label = "YTD"
+
+    # LY YTD label
+    if CUR_MONTH == 3:
+        ytd_ly_label = f"{lyy}Q1"
+    elif CUR_MONTH == 6:
+        ytd_ly_label = f"{lyy}H1"
+    elif CUR_MONTH == 9:
+        ytd_ly_label = f"{lyy}Q1-Q3"
+    elif CUR_MONTH == 12:
+        ytd_ly_label = f"{lyy}H2"
+    else:
+        ytd_ly_label = "LY"
+
 
     ROWS = [
         {
@@ -1876,21 +1926,21 @@ def page4(selected_month):
           <th colspan="7" class="share-header">汤臣倍健市场份额 (%)</th>
         </tr>
         <tr class="sub-header">
-          <th class="sales-header-a">YTD</th>
-          <th class="growth-header-a">YTD<br>同比</th>
-          <th class="growth-header-a">L3M<br>同比</th>
-          <th class="growth-header-a">{str(CUR_YEAR)[2:]}M{CUR_MONTH}<br>同比</th>
-          <th class="growth-header-a">{str(CUR_YEAR)[2:]}M{CUR_MONTH}<br>环比</th>
-          <th class="sales-header-b">YTD</th>
-          <th class="growth-header-b">YTD<br>同比</th>
-          <th class="growth-header-b">L3M<br>同比</th>
-          <th class="growth-header-b">{str(CUR_YEAR)[2:]}M{CUR_MONTH}<br>同比</th>
-          <th class="growth-header-b">{str(CUR_YEAR)[2:]}M{CUR_MONTH}<br>环比</th>
-          <th class="share-header">YTD</th>
+          <th class="sales-header-a">{ytd_label}</th>
+          <th class="growth-header-a">{ytd_label}<br>同比</th>
+          <th class="growth-header-a">{l3m_label}<br>同比</th>
+          <th class="growth-header-a">{yy}M{CUR_MONTH}<br>同比</th>
+          <th class="growth-header-a">{yy}M{CUR_MONTH}<br>环比</th>
+          <th class="sales-header-b">{ytd_label}</th>
+          <th class="growth-header-b">{ytd_label}<br>同比</th>
+          <th class="growth-header-b">{l3m_label}<br>同比</th>
+          <th class="growth-header-b">{yy}M{CUR_MONTH}<br>同比</th>
+          <th class="growth-header-b">{yy}M{CUR_MONTH}<br>环比</th>
+          <th class="share-header">{ytd_label}</th>
           <th class="share-header">同比</th>
-          <th class="share-header">L3M</th>
+          <th class="share-header">{l3m_label}</th>
           <th class="share-header">同比</th>
-          <th class="share-header">{str(CUR_YEAR)[2:]}M{CUR_MONTH}</th>
+          <th class="share-header">{yy}M{CUR_MONTH}</th>
           <th class="share-header">同比</th>
           <th class="share-header">环比</th>
         </tr>
