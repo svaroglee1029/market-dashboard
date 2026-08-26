@@ -546,14 +546,14 @@ st.markdown("""
         background: linear-gradient(135deg, #1B4F8E 0%, #102F57 100%);
         color: white;
         border-radius: 10px;
-        padding: 10px 18px;
+        padding: 6px 18px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 12px;
         box-shadow: 0 3px 12px rgba(27,79,142,0.18);
     }
-    .phdr h2 { margin: 0; font-size: 15px; color: white; font-weight: 800; letter-spacing: 0.02em; }
+    .phdr h2 { margin: 0; font-size: 15px; color: white; font-weight: 800; letter-spacing: 0.02em; line-height: 1.2; }
     .fcard {
         background: #fff;
         border: 1px solid #DCE3EF;
@@ -2367,9 +2367,9 @@ def render_first_page(selected_cat, selected_month, display_months):
         ))
         fig.update_layout(
             barmode="stack",
-            bargap=0.20,
+            bargap=0.25,
             height=right_chart_height,
-            margin=dict(t=42, b=55, l=0, r=0),
+            margin=dict(t=58, b=55, l=0, r=0),
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
@@ -2880,7 +2880,7 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
     n_table_rows = len(table_brands) + 3  # +1 category row, +2 header rows
     table_row_h = 30  # brand-table row height - reduced to align with trend chart bottom
     table_height = n_table_rows * table_row_h
-    trend_chart_h = 315  # make_trend_chart height
+    trend_chart_h = 335  # make_trend_chart height
     streamlit_gap_ba = 18  # gap between table and trend chart
     left_chart_height = table_height + streamlit_gap_ba + trend_chart_h
 
@@ -3439,7 +3439,7 @@ def render_charts(metric_df, cat_label):
         st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax), width='stretch')
     with mid:
         price_names = cfg.get("price", all_names)
-        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=900, label_mode="alternate", cat_label=cat_label)
+        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=860, label_mode="alternate", cat_label=cat_label)
         _mid_fig.update_layout(title=dict(y=0.965))
         st.plotly_chart(_mid_fig, width='stretch')
     with right:
