@@ -3439,7 +3439,7 @@ def render_charts(metric_df, cat_label):
         st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax), width='stretch')
     with mid:
         price_names = cfg.get("price", all_names)
-        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=881, label_mode="alternate", cat_label=cat_label)
+        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=889, label_mode="alternate", cat_label=cat_label)
         _mid_fig.update_layout(title=dict(y=0.965))
         st.plotly_chart(_mid_fig, width='stretch')
     with right:
