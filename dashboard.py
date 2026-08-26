@@ -3575,9 +3575,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("氨糖", "power"): {"full_above": ["OTC", "金装"], "month_override": {"OTC": {"26M2": "below"}}, "default": "endpoints"},
         ("氨糖", "dist"):  {"full_above": ["金装", "白金"], "full_below": ["旧品", "OTC"], "default": "endpoints"},
         # === 益生菌 ===
-        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "month_override": {"B420 20袋": {"26M4": "below", "26M6": "above"}}, "month_yshift": {"B420 20袋": {"26M4": -45}}, "default": "alternate"},
-        ("益生菌", "dist"):  {"alternate_above": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "default": "endpoints"},
-        ("益生菌", "power"): {"alternate_above": ["蓝帽48袋", "益倍适总体", "畅护10袋"], "start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "skip_months": {"畅护10袋": ["25M4"], "B420 20袋": ["25M4"]}, "null_months": {"畅护10袋": ["25M4"], "B420 20袋": ["26M4"]}, "default": "endpoints"},
+        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "month_override": {"B420 20袋": {"26M4": "below", "26M6": "above"}}, "month_yshift": {"B420 20袋": {"26M4": -26}}, "default": "alternate"},
+        ("益生菌", "dist"):  {"alternate_above": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "include_months": {"畅护10袋": ["25M4"]}, "month_xshift": {"25M1": -2}, "default": "endpoints"},
+        ("益生菌", "power"): {"alternate_above": ["蓝帽48袋", "益倍适总体", "畅护10袋"], "start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "skip_months": {"畅护10袋": ["25M4"], "B420 20袋": ["25M4"]}, "null_months": {"畅护10袋": ["25M4"], "B420 20袋": ["26M4"]}, "month_yshift": {"B420 20袋": {"26M5": 12}}, "month_xshift": {"25M1": -2, "26M6": 2}, "default": "endpoints"},
         # === 儿童多维 ===
         ("儿童多维", "dist"):  {"full_below": ["草仙药业五维赖氨酸片36片"], "default": "highlow"},
         ("儿童多维", "power"): {"full_below": ["汤臣倍健多维咀嚼片60片"], "default": "highlow"},
@@ -3594,6 +3594,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     skip_months = cfg.get("skip_months", {})  # {name: ["25M4"]} skip specific month labels
     null_months = cfg.get("null_months", {})  # {name: ["25M4"]} null out data (removes line+point)
     month_yshift = cfg.get("month_yshift", {})  # {name: {"26M4": -23}} override yshift for specific months
+    month_xshift = cfg.get("month_xshift", {})  # {"25M1": -2} global xshift by month (all products)
+    include_months = cfg.get("include_months", {})  # {"name": ["25M4"]} force include months (overrides start_from)
 
     for idx, name in enumerate(names):
         sub = df[df["name"] == name].set_index("label").reindex(labels)
@@ -3662,6 +3664,13 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                     pass
             annotate_indices = {i for i in annotate_indices if i >= _sf_idx}
 
+        # --- Apply include_months: force include specific months (overrides start_from) ---
+        if name in include_months:
+            _inc_set = set(include_months[name])
+            for i in range(len(labels)):
+                if str(labels[i]) in _inc_set and i < len(vals) and not pd.isna(vals.iloc[i]):
+                    annotate_indices.add(i)
+
         # --- Apply skip_months filter: remove specific months ---
         if name in skip_months:
             _skip_set = set(skip_months[name])
@@ -3687,7 +3696,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                     _my_lv = int(_lbl.split("M")[0]) * 12 + int(_lbl.split("M")[1])
                     _sf_val2 = int(str(start_from[name]).split("M")[0]) * 12 + int(str(start_from[name]).split("M")[1])
                     if _my_lv < _sf_val2:
-                        continue
+                        _inc_check = include_months.get(name, set())
+                        if _lbl not in _inc_check:
+                            continue
                 except:
                     pass
             # Apply month_yshift override or default
@@ -3695,9 +3706,12 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 yshift = _ys[_lbl]
             else:
                 yshift = -(yshift_base + idx * 2) if _below else (yshift_base + idx * 2)
+                if metric == "price":
+                    yshift += 2  # Global price label upward shift ~0.05cm
+            _xshift = month_xshift.get(_lbl, 0)
             fig.add_annotation(
                 x=labels[i], y=vals.iloc[i], text=f"{vals.iloc[i]:.{decimals}f}",
-                showarrow=False, xshift=0, yshift=yshift,
+                showarrow=False, xshift=_xshift, yshift=yshift,
                 font=dict(size=12, color=c, family="Arial, sans-serif"),
             )
     fig = _chart_base(fig, title, height, 1.08, legend_below=True)
