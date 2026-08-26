@@ -2836,6 +2836,11 @@ def make_trend_chart(cat_label, cat, brands, months):
             for _j, _m in enumerate(months):
                 if ym_lab(_m) == "25M10" and not pd.isna(vals[_j]):
                     _text[_j] = ""
+        # Blank out 25M2 for 草仙药业 in 儿童多维 (replaced by custom annotation lower)
+        if cat_label == "儿童多维" and "草仙" in _bn:
+            for _j, _m in enumerate(months):
+                if ym_lab(_m) == "25M2" and not pd.isna(vals[_j]):
+                    _text[_j] = ""
 
         # Build textposition: if lines overlap at a month, higher->top, lower->bottom
         _tp = []
@@ -2871,6 +2876,8 @@ def make_trend_chart(cat_label, cat, brands, months):
                     _tp.append("bottom center")
                 elif (cat_label == "成人钙" and "汤臣倍健" in _bn):
                     _tp.append("bottom center")
+                elif (cat_label == "儿童钙" and "汤臣倍健" in _bn):
+                    _tp.append("bottom center")
                 elif (cat_label == "儿童多维" and "汤臣倍健" in _bn):
                     _tp.append("bottom center")
                 elif (cat_label == "益生菌" and "Life-Space" in _bn):
@@ -2892,7 +2899,7 @@ def make_trend_chart(cat_label, cat, brands, months):
                 hovertemplate="%{fullData.name}<br>%{x}份额：%{y:.3f}%<extra></extra>",
             )
         )
-    # Custom annotation: 九力 25M10 label moved ~0.1cm higher (yshift=14)
+    # Custom annotation: 九力 25M10 label moved ~0.1cm higher (yshift=18)
     if cat_label == "氨糖":
         for i, brand in enumerate(brands):
             _bn = brand_name(brand)
@@ -2904,7 +2911,24 @@ def make_trend_chart(cat_label, cat, brands, months):
                             fig.add_annotation(
                                 x=ym_lab(m), y=_val,
                                 text=fmt_share(_val),
-                                showarrow=False, yshift=14,
+                                showarrow=False, yshift=18,
+                                font=dict(size=14, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], family="Arial, sans-serif"),
+                            )
+                        break
+                break
+    # Custom annotation: 草仙药业 25M2 label moved ~0.8cm lower (yshift=-30)
+    if cat_label == "儿童多维":
+        for i, brand in enumerate(brands):
+            _bn = brand_name(brand)
+            if "草仙" in _bn:
+                for j, m in enumerate(months):
+                    if ym_lab(m) == "25M2":
+                        _val = _brand_vals[i][j]
+                        if not pd.isna(_val):
+                            fig.add_annotation(
+                                x=ym_lab(m), y=_val,
+                                text=fmt_share(_val),
+                                showarrow=False, yshift=-30,
                                 font=dict(size=14, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], family="Arial, sans-serif"),
                             )
                         break
@@ -2917,7 +2941,7 @@ def make_trend_chart(cat_label, cat, brands, months):
         plot_bgcolor="white",
         font=dict(family="Microsoft YaHei", size=13),
         xaxis=dict(showgrid=False, tickangle=-45, automargin=False),
-        yaxis=dict(showgrid=True, gridcolor="#EEF2FA", showticklabels=False, zeroline=False, range=[0, _y_max]),
+        yaxis=dict(showgrid=True, gridcolor="#EEF2FA", showticklabels=False, zeroline=False, range=[-5 if cat_label == "儿童钙" else 0, _y_max]),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     fig.update_xaxes(range=[-0.5, len(months) - 0.5])
