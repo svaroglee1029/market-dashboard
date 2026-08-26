@@ -1939,8 +1939,8 @@ def page4(selected_month):
             td_growth(row["cat_m4_mom"]),
         ])
         _bd = row["brand_display"]
-        if '(" in _bd:
-            _bd_main, _bd_suffix = _bd.split('(', 1)
+        if "(" in _bd:
+            _bd_main, _bd_suffix = _bd.split("(", 1)
             brand_cell = f'<td class="brand-name">{_bd_main}<span class="brand-sub">({_bd_suffix}</span></td>'
         else:
             brand_cell = f'<td class="brand-name">{_bd}</td>'
