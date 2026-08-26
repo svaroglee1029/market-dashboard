@@ -3087,8 +3087,8 @@ CHART_NAMES = {
         "dist":   ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
         "power":  ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
         "bar_colors": {
-            "女维120片": "#4472C4", "女维60片": "#5B9BD5",
-            "男维120片": "#FFC000", "男维60片": "#FFD966",
+            "女维120片": "#FFC000", "女维60片": "#FFD966",
+            "男维120片": "#4472C4", "男维60片": "#5B9BD5",
             "银善存91sx2p": "#7F6000", "善存多维元素片(29)91sx2p": "#BF9000", "汤臣多维整体": "#7030A0",
         },
     },
@@ -3099,10 +3099,10 @@ CHART_NAMES = {
         "dist":   ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "power":  ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "bar_colors": {
-            "汤臣倍健多维咀嚼片60片": "#4472C4",
+            "汤臣倍健多维咀嚼片60片": "#ED7D31",
             "仁合堂药业五维赖氨酸口服液12袋": "#7F6000",
             "草仙药业五维赖氨酸片36片": "#BF9000",
-            "小施尔康多维咀嚼片(10)30片": "#A6A6A6", "汤臣儿童多维整体": "#7030A0",
+            "小施尔康多维咀嚼片(10)30片": "#A6A6A6", "汤臣儿童多维整体": "#ED7D31",
         },
     },
     "鱼油": {
@@ -3135,7 +3135,7 @@ CHART_NAMES = {
         "dist":   ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益倍适总体", "益君康30片"],
         "power":  ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益倍适总体", "益君康30片"],
         "bar_colors": {
-            "蓝帽20袋": "#4472C4", "蓝帽48袋": "#5B9BD5", "畅护10袋": "#FFC000",
+            "蓝帽20袋": "#4472C4", "蓝帽48袋": "#2F5597", "畅护10袋": "#FFC000",
             "B420 20袋": "#92D050", "其他": "#A6A6A6",
             "益倍适总体": "#7030A0", "益君康30片": "#7F6000",
         },
@@ -3381,7 +3381,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
             _t = _stack_sum
         _totals_display.append(_t)
     _max_pos = max(_totals_position) if _totals_position else 0
-    _decimals = 1 if metric == "share" else 0
+    _decimals = text_decimals if metric == "share" else 0
     for _i, _lbl in enumerate(labels):
         _t_display = _totals_display[_i]
         _t_pos = _totals_position[_i]
@@ -3419,11 +3419,12 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                 if val >= _skip_threshold or name in NEW_PRODUCTS:
                     # Stagger annotations vertically to avoid overlap for small segments
                     _hb_yshift = 0
-                    if val < (ymax * 0.08):
-                        _stagger = [14, -14, 20, -20, 7, -7]
+                    if val < (ymax * 0.05):
+                        _stagger = [8, -8, 5, -5, 10, -10]
                         _hb_yshift = _stagger[_hb_idx % len(_stagger)]
+                    _hb_dec = 2 if abs(diff) < 0.05 else 1
                     fig.add_annotation(
-                        x=last_label, y=y_center, text=f"{diff:+.1f}", showarrow=False,
+                        x=last_label, y=y_center, text=f"{diff:+.{_hb_dec}f}", showarrow=False,
                         xshift=36, yshift=_hb_yshift,
                         font=dict(size=13, color="#00A85A" if diff >= 0 else "#E53935", family="Microsoft YaHei", weight="bold"),
                     )
