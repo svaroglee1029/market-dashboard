@@ -2810,8 +2810,18 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
 
 def make_trend_chart(cat_label, cat, brands, months):
     fig = go.Figure()
+    _TREND_YMAX = {"蛋白粉": 65, "成人钙": 40, "儿童钙": 40, "成人多维": 45, "儿童多维": 40, "鱼油": 55, "氨糖": 45, "益生菌": 35}
+    # Pre-calculate all brand values for overlap detection
+    _brand_vals = []
+    for brand in brands:
+        _bv = [calc_share([m], cat, brand) for m in months]
+        _brand_vals.append(_bv)
+    _all_vals_flat = [v for bv in _brand_vals for v in bv if not pd.isna(v)]
+    _y_max = _TREND_YMAX.get(cat_label, max(_all_vals_flat) * 1.25 if _all_vals_flat else 100)
+    _overlap_thresh = _y_max * 0.03  # 3% of y-axis range = "overlapping"
+
     for i, brand in enumerate(brands):
-        vals = [calc_share([m], cat, brand) for m in months]
+        vals = _brand_vals[i]
         _bn = brand_name(brand)
         _valid_idx = [j for j, v in enumerate(vals) if not pd.isna(v)]
         if cat_label == "成人钙" and "励全" in _bn and len(_valid_idx) >= 2:
@@ -2820,6 +2830,48 @@ def make_trend_chart(cat_label, cat, brands, months):
             _text[_valid_idx[-1]] = fmt_share(vals[_valid_idx[-1]])
         else:
             _text = [fmt_share(v) if not pd.isna(v) else "" for v in vals]
+
+        # Build textposition: if lines overlap at a month, higher->top, lower->bottom
+        _tp = []
+        for j, m in enumerate(months):
+            _my_val = vals[j]
+            _lbl = ym_lab(m)
+            if pd.isna(_my_val):
+                _tp.append("top center")
+                continue
+            # Check for overlap with other brands at this month
+            _overlap = False
+            _am_higher = True
+            for k in range(len(brands)):
+                if k == i:
+                    continue
+                _other_val = _brand_vals[k][j] if j < len(_brand_vals[k]) else None
+                if _other_val is None or pd.isna(_other_val):
+                    continue
+                if abs(_my_val - _other_val) < _overlap_thresh:
+                    _overlap = True
+                    if _my_val < _other_val:
+                        _am_higher = False
+                    break
+            if _overlap:
+                _tp.append("top center" if _am_higher else "bottom center")
+            else:
+                # No overlap: use existing default rules
+                if (cat_label == "氨糖" and "九力" in _bn and _lbl in ["25M10", "25M11", "25M12", "26M2"]):
+                    _tp.append("top center")
+                elif (cat_label == "儿童多维" and "汤臣倍健" in _bn and _lbl == "25M2"):
+                    _tp.append("top center")
+                elif (cat_label == "氨糖" and "九力" in _bn):
+                    _tp.append("bottom center")
+                elif (cat_label == "成人钙" and "汤臣倍健" in _bn):
+                    _tp.append("bottom center")
+                elif (cat_label == "儿童多维" and "汤臣倍健" in _bn):
+                    _tp.append("bottom center")
+                elif (cat_label == "益生菌" and "Life-Space" in _bn):
+                    _tp.append("bottom center")
+                else:
+                    _tp.append("top center")
+
         fig.add_trace(
             go.Scatter(
                 x=[ym_lab(m) for m in months],
@@ -2829,24 +2881,11 @@ def make_trend_chart(cat_label, cat, brands, months):
                 line=dict(width=3, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], shape="spline", smoothing=1.3),
                 marker=dict(size=6),
                 text=_text,
-                textposition=[
-                    (lambda _l:
-                        "top center" if (cat_label == "氨糖" and "九力" in _bn and _l in ["25M10", "25M11", "25M12", "26M2"])
-                        else "top center" if (cat_label == "儿童多维" and "汤臣倍健" in _bn and _l == "25M2")
-                        else "bottom center" if (cat_label == "氨糖" and "九力" in _bn)
-                        else "bottom center" if (cat_label == "成人钙" and "汤臣倍健" in _bn)
-                        else "bottom center" if (cat_label == "儿童多维" and "汤臣倍健" in _bn)
-                        else "bottom center" if (cat_label == "益生菌" and "Life-Space" in _bn)
-                        else "top center"
-                    )(ym_lab(m)) for m in months
-                ],
+                textposition=_tp,
                 textfont=dict(size=14, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], family="Arial, sans-serif"),
                 hovertemplate="%{fullData.name}<br>%{x}份额：%{y:.3f}%<extra></extra>",
             )
         )
-    _all_vals = [v for v in vals if not pd.isna(v)]
-    _TREND_YMAX = {"蛋白粉": 65, "成人钙": 40, "儿童钙": 40, "成人多维": 45, "儿童多维": 40, "鱼油": 55, "氨糖": 45, "益生菌": 35}
-    _y_max = _TREND_YMAX.get(cat_label, max(_all_vals) * 1.25 if _all_vals else 100)
     fig.update_layout(
         title=dict(text=f"{cat_label}-重点品牌份额(%)趋势", x=0.5, font=dict(size=16, color="#666")),
         height=315,
