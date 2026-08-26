@@ -3571,9 +3571,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("鱼油", "power"): {"default": "highlow"},
         ("鱼油", "dist"):  {"full_above": ["200粒", "晶纯60粒"], "full_below": ["100粒"], "default": "all"},
         # === 氨糖 ===
-        ("氨糖", "price"): {"default": "all"},
-        ("氨糖", "power"): {"full_above": ["OTC", "金装"], "month_override": {"OTC": {"26M2": "below"}}, "default": "endpoints"},
-        ("氨糖", "dist"):  {"full_above": ["金装", "白金"], "full_below": ["旧品", "OTC"], "default": "endpoints"},
+        ("氨糖", "price"): {"full_below": ["OTC60粒"], "default": "all"},
+        ("氨糖", "power"): {"full_above": ["OTC", "金装"], "month_override": {"OTC": {"26M2": "below"}}, "month_xshift": {"25M1": -8, "26M6": 8}, "product_month_xshift": {"OTC": {"25M9": -8, "25M10": -8}}, "default": "endpoints"},
+        ("氨糖", "dist"):  {"full_above": ["金装", "白金"], "full_below": ["旧品", "OTC"], "month_xshift": {"25M1": -8, "26M6": 8}, "product_yshift_offset": {"旧品": -8}, "default": "endpoints"},
         # === 益生菌 ===
         ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "month_override": {"B420 20袋": {"26M4": "below", "26M6": "above"}}, "month_yshift": {"B420 20袋": {"26M4": 12}}, "default": "alternate"},
         ("益生菌", "dist"):  {"alternate_above": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "include_months": {"畅护10袋": ["25M4"]}, "month_xshift": {"25M1": -4}, "default": "alternate"},
@@ -3596,6 +3596,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     month_yshift = cfg.get("month_yshift", {})  # {name: {"26M4": -23}} override yshift for specific months
     month_xshift = cfg.get("month_xshift", {})  # {"25M1": -2} global xshift by month (all products)
     include_months = cfg.get("include_months", {})  # {"name": ["25M4"]} force include months (overrides start_from)
+    product_yshift_offset = cfg.get("product_yshift_offset", {})  # {"name": -8} per-product yshift offset
+    product_month_xshift = cfg.get("product_month_xshift", {})  # {"OTC": {"25M9": -8}} per-product per-month xshift
 
     for idx, name in enumerate(names):
         sub = df[df["name"] == name].set_index("label").reindex(labels)
@@ -3708,7 +3710,11 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 yshift = -(yshift_base + idx * 2) if _below else (yshift_base + idx * 2)
                 if metric == "price":
                     yshift += 2  # Global price label upward shift ~0.05cm
+            yshift += product_yshift_offset.get(name, 0)
             _xshift = month_xshift.get(_lbl, 0)
+            _pxshift = product_month_xshift.get(name, {})
+            if _lbl in _pxshift:
+                _xshift += _pxshift[_lbl]
             fig.add_annotation(
                 x=labels[i], y=vals.iloc[i], text=f"{vals.iloc[i]:.{decimals}f}",
                 showarrow=False, xshift=_xshift, yshift=yshift,
