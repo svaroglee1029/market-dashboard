@@ -2941,7 +2941,7 @@ def make_trend_chart(cat_label, cat, brands, months):
         plot_bgcolor="white",
         font=dict(family="Microsoft YaHei", size=13),
         xaxis=dict(showgrid=False, tickangle=-45, automargin=False),
-        yaxis=dict(showgrid=True, gridcolor="#EEF2FA", showticklabels=False, zeroline=False, range=[-5 if cat_label == "儿童钙" else 0, _y_max]),
+        yaxis=dict(showgrid=True, gridcolor="#EEF2FA", showticklabels=False, zeroline=False, range=[8 if cat_label == "氨糖" else (-5 if cat_label == "儿童钙" else 0), 25 if cat_label == "氨糖" else _y_max]),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     fig.update_xaxes(range=[-0.5, len(months) - 0.5])
@@ -3577,7 +3577,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         # === 益生菌 ===
         ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "month_override": {"B420 20袋": {"26M4": "below", "26M6": "above"}}, "default": "alternate"},
         ("益生菌", "dist"):  {"full_below": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "default": "alternate"},
-        ("益生菌", "power"): {"start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "default": "endpoints"},
+        ("益生菌", "power"): {"start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "skip_months": {"畅护10袋": ["25M4"], "B420 20袋": ["25M4"]}, "default": "endpoints"},
         # === 儿童多维 ===
         ("儿童多维", "dist"):  {"full_below": ["草仙药业五维赖氨酸片36片"], "default": "highlow"},
         ("儿童多维", "power"): {"full_below": ["汤臣倍健多维咀嚼片60片"], "default": "highlow"},
@@ -3590,6 +3590,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     start_from = cfg.get("start_from", {})  # {name: "25M5"} skip labels before this month
     month_override = cfg.get("month_override", {})  # {name: {"26M4": "below", "26M6": "above"}}
     yshift_base = cfg.get("yshift_base", 6)  # base yshift for labels
+    skip_months = cfg.get("skip_months", {})  # {name: ["25M4"]} skip specific month labels
 
     for idx, name in enumerate(names):
         sub = df[df["name"] == name].set_index("label").reindex(labels)
@@ -3646,6 +3647,11 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 except:
                     pass
             annotate_indices = {i for i in annotate_indices if i >= _sf_idx}
+
+        # --- Apply skip_months filter: remove specific months ---
+        if name in skip_months:
+            _skip_set = set(skip_months[name])
+            annotate_indices = {i for i in annotate_indices if labels[i] not in _skip_set}
 
         # --- Determine yshift: above (positive) or below (negative) ---
         # Labels close to data point, not overlapping; tight stagger
