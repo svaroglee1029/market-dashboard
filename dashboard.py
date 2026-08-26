@@ -2666,6 +2666,7 @@ def get_brand_attribute(cat, brand, ytd_months):
 
 
 def build_table_html(cat_label, cat, table_brands, current_ym):
+    ytd_label, _, _, _, _ = period_labels(current_ym)
     rows = [row_metrics(cat_label, cat, None, current_ym)]
     rows.extend([row_metrics(brand_name(b), cat, b, current_ym) for b in table_brands])
     html = [
