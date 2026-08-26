@@ -3575,9 +3575,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("氨糖", "power"): {"full_above": ["OTC", "金装"], "month_override": {"OTC": {"26M2": "below"}}, "default": "endpoints"},
         ("氨糖", "dist"):  {"full_above": ["金装", "白金"], "full_below": ["旧品", "OTC"], "default": "endpoints"},
         # === 益生菌 ===
-        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "month_override": {"B420 20袋": {"26M4": "below", "26M6": "above"}}, "default": "alternate"},
-        ("益生菌", "dist"):  {"full_below": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "default": "alternate"},
-        ("益生菌", "power"): {"start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "skip_months": {"畅护10袋": ["25M4"], "B420 20袋": ["25M4"]}, "default": "endpoints"},
+        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "month_override": {"B420 20袋": {"26M4": "below", "26M6": "above"}}, "month_yshift": {"B420 20袋": {"26M4": -23}}, "null_months": {"畅护10袋": ["25M4"]}, "default": "alternate"},
+        ("益生菌", "dist"):  {"full_below": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "null_months": {"畅护10袋": ["25M4"], "B420 20袋": ["26M4"]}, "default": "alternate"},
+        ("益生菌", "power"): {"start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "skip_months": {"畅护10袋": ["25M4"], "B420 20袋": ["25M4"]}, "null_months": {"畅护10袋": ["25M4"], "B420 20袋": ["26M4"]}, "default": "endpoints"},
         # === 儿童多维 ===
         ("儿童多维", "dist"):  {"full_below": ["草仙药业五维赖氨酸片36片"], "default": "highlow"},
         ("儿童多维", "power"): {"full_below": ["汤臣倍健多维咀嚼片60片"], "default": "highlow"},
@@ -3591,10 +3591,18 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     month_override = cfg.get("month_override", {})  # {name: {"26M4": "below", "26M6": "above"}}
     yshift_base = cfg.get("yshift_base", 6)  # base yshift for labels
     skip_months = cfg.get("skip_months", {})  # {name: ["25M4"]} skip specific month labels
+    null_months = cfg.get("null_months", {})  # {name: ["25M4"]} null out data (removes line+point)
+    month_yshift = cfg.get("month_yshift", {})  # {name: {"26M4": -23}} override yshift for specific months
 
     for idx, name in enumerate(names):
         sub = df[df["name"] == name].set_index("label").reindex(labels)
         vals = pd.to_numeric(sub[metric], errors="coerce")
+        # Apply null_months: set specific months to NaN (removes data point + line)
+        if name in null_months:
+            _null_set = set(null_months[name])
+            for _ni in range(len(labels)):
+                if str(labels[_ni]) in _null_set and _ni < len(vals):
+                    vals.iloc[_ni] = float('nan')
         c = colors.get(name, SA_COLORS[idx % len(SA_COLORS)])
         fig.add_scatter(
             x=labels, y=vals, mode="lines+markers", name=name,
@@ -3658,6 +3666,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         # Labels close to data point, not overlapping; tight stagger
         _ov = month_override.get(name, {})
 
+        _ys = month_yshift.get(name, {})
         for i in sorted(annotate_indices):
             _lbl = str(labels[i]) if i < len(labels) else ""
             # Hardcoded skip: 益生菌 power 25M4 for 畅护10袋 & B420 20袋
@@ -3676,7 +3685,11 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                         continue
                 except:
                     pass
-            yshift = -(yshift_base + idx * 2) if _below else (yshift_base + idx * 2)
+            # Apply month_yshift override or default
+            if _lbl in _ys:
+                yshift = _ys[_lbl]
+            else:
+                yshift = -(yshift_base + idx * 2) if _below else (yshift_base + idx * 2)
             fig.add_annotation(
                 x=labels[i], y=vals.iloc[i], text=f"{vals.iloc[i]:.{decimals}f}",
                 showarrow=False, xshift=0, yshift=yshift,
