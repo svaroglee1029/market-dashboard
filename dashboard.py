@@ -2925,6 +2925,7 @@ SA_CATEGORY_CONFIG = {
             ]},
             {"name": "钙尔奇D600 60片", "source": "sku", "filters": {"品类": "钙-成人", "品牌产品": "钙尔奇D600(碳酸钙D3片(Ⅰ))", "产品包装": "0.6gx60s"}},
             {"name": "汤臣钙DK整体",   "source": "brand", "filters": {"品类": "钙-成人", "品牌产品": "汤臣倍健(钙维生素D维生素K软胶囊)"}},
+            {"name": "汤臣钙整体",     "source": "sku", "filters": {"品类": "钙-成人", "品牌": "汤臣倍健"}},
         ],
     },
     "儿童钙": {
@@ -2935,6 +2936,7 @@ SA_CATEGORY_CONFIG = {
             {"name": "钙铁锌60片",   "source": "sku", "filters": {"品类": "钙-儿童", "品牌产品": "汤臣倍健(钙铁锌咀嚼片)", "产品包装": "1.5gx60s"}},
             {"name": "钙镁90片",     "source": "sku", "filters": {"品类": "钙-儿童", "品牌产品": "汤臣倍健(钙镁咀嚼片)", "产品包装": "1.6gx90s"}},
             {"name": "锌钙特葡萄糖酸钙锌口服液24袋", "source": "sku", "filters": {"品类": "钙-儿童", "品牌产品": "锌钙特(葡萄糖酸钙锌口服溶液)", "产品包装": "10ml:0.73gx24z"}},
+            {"name": "汤臣儿童钙整体", "source": "sku", "filters": {"品类": "钙-儿童", "品牌": "汤臣倍健"}},
         ],
     },
     "成人多维": {
@@ -2946,6 +2948,7 @@ SA_CATEGORY_CONFIG = {
             {"name": "男维60片",  "source": "sku", "filters": {"品类": "多维-成人", "品牌产品": "汤臣倍健(多种维生素矿物质片)", "品名(含属性)": "多种维生素矿物质片|男士型|", "产品包装": "1.5gx60s"}},
             {"name": "银善存91sx2p", "source": "sku", "filters": {"品类": "多维-成人", "品牌产品": "银善存(多维元素片(29-Ⅱ))", "产品包装": "91sx2p"}},
             {"name": "善存多维元素片(29)91sx2p", "source": "sku", "filters": {"品类": "多维-成人", "品牌产品": "善存(多维元素片(29))", "产品包装": "91sx2p"}},
+            {"name": "汤臣多维整体", "source": "sku", "filters": {"品类": "多维-成人", "品牌": "汤臣倍健"}},
         ],
     },
     "儿童多维": {
@@ -2955,6 +2958,7 @@ SA_CATEGORY_CONFIG = {
             {"name": "仁合堂药业五维赖氨酸口服液12袋", "source": "sku", "filters": {"品类": "多维-儿童", "品牌产品": "五维赖氨酸口服溶液(黑龙江仁合堂药业)", "产品包装": "10mlx12z"}},
             {"name": "草仙药业五维赖氨酸片36片", "source": "sku", "filters": {"品类": "多维-儿童", "品牌产品": "五维赖氨酸片(草仙药业)", "产品包装": "36s"}},
             {"name": "小施尔康多维咀嚼片(10)30片", "source": "sku", "filters": {"品类": "多维-儿童", "品牌产品": "小施尔康(小儿多维生素咀嚼片(10))", "产品包装": "30s"}},
+            {"name": "汤臣儿童多维整体", "source": "sku", "filters": {"品类": "多维-儿童", "品牌": "汤臣倍健"}},
         ],
     },
     "鱼油": {
@@ -2977,6 +2981,7 @@ SA_CATEGORY_CONFIG = {
             {"name": "白金150片",       "source": "sku", "filters": {"品类": "关节护理", "品牌产品": "健力多白金氨糖(氨糖硫酸软骨素钙片)", "产品包装": "1.16gx150s"}},
             {"name": "OTC60粒",         "source": "sku", "filters": {"品类": "关节护理", "品牌产品": "健力多(硫酸氨基葡萄糖胶囊)", "产品包装": "0.25gx60s"}},
             {"name": "蓝氨糖120片",     "source": "sku", "filters": {"品类": "关节护理", "品牌产品": "健力多蓝氨糖(氨糖软骨素钙片)", "产品包装": "0.9gx120s"}},
+            {"name": "健力多整体",       "source": "sku", "filters": {"品类": "关节护理", "品牌": "健力多"}},
         ],
     },
     "益生菌": {
@@ -3036,6 +3041,7 @@ SHARE_DECIMALS = {
 CHART_NAMES = {
     "蛋白粉": {
         "bar":    ["旧品", "金装", "白金", "E钙"],
+        "brand_total_name": "汤臣整体",
         "price":  ["金装礼盒装300g*2p", "白金礼盒装330g*2p", "E钙蛋520g", "金装450g", "白金480g"],
         "dist":   ["旧品", "金装", "白金", "E钙", "汤臣整体"],
         "power":  ["旧品", "金装", "白金", "E钙", "汤臣整体"],
@@ -3054,37 +3060,41 @@ CHART_NAMES = {
     },
     "成人钙": {
         "bar":    ["其他", "200粒x2", "120粒", "焕动力120粒"],
+        "brand_total_name": "汤臣钙整体",
         "price":  ["200粒x2", "120粒", "焕动力120粒", "钙尔奇D600 60片"],
         "dist":   ["200粒x2", "120粒", "焕动力120粒", "汤臣钙DK整体", "钙尔奇D600 60片"],
         "power":  ["200粒x2", "120粒", "焕动力120粒", "汤臣钙DK整体", "钙尔奇D600 60片"],
         "bar_colors": {
             "200粒x2": "#4472C4", "120粒": "#FFC000", "焕动力120粒": "#92D050", "其他": "#A6A6A6",
-            "汤臣钙DK整体": "#7030A0", "钙尔奇D600 60片": "#7F6000",
+            "汤臣钙DK整体": "#7030A0", "钙尔奇D600 60片": "#7F6000", "汤臣钙整体": "#7030A0",
         },
     },
     "儿童钙": {
         "bar":    ["牛初乳60片*2", "钙铁锌60片", "钙镁90片", "液体钙12袋"],
+        "brand_total_name": "汤臣儿童钙整体",
         "price":  ["牛初乳60片*2", "钙镁90片", "液体钙12袋", "钙铁锌60片", "锌钙特葡萄糖酸钙锌口服液24袋"],
         "dist":   ["牛初乳60片*2", "钙镁90片", "液体钙12袋", "钙铁锌60片", "锌钙特葡萄糖酸钙锌口服液24袋"],
         "power":  ["牛初乳60片*2", "钙镁90片", "液体钙12袋", "钙铁锌60片", "锌钙特葡萄糖酸钙锌口服液24袋"],
         "bar_colors": {
             "牛初乳60片*2": "#4472C4", "钙铁锌60片": "#FFC000", "钙镁90片": "#5B9BD5", "液体钙12袋": "#92D050",
-            "锌钙特葡萄糖酸钙锌口服液24袋": "#7F6000",
+            "锌钙特葡萄糖酸钙锌口服液24袋": "#7F6000", "汤臣儿童钙整体": "#7030A0",
         },
     },
     "成人多维": {
         "bar":    ["女维120片", "女维60片", "男维120片", "男维60片"],
+        "brand_total_name": "汤臣多维整体",
         "price":  ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
         "dist":   ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
         "power":  ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
         "bar_colors": {
             "女维120片": "#4472C4", "女维60片": "#5B9BD5",
             "男维120片": "#FFC000", "男维60片": "#FFD966",
-            "银善存91sx2p": "#7F6000", "善存多维元素片(29)91sx2p": "#BF9000",
+            "银善存91sx2p": "#7F6000", "善存多维元素片(29)91sx2p": "#BF9000", "汤臣多维整体": "#7030A0",
         },
     },
     "儿童多维": {
         "bar":    ["汤臣倍健多维咀嚼片60片"],
+        "brand_total_name": "汤臣儿童多维整体",
         "price":  ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "dist":   ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "power":  ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
@@ -3092,11 +3102,12 @@ CHART_NAMES = {
             "汤臣倍健多维咀嚼片60片": "#4472C4",
             "仁合堂药业五维赖氨酸口服液12袋": "#7F6000",
             "草仙药业五维赖氨酸片36片": "#BF9000",
-            "小施尔康多维咀嚼片(10)30片": "#A6A6A6",
+            "小施尔康多维咀嚼片(10)30片": "#A6A6A6", "汤臣儿童多维整体": "#7030A0",
         },
     },
     "鱼油": {
         "bar":    ["200粒", "100粒", "晶纯60粒"],
+        "brand_total_name": "汤臣鱼油总体",
         "price":  ["200粒", "100粒", "晶纯60粒"],
         "dist":   ["200粒", "100粒", "晶纯60粒", "汤臣鱼油总体"],
         "power":  ["200粒", "100粒", "晶纯60粒", "汤臣鱼油总体"],
@@ -3107,17 +3118,19 @@ CHART_NAMES = {
     },
     "氨糖": {
         "bar":    ["旧品", "金装", "白金", "OTC"],
+        "brand_total_name": "健力多整体",
         "price":  ["金装280片礼盒装", "白金150片", "OTC60粒", "蓝氨糖120片"],
         "dist":   ["旧品", "金装", "白金", "OTC"],
         "power":  ["旧品", "金装", "白金", "OTC"],
         "bar_colors": {
             "旧品": "#A6A6A6", "金装": "#4472C4", "白金": "#FFC000", "OTC": "#92D050",
             "金装280片礼盒装": "#5B9BD5", "白金150片": "#FFD966",
-            "OTC60粒": "#00B050", "蓝氨糖120片": "#A6A6A6",
+            "OTC60粒": "#00B050", "蓝氨糖120片": "#A6A6A6", "健力多整体": "#7030A0",
         },
     },
     "益生菌": {
         "bar":    ["其他", "蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋"],
+        "brand_total_name": "益倍适总体",
         "price":  ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益君康30片"],
         "dist":   ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益倍适总体", "益君康30片"],
         "power":  ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益倍适总体", "益君康30片"],
@@ -3316,7 +3329,7 @@ NEW_PRODUCTS = {
 }
 
 
-def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=380, legend_y=1.08, y_max=None):
+def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=380, legend_y=1.08, y_max=None, brand_total_name=None):
     fig = go.Figure()
     labels = df["label"].drop_duplicates().tolist()
     for idx, name in enumerate(names):
@@ -3347,14 +3360,20 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
     fig.update_layout(barmode="stack")
 
     # --- Add total annotations above each bar ---
+    # Use brand total data if available, otherwise sum of segments
     _totals = []
     for _lbl in labels:
-        _t = 0.0
-        for _name in names:
-            _sub = df[(df["label"] == _lbl) & (df["name"] == _name)]
-            _v = pd.to_numeric(_sub[metric], errors="coerce").fillna(0)
-            if len(_v) > 0:
-                _t += float(_v.iloc[0])
+        if brand_total_name:
+            _bt = df[(df["label"] == _lbl) & (df["name"] == brand_total_name)]
+            _v = pd.to_numeric(_bt[metric], errors="coerce").fillna(0)
+            _t = float(_v.iloc[0]) if len(_v) > 0 else 0.0
+        else:
+            _t = 0.0
+            for _name in names:
+                _sub = df[(df["label"] == _lbl) & (df["name"] == _name)]
+                _v = pd.to_numeric(_sub[metric], errors="coerce").fillna(0)
+                if len(_v) > 0:
+                    _t += float(_v.iloc[0])
         _totals.append(_t)
     _max_total = max(_totals) if _totals else 0
     for _i, _lbl in enumerate(labels):
@@ -3521,8 +3540,9 @@ def render_charts(metric_df, cat_label):
         bar_names = cfg.get("bar", all_names)
         share_ymax = SHARE_YMAX.get(cat_label, 100)
         share_dec = SHARE_DECIMALS.get(cat_label, 0)
-        st.plotly_chart(make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=437), width='stretch')
-        st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax), width='stretch')
+        _btn = cfg.get("brand_total_name")
+        st.plotly_chart(make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=437, brand_total_name=_btn), width='stretch')
+        st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax, brand_total_name=_btn), width='stretch')
     with mid:
         price_names = cfg.get("price", all_names)
         _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=889, label_mode="alternate", cat_label=cat_label)
