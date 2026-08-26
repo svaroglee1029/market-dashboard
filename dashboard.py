@@ -648,7 +648,7 @@ st.markdown("""
     div[data-testid="stPlotlyChart"] {
         margin-top: 0 !important;
         margin-bottom: 0 !important;
-        margin-right: -28px !important;
+        margin-right: -38px !important;
     }
     /* Tighten gap between consecutive plotly charts only (not text/table elements) */
     div[data-testid="stColumn"] > div[data-testid="stVerticalBlock"] > div[data-testid="stPlotlyChart"] + div[data-testid="stPlotlyChart"] {
