@@ -3640,7 +3640,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             _sf_idx = len(labels)
             for i, lbl in enumerate(labels):
                 try:
-                    _lv = int(lbl.split("M")[0]) * 12 + int(lbl.split("M")[1])
+                    _ls = str(lbl)
+                    _lv = int(_ls.split("M")[0]) * 12 + int(_ls.split("M")[1])
                     if _lv >= _sf_val:
                         _sf_idx = i
                         break
@@ -3651,18 +3652,30 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         # --- Apply skip_months filter: remove specific months ---
         if name in skip_months:
             _skip_set = set(skip_months[name])
-            annotate_indices = {i for i in annotate_indices if labels[i] not in _skip_set}
+            annotate_indices = {i for i in annotate_indices if str(labels[i]) not in _skip_set}
 
         # --- Determine yshift: above (positive) or below (negative) ---
         # Labels close to data point, not overlapping; tight stagger
         _ov = month_override.get(name, {})
 
         for i in sorted(annotate_indices):
-            _lbl = labels[i] if i < len(labels) else ""
+            _lbl = str(labels[i]) if i < len(labels) else ""
+            # Hardcoded skip: 益生菌 power 25M4 for 畅护10袋 & B420 20袋
+            if cat_label == "益生菌" and metric == "power" and _lbl == "25M4" and name in ("畅护10袋", "B420 20袋"):
+                continue
             if _lbl in _ov:
                 _below = _ov[_lbl] == "below"
             else:
                 _below = name in full_below
+            # Also check hardcoded skip for start_from items
+            if name in start_from:
+                try:
+                    _my_lv = int(_lbl.split("M")[0]) * 12 + int(_lbl.split("M")[1])
+                    _sf_val2 = int(str(start_from[name]).split("M")[0]) * 12 + int(str(start_from[name]).split("M")[1])
+                    if _my_lv < _sf_val2:
+                        continue
+                except:
+                    pass
             yshift = -(yshift_base + idx * 2) if _below else (yshift_base + idx * 2)
             fig.add_annotation(
                 x=labels[i], y=vals.iloc[i], text=f"{vals.iloc[i]:.{decimals}f}",
