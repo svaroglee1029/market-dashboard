@@ -1481,7 +1481,7 @@ def page2(sel_month, trend_months):
             st.plotly_chart(fig, width='stretch')
 
         with cL_table:
-            st.markdown("<b class='chart-title'>{ytd_label} 规模同比 & 份额变化</b>", unsafe_allow_html=True)
+            st.markdown(f"<b class='chart-title'>{ytd_label} 规模同比 & 份额变化</b>", unsafe_allow_html=True)
             table_rows = []
             for _, r in metrics_df[::-1].iterrows():
                 sy = r["YTD规模同比"]
@@ -2719,6 +2719,7 @@ def build_table_html(cat_label, cat, table_brands, current_ym):
 
 
 def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=690):
+    ytd_label, ly_label, _, _, _ = period_labels(current_ym)
     ytd_months = period_months("YTD", current_ym)
     ly_months = period_months("YTD_LY", current_ym)
     fig = go.Figure()
