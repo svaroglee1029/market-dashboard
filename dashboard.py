@@ -2367,7 +2367,7 @@ def render_first_page(selected_cat, selected_month, display_months):
         ))
         fig.update_layout(
             barmode="stack",
-            bargap=0.25,
+            bargap=0.20,
             height=right_chart_height,
             margin=dict(t=72, b=55, l=0, r=0),
             paper_bgcolor="white",
@@ -2419,8 +2419,10 @@ def render_first_page(selected_cat, selected_month, display_months):
                 "label": "VDS",
                 "values": [fp_calc_yoy(r["vds"], r["vds_ly"]) for _, r in monthly_df.iterrows()]
             })
+        _bl = config["brand_label"]
+        _bl_short = {"汤臣倍健": "汤臣", "健力多": "健力多", "Life-Space": "益倍适"}.get(_bl, _bl)
         growth_rows.append({
-            "label": "汤臣同比",
+            "label": f"{_bl_short}同比",
             "values": [fp_calc_yoy(r["brand"], r["brand_ly"]) for _, r in monthly_df.iterrows()]
         })
         n_months = len(display_months)
@@ -3115,7 +3117,7 @@ CHART_NAMES = {
         },
     },
     "益生菌": {
-        "bar":    ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "其他", "B420 20袋"],
+        "bar":    ["其他", "蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋"],
         "price":  ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益君康30片"],
         "dist":   ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益倍适总体", "益君康30片"],
         "power":  ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益倍适总体", "益君康30片"],
@@ -3390,11 +3392,12 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                     # Stagger annotations vertically to avoid overlap for small segments
                     _hb_yshift = 0
                     if val < (ymax * 0.08):
-                        _hb_yshift = 10 if _hb_idx % 2 == 0 else -10
+                        _stagger = [14, -14, 20, -20, 7, -7]
+                        _hb_yshift = _stagger[_hb_idx % len(_stagger)]
                     fig.add_annotation(
                         x=last_label, y=y_center, text=f"{diff:+.1f}", showarrow=False,
                         xshift=36, yshift=_hb_yshift,
-                        font=dict(size=15, color="#00A85A" if diff >= 0 else "#E53935", family="Microsoft YaHei", weight="bold"),
+                        font=dict(size=13, color="#00A85A" if diff >= 0 else "#E53935", family="Microsoft YaHei", weight="bold"),
                     )
                 y_cursor += val
             else:
