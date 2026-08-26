@@ -3359,7 +3359,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                 y_cursor += float(last_v.iloc[0]) if last_v.notna().any() else 0
     fig = _chart_base(fig, title, height, legend_y, show_yaxis=True, legend_below=True)
     fig.update_layout(showlegend=True)
-    fig.update_xaxes(tickangle=-45, tickfont=dict(size=13, family="Microsoft YaHei"))
+    fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
     if metric == "share":
         ymax = y_max if y_max is not None else 100
         fig.update_layout(yaxis=dict(showgrid=False, zeroline=False, visible=True, range=[0, ymax * 1.25]))
@@ -3461,7 +3461,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 font=dict(size=12, color=c, family="Arial, sans-serif"),
             )
     fig = _chart_base(fig, title, height, 1.08, legend_below=True)
-    fig.update_xaxes(tickangle=-45, tickfont=dict(size=13, family="Microsoft YaHei"))
+    fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
     return fig
 
 
