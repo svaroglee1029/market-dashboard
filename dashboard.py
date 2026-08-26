@@ -2829,7 +2829,17 @@ def make_trend_chart(cat_label, cat, brands, months):
                 line=dict(width=3, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], shape="spline", smoothing=1.3),
                 marker=dict(size=6),
                 text=_text,
-                textposition="bottom center" if ((cat_label == "氨糖" and "九力" in _bn) or (cat_label == "成人钙" and "汤臣倍健" in _bn) or (cat_label == "儿童多维" and "汤臣倍健" in _bn) or (cat_label == "益生菌" and "Life-Space" in _bn)) else "top center",
+                textposition=[
+                    (lambda _l:
+                        "top center" if (cat_label == "氨糖" and "九力" in _bn and _l in ["25M10", "25M11", "25M12", "26M2"])
+                        else "top center" if (cat_label == "儿童多维" and "汤臣倍健" in _bn and _l == "25M2")
+                        else "bottom center" if (cat_label == "氨糖" and "九力" in _bn)
+                        else "bottom center" if (cat_label == "成人钙" and "汤臣倍健" in _bn)
+                        else "bottom center" if (cat_label == "儿童多维" and "汤臣倍健" in _bn)
+                        else "bottom center" if (cat_label == "益生菌" and "Life-Space" in _bn)
+                        else "top center"
+                    )(ym_lab(m)) for m in months
+                ],
                 textfont=dict(size=14, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], family="Arial, sans-serif"),
                 hovertemplate="%{fullData.name}<br>%{x}份额：%{y:.3f}%<extra></extra>",
             )
@@ -3099,10 +3109,10 @@ CHART_NAMES = {
         "dist":   ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "power":  ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "bar_colors": {
-            "汤臣倍健多维咀嚼片60片": "#FFD966",
+            "汤臣倍健多维咀嚼片60片": "#F4B084",
             "仁合堂药业五维赖氨酸口服液12袋": "#7F6000",
             "草仙药业五维赖氨酸片36片": "#BF9000",
-            "小施尔康多维咀嚼片(10)30片": "#A6A6A6", "汤臣儿童多维整体": "#FFD966",
+            "小施尔康多维咀嚼片(10)30片": "#4472C4", "汤臣儿童多维整体": "#F4B084",
         },
     },
     "鱼油": {
@@ -3471,19 +3481,20 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("成人多维", "dist"):  {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
         ("成人多维", "power"): {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
         # === 鱼油 ===
-        ("鱼油", "price"): {"full_above": ["200粒", "100粒", "晶纯60粒"], "default": "all"},
-        ("鱼油", "power"): {"default": "alternate"},
-        ("鱼油", "dist"):  {"full_above": ["200粒", "100粒", "晶纯60粒"], "default": "all"},
+        ("鱼油", "price"): {"full_above": ["200粒", "100粒", "晶纯60粒"], "default": "all", "yshift_base": 10},
+        ("鱼油", "power"): {"default": "highlow"},
+        ("鱼油", "dist"):  {"full_above": ["200粒", "晶纯60粒"], "full_below": ["100粒"], "default": "all"},
         # === 氨糖 ===
-        ("氨糖", "power"): {"full_above": ["OTC", "金装"], "default": "endpoints"},
+        ("氨糖", "price"): {"default": "all"},
+        ("氨糖", "power"): {"full_above": ["OTC", "金装"], "month_override": {"OTC": {"26M2": "below"}}, "default": "endpoints"},
         ("氨糖", "dist"):  {"full_above": ["金装", "白金"], "full_below": ["旧品", "OTC"], "default": "endpoints"},
         # === 益生菌 ===
-        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "default": "alternate"},
+        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "month_override": {"B420 20袋": {"26M4": "below", "26M6": "above"}}, "default": "alternate"},
         ("益生菌", "dist"):  {"full_below": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "default": "alternate"},
         ("益生菌", "power"): {"start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "default": "endpoints"},
         # === 儿童多维 ===
-        ("儿童多维", "dist"):  {"full_below": ["草仙药业五维赖氨酸片36片"], "default": "endpoints"},
-        ("儿童多维", "power"): {"full_below": ["汤臣倍健多维咀嚼片60片"], "default": "endpoints"},
+        ("儿童多维", "dist"):  {"full_below": ["草仙药业五维赖氨酸片36片"], "default": "highlow"},
+        ("儿童多维", "power"): {"full_below": ["汤臣倍健多维咀嚼片60片"], "default": "highlow"},
     }
     cfg = _LC.get((cat_label, metric), {})
     full_above = set(cfg.get("full_above", []))
@@ -3491,6 +3502,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     highpoint_above = set(cfg.get("highpoint_above", []))
     default_mode = cfg.get("default", label_mode)
     start_from = cfg.get("start_from", {})  # {name: "25M5"} skip labels before this month
+    month_override = cfg.get("month_override", {})  # {name: {"26M4": "below", "26M6": "above"}}
+    yshift_base = cfg.get("yshift_base", 6)  # base yshift for labels
 
     for idx, name in enumerate(names):
         sub = df[df["name"] == name].set_index("label").reindex(labels)
@@ -3525,21 +3538,40 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 annotate_indices.add(valid[-1])
             elif default_mode == "skip_start":
                 annotate_indices = set(valid[1:])
+            elif default_mode == "highlow":
+                # Show start, end, and 3-5 high/low points
+                annotate_indices = {valid[0], valid[-1]}
+                _sorted_idx = sorted(valid, key=lambda i: vals.iloc[i], reverse=True)
+                _n_extra = min(5, len(_sorted_idx) - 2)
+                for i in _sorted_idx[:_n_extra]:
+                    annotate_indices.add(i)
 
         # --- Apply start_from filter: skip labels before specified month ---
         if name in start_from:
             _sf = start_from[name]
-            _sf_idx = next((i for i, lbl in enumerate(labels) if lbl >= _sf), len(labels))
+            _sf_val = int(_sf.split("M")[0]) * 12 + int(_sf.split("M")[1])
+            _sf_idx = len(labels)
+            for i, lbl in enumerate(labels):
+                try:
+                    _lv = int(lbl.split("M")[0]) * 12 + int(lbl.split("M")[1])
+                    if _lv >= _sf_val:
+                        _sf_idx = i
+                        break
+                except:
+                    pass
             annotate_indices = {i for i in annotate_indices if i >= _sf_idx}
 
         # --- Determine yshift: above (positive) or below (negative) ---
         # Labels close to data point, not overlapping; tight stagger
-        if name in full_below:
-            yshift = -(6 + idx * 2)
-        else:
-            yshift = 6 + idx * 2
+        _ov = month_override.get(name, {})
 
         for i in sorted(annotate_indices):
+            _lbl = labels[i] if i < len(labels) else ""
+            if _lbl in _ov:
+                _below = _ov[_lbl] == "below"
+            else:
+                _below = name in full_below
+            yshift = -(yshift_base + idx * 2) if _below else (yshift_base + idx * 2)
             fig.add_annotation(
                 x=labels[i], y=vals.iloc[i], text=f"{vals.iloc[i]:.{decimals}f}",
                 showarrow=False, xshift=0, yshift=yshift,
