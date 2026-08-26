@@ -3568,7 +3568,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("成人多维", "power"): {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
         # === 鱼油 ===
         ("鱼油", "price"): {"full_above": ["200粒", "100粒", "晶纯60粒"], "default": "all", "yshift_base": 10},
-        ("鱼油", "power"): {"full_above": ["汤臣鱼油总体", "100粒"], "product_mode": {"200粒": "endpoints"}, "product_month_yshift_delta": {"200粒": {"25M1": 19}, "晶纯60粒": {"25M5": -19, "25M6": 19}}, "default": "highlow"},
+        ("鱼油", "power"): {"full_above": ["汤臣鱼油总体", "100粒"], "product_mode": {"200粒": "endpoints"}, "product_month_yshift_delta": {"200粒": {"25M1": 19}, "晶纯60粒": {"25M5": -19, "25M6": 19}, "汤臣鱼油总体": {"25M3": -38, "25M4": -57}}, "default": "highlow"},
         ("鱼油", "dist"):  {"full_above": ["200粒"], "full_below": ["100粒", "晶纯60粒"], "product_month_yshift_delta": {"100粒": {"25M1": -19, "25M2": -19, "25M3": 19, "25M4": -19, "26M6": 15}}, "default": "all"},
         # === 氨糖 ===
         ("氨糖", "price"): {"full_below": ["OTC60粒"], "default": "all"},
