@@ -2880,7 +2880,7 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
     n_table_rows = len(table_brands) + 3  # +1 category row, +2 header rows
     table_row_h = 30  # brand-table row height - reduced to align with trend chart bottom
     table_height = n_table_rows * table_row_h
-    trend_chart_h = 335  # make_trend_chart height
+    trend_chart_h = 370  # make_trend_chart height
     streamlit_gap_ba = 18  # gap between table and trend chart
     left_chart_height = table_height + streamlit_gap_ba + trend_chart_h
 
@@ -3439,7 +3439,7 @@ def render_charts(metric_df, cat_label):
         st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax), width='stretch')
     with mid:
         price_names = cfg.get("price", all_names)
-        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=860, label_mode="alternate", cat_label=cat_label)
+        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=900, label_mode="alternate", cat_label=cat_label)
         _mid_fig.update_layout(title=dict(y=0.965))
         st.plotly_chart(_mid_fig, width='stretch')
     with right:
