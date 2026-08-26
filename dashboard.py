@@ -3367,19 +3367,19 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
             xshift=36, yshift=0, font=dict(size=14, color="#333"),
         )
         y_cursor = 0.0
-        for name in names:
+        for _hb_idx, name in enumerate(names):
             last_v = pd.to_numeric(df.loc[(df["label"] == last_label) & (df["name"] == name), metric], errors="coerce")
             prev_v = pd.to_numeric(df.loc[(df["label"] == prev_label) & (df["name"] == name), metric], errors="coerce")
             if last_v.notna().any() and prev_v.notna().any():
                 val = float(last_v.iloc[0]); base = float(prev_v.iloc[0])
                 diff = val - base
                 y_center = y_cursor + val / 2
-                # Skip 环比 annotation if share is too small (<1%)
-                if val >= 1.0:
+                # Skip 环比 annotation only for non-新产品 with share < 1%
+                if val >= 1.0 or name in NEW_PRODUCTS:
                     # Stagger annotations vertically to avoid overlap for small segments
                     _hb_yshift = 0
                     if val < (ymax * 0.08):
-                        _hb_yshift = 10 if idx % 2 == 0 else -10
+                        _hb_yshift = 10 if _hb_idx % 2 == 0 else -10
                     fig.add_annotation(
                         x=last_label, y=y_center, text=f"{diff:+.1f}", showarrow=False,
                         xshift=36, yshift=_hb_yshift,
