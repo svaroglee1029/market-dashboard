@@ -546,7 +546,7 @@ st.markdown("""
         background: linear-gradient(135deg, #1B4F8E 0%, #102F57 100%);
         color: white;
         border-radius: 10px;
-        padding: 6px 18px;
+        padding: 4px 18px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -3081,7 +3081,7 @@ CHART_NAMES = {
         },
     },
     "成人多维": {
-        "bar":    ["女维120片", "女维60片", "男维120片", "男维60片"],
+        "bar":    ["男维60片", "男维120片", "女维60片", "女维120片"],
         "brand_total_name": "汤臣多维整体",
         "price":  ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
         "dist":   ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
