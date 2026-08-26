@@ -2831,6 +2831,12 @@ def make_trend_chart(cat_label, cat, brands, months):
         else:
             _text = [fmt_share(v) if not pd.isna(v) else "" for v in vals]
 
+        # Blank out 25M10 for 九力 in 氨糖 (replaced by custom annotation with higher offset)
+        if cat_label == "氨糖" and "九力" in _bn:
+            for _j, _m in enumerate(months):
+                if ym_lab(_m) == "25M10" and not pd.isna(vals[_j]):
+                    _text[_j] = ""
+
         # Build textposition: if lines overlap at a month, higher->top, lower->bottom
         _tp = []
         for j, m in enumerate(months):
@@ -2886,6 +2892,23 @@ def make_trend_chart(cat_label, cat, brands, months):
                 hovertemplate="%{fullData.name}<br>%{x}份额：%{y:.3f}%<extra></extra>",
             )
         )
+    # Custom annotation: 九力 25M10 label moved ~0.1cm higher (yshift=14)
+    if cat_label == "氨糖":
+        for i, brand in enumerate(brands):
+            _bn = brand_name(brand)
+            if "九力" in _bn:
+                for j, m in enumerate(months):
+                    if ym_lab(m) == "25M10":
+                        _val = _brand_vals[i][j]
+                        if not pd.isna(_val):
+                            fig.add_annotation(
+                                x=ym_lab(m), y=_val,
+                                text=fmt_share(_val),
+                                showarrow=False, yshift=14,
+                                font=dict(size=14, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], family="Arial, sans-serif"),
+                            )
+                        break
+                break
     fig.update_layout(
         title=dict(text=f"{cat_label}-重点品牌份额(%)趋势", x=0.5, font=dict(size=16, color="#666")),
         height=315,
