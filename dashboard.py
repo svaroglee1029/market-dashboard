@@ -2904,6 +2904,8 @@ SA_CATEGORY_CONFIG = {
             {"name": "金装礼盒装300g*2p", "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健金装(蛋白粉)", "产品包装": "300gx2p"}},
             {"name": "白金礼盒装330g*2p", "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健白金(蛋白粉)", "产品包装": "330gx2p"}},
             {"name": "E钙蛋520g",          "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健(钙维生素E蛋白粉)", "产品包装": "520g"}},
+            {"name": "金装450g",          "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健金装(蛋白粉)", "产品包装": "450g"}},
+            {"name": "白金480g",          "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健白金(蛋白粉)", "产品包装": "480g"}},
             {"name": "汤臣整体",           "source": "sku", "filters": {"品类": "蛋白粉", "品牌": "汤臣倍健"}, "dist_source": "distribution", "dist_filters": {"品牌_NEW": "汤臣倍健蛋白粉"}},
         ],
     },
@@ -3031,7 +3033,7 @@ SHARE_DECIMALS = {
 CHART_NAMES = {
     "蛋白粉": {
         "bar":    ["旧品", "金装", "白金", "E钙"],
-        "price":  ["金装礼盒装300g*2p", "白金礼盒装330g*2p", "E钙蛋520g"],
+        "price":  ["金装礼盒装300g*2p", "白金礼盒装330g*2p", "E钙蛋520g", "金装450g", "白金480g"],
         "dist":   ["旧品", "金装", "白金", "E钙", "汤臣整体"],
         "power":  ["旧品", "金装", "白金", "E钙", "汤臣整体"],
     },
@@ -3289,6 +3291,32 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
             hovertemplate=f"{name}<br>%{{x}}：%{{y:.{text_decimals}f}}<extra></extra>",
         )
     fig.update_layout(barmode="stack")
+
+    # --- Add total annotations above each bar ---
+    _totals = []
+    for _lbl in labels:
+        _t = 0.0
+        for _name in names:
+            _sub = df[(df["label"] == _lbl) & (df["name"] == _name)]
+            _v = pd.to_numeric(_sub[metric], errors="coerce").fillna(0)
+            if len(_v) > 0:
+                _t += float(_v.iloc[0])
+        _totals.append(_t)
+    _max_total = max(_totals) if _totals else 0
+    for _i, _lbl in enumerate(labels):
+        _t = _totals[_i]
+        if _t > 0:
+            fig.add_annotation(
+                x=_lbl, y=_t,
+                text=f"<b>{_t:.0f}</b>",
+                showarrow=False,
+                yshift=10,
+                font=dict(size=14, color="#FF0000", family="Arial, sans-serif"),
+            )
+    # Set y-axis range for sales chart to accommodate annotations
+    if metric != "share" and _max_total > 0:
+        fig.update_layout(yaxis=dict(showgrid=False, zeroline=False, visible=True, range=[0, _max_total * 1.15]))
+
     if metric == "share" and len(labels) >= 2:
         last_label, prev_label = labels[-1], labels[-2]
         month_num = last_label.split("M")[-1] if "M" in last_label else ""
@@ -3319,7 +3347,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                 y_cursor += float(last_v.iloc[0]) if last_v.notna().any() else 0
     fig = _chart_base(fig, title, height, legend_y, show_yaxis=True, legend_below=True)
     fig.update_layout(showlegend=True)
-    fig.update_xaxes(tickangle=-45, tickfont=dict(size=11, family="Microsoft YaHei"))
+    fig.update_xaxes(tickangle=-45, tickfont=dict(size=13, family="Microsoft YaHei"))
     if metric == "share":
         ymax = y_max if y_max is not None else 100
         fig.update_layout(yaxis=dict(showgrid=False, zeroline=False, visible=True, range=[0, ymax * 1.25]))
@@ -3339,6 +3367,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         # === 蛋白粉 ===
         # price: 白金礼盒装 above, 金装礼盒 below, E钙蛋 above
         ("蛋白粉", "price"): {"full_above": ["白金礼盒装330g*2p", "E钙蛋520g"], "full_below": ["金装礼盒装300g*2p"], "default": "endpoints"},
+        # 金装450g/白金480g use alternate labeling
         # dist: 汤臣整体 all above (close); others endpoints, staggered to avoid overlap
         ("蛋白粉", "dist"):  {"full_above": ["汤臣整体"], "full_below": ["E钙"], "default": "endpoints"},
         # power: same pattern as dist
@@ -3420,7 +3449,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 font=dict(size=12, color=c, family="Arial, sans-serif"),
             )
     fig = _chart_base(fig, title, height, 1.08, legend_below=True)
-    fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
+    fig.update_xaxes(tickangle=-45, tickfont=dict(size=13, family="Microsoft YaHei"))
     return fig
 
 
