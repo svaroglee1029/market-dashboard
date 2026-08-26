@@ -423,7 +423,7 @@ st.markdown("""
     .cat-name .sub-no-otc { font-size: 13px; color: #000000; font-weight: bold; margin-left: 3px; }
     .cat-name .sub-yes-otc { font-size: 13px; color: #888888; font-weight: normal; margin-left: 3px; }
     .brand-name { font-weight: 600; color: #1B4F8E; width: 100px; }
-    .brand-name .brand-sub { font-size: 13px; color: #888888; font-weight: normal; margin-left: 2px; }
+    .brand-name .brand-sub { font-size: 13px; color: #1B4F8E; font-weight: normal; margin-left: 2px; }
     .num { font-variant-numeric: tabular-nums; width: 68px; position: relative; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .sales-bold { font-weight: 700; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .bar-cell { position: relative; overflow: hidden; }
@@ -1916,10 +1916,10 @@ def page4(selected_month):
         return f'<td class="num">{format_share(v)}</td>'
 
     def td_share_change(v):
+        if pd.isna(v):
+            return '<td class="num share-change">-</td>'
         c_color, f_color = share_change_color(v)
-        s = format_share(v)
-        if not pd.isna(v):
-            s = f"{v:+.1f}"
+        s = f"{v:+.1f}"
         return f'<td class="num share-change" style="color:{f_color}">{circle_svg(c_color)}<span>{s}</span></td>'
 
     def td_sales_plain(v):
