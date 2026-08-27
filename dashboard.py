@@ -243,14 +243,13 @@ def _load_conclusions():
         return {}
 
 def _save_conclusion(page_key, month, text):
-    """保存单条结论到 JSON 文件"""
+    """保存单条结论到 JSON 文件 - 永不删除已有结论"""
+    if not text or not text.strip():
+        return  # 空文本不保存也不删除，防止意外清空
     data = _load_conclusions()
     if page_key not in data:
         data[page_key] = {}
-    if text and text.strip():
-        data[page_key][month] = text.strip()
-    elif month in data[page_key]:
-        del data[page_key][month]
+    data[page_key][month] = text.strip()
     try:
         with open(_CONCLUSION_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
