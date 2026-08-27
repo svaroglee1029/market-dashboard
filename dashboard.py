@@ -302,28 +302,7 @@ def render_conclusion(page_key, month):
     if new_text != current_text:
         _save_conclusion(page_key, month, new_text)
 
-    # 展示历史结论（排除当前月）
-    history = {m: t for m, t in page_conclusions.items() if m != month}
-    if history:
-        sorted_months = sorted(history.keys(), reverse=True)
-        items_html = ""
-        for idx, m in enumerate(sorted_months):
-            m_label = ym_lab(m)
-            text = history[m]
-            color = _MONTH_COLORS[idx % len(_MONTH_COLORS)]
-            items_html += (
-                f'<div class="conclusion-history-item" style="border-left-color:{color}">'
-                f'<span class="conclusion-history-month" style="color:{color}">{m_label}</span>'
-                f'<span class="conclusion-history-text">{_parse_conclusion_markup(text)}</span>'
-                f'</div>'
-            )
-        st.markdown(
-            f'<div class="conclusion-history">'
-            f'<div class="conclusion-history-title">📋 历史结论</div>'
-            f'{items_html}'
-            f'</div>',
-            unsafe_allow_html=True
-        )
+    # 历史结论不再显示，只显示当月结论
 
 # ====================== v2 Helper: sparse x-axis labels ======================
 
