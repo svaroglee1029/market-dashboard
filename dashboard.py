@@ -3565,8 +3565,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("儿童钙", "dist"):  {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "month_xshift": {"25M1": -12, "26M6": 12}, "product_month_xshift": {"锌钙特葡萄糖酸钙锌口服液24袋": {"25M1": 12, "26M6": -12}}, "product_month_yshift_delta": {"钙镁90片": {"25M1": -8, "26M6": -11}}, "default": "endpoints"},
         ("儿童钙", "power"): {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "product_month_yshift_delta": {"钙镁90片": {"25M1": -11, "26M6": -11}}, "product_month_xshift": {"钙镁90片": {"25M1": -8, "26M6": 8}}, "default": "endpoints"},
         # === 成人多维 ===
-        ("成人多维", "dist"):  {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
-        ("成人多维", "power"): {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
+        ("成人多维", "price"): {"full_below": ["善存多维元素片(29)91sx2p", "女维60片"], "default": "all"},
+        ("成人多维", "dist"):  {"highpoint_above": ["善存多维元素片(29)91sx2p"], "highpoint_below": ["银善存91sx2p"], "alternate_above": ["男维120片"], "month_xshift": {"25M1": -8, "26M6": 8}, "default": "endpoints"},
+        ("成人多维", "power"): {"alternate_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "month_xshift": {"25M1": -4, "26M6": 4}, "default": "endpoints"},
         # === 鱼油 ===
         ("鱼油", "price"): {"full_above": ["200粒", "100粒", "晶纯60粒"], "default": "all", "yshift_base": 10},
         ("鱼油", "power"): {"full_above": ["汤臣鱼油总体", "100粒"], "product_mode": {"200粒": "endpoints"}, "product_month_yshift_delta": {"200粒": {"25M1": 19}, "晶纯60粒": {"25M5": -19, "25M6": 19}, "汤臣鱼油总体": {"25M3": 19, "25M4": 34}}, "default": "highlow"},
@@ -3589,6 +3590,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     alternate_above = set(cfg.get("alternate_above", []))
     alternate_below = set(cfg.get("alternate_below", []))
     highpoint_above = set(cfg.get("highpoint_above", []))
+    highpoint_below = set(cfg.get("highpoint_below", []))
     default_mode = cfg.get("default", label_mode)
     start_from = cfg.get("start_from", {})  # {name: "25M5"} skip labels before this month
     month_override = cfg.get("month_override", {})  # {name: {"26M4": "below", "26M6": "above"}}
@@ -3631,7 +3633,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             for j in range(0, len(valid), 2):
                 annotate_indices.add(valid[j])
             annotate_indices.add(valid[-1])
-        elif name in highpoint_above:
+        elif name in highpoint_above or name in highpoint_below:
             annotate_indices = {valid[0], valid[-1]}
             max_idx = max(valid, key=lambda i: vals.iloc[i])
             annotate_indices.add(max_idx)
@@ -3696,7 +3698,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             if _lbl in _ov:
                 _below = _ov[_lbl] == "below"
             else:
-                _below = name in full_below or name in alternate_below
+                _below = name in full_below or name in alternate_below or name in highpoint_below
             # Also check hardcoded skip for start_from items
             if name in start_from:
                 try:
