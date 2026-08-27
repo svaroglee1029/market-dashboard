@@ -3549,12 +3549,12 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     _LC = {
         # === 蛋白粉 ===
         # price: 白金礼盒装 above, 金装礼盒 below, E钙蛋 above
-        ("蛋白粉", "price"): {"default": "full_above"},
+        ("蛋白粉", "price"): {"default": "all"},
         # 金装450g/白金480g use alternate labeling
         # dist: 汤臣整体 all above (close); others endpoints, staggered to avoid overlap
-        ("蛋白粉", "dist"):  {"full_above": ["金装", "汤臣整体", "旧品"], "month_xshift": {"25M1": -12}, "month_yshift": {"25M1": -12}, "product_month_yshift_delta": {"E钙": {"26M6": 12}, "白金": {"26M6": -8}, "金装": {"26M6": -12}}, "default": "endpoints"},
+        ("蛋白粉", "dist"):  {"full_above": ["金装", "汤臣整体", "旧品"], "month_xshift": {"25M1": -12}, "month_yshift": {"25M1": -12}, "product_month_yshift_delta": {"E钙": {"26M6": 12}, "白金": {"26M6": 8}, "金装": {"26M6": -12}}, "default": "endpoints"},
         # power: same pattern as dist
-        ("蛋白粉", "power"): {"full_above": ["汤臣整体"], "product_month_xshift": {"金装": {"26M6": 8}, "白金": {"26M6": 8}, "旧品": {"26M6": 8}}, "product_month_yshift_delta": {"旧品": {"26M6": 4}}, "default": "endpoints"},
+        ("蛋白粉", "power"): {"full_above": ["汤臣整体"], "product_month_xshift": {"金装": {"26M6": 8}, "白金": {"26M6": 8}, "旧品": {"26M6": 8}}, "product_month_yshift_delta": {"旧品": {"26M6": 4}, "白金": {"25M1": -19}}, "default": "endpoints"},
         # === 成人钙 ===
         # dist: all closer, staggered
         ("成人钙", "dist"):  {"full_above": ["200粒x2", "焕动力120粒"], "full_below": ["汤臣钙DK整体", "120粒"], "highpoint_above": ["钙尔奇D600 60片"], "default": "endpoints"},
