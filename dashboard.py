@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 # 市场分析综合仪表盘 - 合并版
 # Tab 1: 全国药店VDS市场表现 (page1-page4)
 # Tab 2: 重点品类汤臣市场表现 (render_first_page/render_brand_analysis/render_sku_analysis)
@@ -237,7 +237,7 @@ def _parse_conclusion_markup(text):
 def _load_conclusions():
     """从 JSON 文件加载所有保存的结论"""
     try:
-        with open(_CONCLUSION_FILE, "r", encoding="utf-8") as f:
+        with open(_CONCLUSION_FILE, "r", encoding="utf-8-sig") as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
