@@ -3145,7 +3145,7 @@ CHART_NAMES = {
             "旧品": "#A6A6A6",
             "金装": "#4472C4",
             "白金": "#FFC000",
-            "E钙": "#00B050",
+            "E钙": "#92D050",
             "金装礼盒装300g*2p": "#5B9BD5",
             "白金礼盒装330g*2p": "#FFD966",
             "E钙蛋520g": "#00B050",
@@ -3549,12 +3549,12 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     _LC = {
         # === 蛋白粉 ===
         # price: 白金礼盒装 above, 金装礼盒 below, E钙蛋 above
-        ("蛋白粉", "price"): {"default": "full_above"},
+        ("蛋白粉", "price"): {"default": "full_above"}  # already full,
         # 金装450g/白金480g use alternate labeling
         # dist: 汤臣整体 all above (close); others endpoints, staggered to avoid overlap
-        ("蛋白粉", "dist"):  {"full_above": ["金装", "汤臣整体", "旧品"], "default": "endpoints"},
+        ("蛋白粉", "dist"):  {"full_above": ["金装", "汤臣整体", "旧品"], "month_xshift": {"25M1": -12}, "month_yshift": {"25M1": -12}, "product_month_yshift_delta": {"E钙": {"26M6": 12}, "白金": {"26M6": -8}, "金装": {"26M6": -12}}, "default": "endpoints"},
         # power: same pattern as dist
-        ("蛋白粉", "power"): {"full_above": ["汤臣整体"], "default": "endpoints"},
+        ("蛋白粉", "power"): {"full_above": ["汤臣整体"], "product_month_xshift": {"金装": {"26M6": 8}, "白金": {"26M6": 8}, "旧品": {"26M6": 8}}, "product_month_yshift_delta": {"旧品": {"26M6": 4}}, "default": "endpoints"},
         # === 成人钙 ===
         # dist: all closer, staggered
         ("成人钙", "dist"):  {"full_above": ["200粒x2", "焕动力120粒"], "full_below": ["汤臣钙DK整体", "120粒"], "highpoint_above": ["钙尔奇D600 60片"], "default": "endpoints"},
@@ -3567,15 +3567,15 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("成人多维", "dist"):  {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
         ("成人多维", "power"): {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
         # === 鱼油 ===
-        ("鱼油", "price"): {"full_above": ["200粒", "100粒", "晶纯60粒"], "default": "all", "yshift_base": 10},
+        ("鱼油", "price"): {"default": "full_above"},
         ("鱼油", "power"): {"full_above": ["汤臣鱼油总体", "100粒"], "product_mode": {"200粒": "endpoints"}, "product_month_yshift_delta": {"200粒": {"25M1": 19}, "晶纯60粒": {"25M5": -19, "25M6": 19}, "汤臣鱼油总体": {"25M3": 19, "25M4": 34}}, "default": "highlow"},
         ("鱼油", "dist"):  {"full_above": ["200粒"], "full_below": ["100粒", "晶纯60粒"], "product_month_yshift_delta": {"100粒": {"25M1": -19, "25M2": -19, "25M3": 19, "25M4": -19, "26M6": 15}}, "default": "all"},
         # === 氨糖 ===
-        ("氨糖", "price"): {"full_below": ["OTC60粒"], "default": "all"},
+        ("氨糖", "price"): {"default": "full_above"},
         ("氨糖", "power"): {"full_above": ["OTC", "金装"], "month_override": {"OTC": {"26M2": "below"}}, "month_xshift": {"25M1": -8, "26M6": 8}, "product_month_xshift": {"OTC": {"25M9": -8, "25M10": -8}}, "default": "endpoints"},
         ("氨糖", "dist"):  {"full_above": ["金装", "白金"], "full_below": ["旧品", "OTC"], "month_xshift": {"25M1": -8, "26M6": 8}, "product_yshift_offset": {"旧品": -8}, "default": "endpoints"},
         # === 益生菌 ===
-        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "month_override": {"B420 20袋": {"26M4": "below", "26M6": "above"}}, "month_yshift": {"B420 20袋": {"26M4": 12}}, "default": "alternate"},
+        ("益生菌", "price"): {"default": "full_above"}}, "month_yshift": {"B420 20袋": {"26M4": 12}}, "default": "alternate"},
         ("益生菌", "dist"):  {"alternate_above": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "include_months": {"畅护10袋": ["25M4"]}, "month_xshift": {"25M1": -4}, "default": "alternate"},
         ("益生菌", "power"): {"alternate_above": ["蓝帽48袋", "益倍适总体", "畅护10袋"], "start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "skip_months": {"畅护10袋": ["25M4"], "B420 20袋": ["25M4"]}, "null_months": {"畅护10袋": ["25M4"], "B420 20袋": ["26M4"]}, "month_yshift": {"B420 20袋": {"26M5": -3}}, "month_xshift": {"25M1": -4, "26M6": 4}, "default": "endpoints"},
         # === 儿童多维 ===
