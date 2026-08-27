@@ -217,13 +217,13 @@ def _parse_conclusion_markup(text):
     # Escape HTML special chars
     text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
     # Parse markup tags
-    text = _re.sub(r'\[g\](.*?)\[/g\]', r'<span style="color:#00B050;font-weight:700">\1</span>', text)
-    text = _re.sub(r'\[r\](.*?)\[/r\]', r'<span style="color:#FF0000;font-weight:700">\1</span>', text)
-    text = _re.sub(r'\[b\](.*?)\[/b\]', r'<span style="font-weight:700;font-size:1.1em">\1</span>', text)
-    text = _re.sub(r'\[o\](.*?)\[/o\]', r'<span style="color:#002060;font-weight:700">\1</span>', text)
-    text = _re.sub(r'\[s\](.*?)\[/s\]', r'<span style="font-size:0.85em">\1</span>', text)
-    text = _re.sub(r'\[i\](.*?)\[/i\]', r'<span style="font-style:italic">\1</span>', text)
-    text = _re.sub(r'\[u\](.*?)\[/u\]', r'<span style="text-decoration:underline">\1</span>', text)
+    text = _re.sub(r'\[g\](.*?)\[/g\]', r'<span style="color:#00B050;font-weight:700">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[r\](.*?)\[/r\]', r'<span style="color:#FF0000;font-weight:700">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[b\](.*?)\[/b\]', r'<span style="font-weight:700;font-size:1.1em">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[o\](.*?)\[/o\]', r'<span style="color:#002060;font-weight:700">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[s\](.*?)\[/s\]', r'<span style="font-size:0.85em">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[i\](.*?)\[/i\]', r'<span style="font-style:italic">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[u\](.*?)\[/u\]', r'<span style="text-decoration:underline">\1</span>', text, flags=_re.DOTALL)
     # Split by \n and wrap each paragraph in a div for visual separation
     paragraphs = text.split('\n')
     html_parts = []
@@ -319,8 +319,8 @@ def render_conclusion(page_key, month):
     st.session_state[first_render_key] = True
 
     if not is_first_render:
-        new_text = st.session_state.get(widget_key, "")
-        if new_text != current_text:
+        new_text = st.session_state.get(widget_key, current_text)
+        if new_text != current_text and new_text and new_text.strip():
             _save_conclusion(page_key, month, new_text)
 
     # 历史结论不再显示，只显示当月结论
