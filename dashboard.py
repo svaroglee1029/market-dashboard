@@ -3172,7 +3172,7 @@ CHART_NAMES = {
         "dist":   ["牛初乳60片*2", "钙镁90片", "液体钙12袋", "钙铁锌60片", "锌钙特葡萄糖酸钙锌口服液24袋"],
         "power":  ["牛初乳60片*2", "钙镁90片", "液体钙12袋", "钙铁锌60片", "锌钙特葡萄糖酸钙锌口服液24袋"],
         "bar_colors": {
-            "牛初乳60片*2": "#4472C4", "钙铁锌60片": "#FFC000", "钙镁90片": "#5B9BD5", "液体钙12袋": "#92D050",
+            "牛初乳60片*2": "#A6A6A6", "钙铁锌60片": "#FFC000", "钙镁90片": "#5B9BD5", "液体钙12袋": "#92D050",
             "锌钙特葡萄糖酸钙锌口服液24袋": "#7F6000", "汤臣儿童钙整体": "#7030A0",
         },
     },
@@ -3549,20 +3549,21 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     _LC = {
         # === 蛋白粉 ===
         # price: 白金礼盒装 above, 金装礼盒 below, E钙蛋 above
-        ("蛋白粉", "price"): {"default": "all"},
+        ("蛋白粉", "price"): {"default": "all", "product_month_yshift_delta": {"白金480g": {"25M3": -11}}},
         # 金装450g/白金480g use alternate labeling
         # dist: 汤臣整体 all above (close); others endpoints, staggered to avoid overlap
-        ("蛋白粉", "dist"):  {"full_above": ["金装", "汤臣整体", "旧品"], "month_xshift": {"25M1": -12}, "month_yshift": {"25M1": -12}, "product_month_yshift_delta": {"E钙": {"26M6": 12}, "白金": {"26M6": 8}, "金装": {"26M6": -12}}, "default": "endpoints"},
+        ("蛋白粉", "dist"):  {"full_above": ["金装", "汤臣整体", "旧品"], "month_xshift": {"25M1": -12}, "month_yshift": {"25M1": -12}, "product_yshift_offset": {"白金": -11}, "product_month_yshift_delta": {"E钙": {"26M6": 12}, "白金": {"26M6": 8}, "金装": {"26M6": -12}}, "default": "endpoints"},
         # power: same pattern as dist
         ("蛋白粉", "power"): {"full_above": ["汤臣整体"], "product_month_xshift": {"金装": {"26M6": 8}, "白金": {"26M6": 8}, "旧品": {"26M6": 8}}, "product_month_yshift_delta": {"旧品": {"26M6": 4}, "白金": {"25M1": -19}}, "default": "endpoints"},
         # === 成人钙 ===
         # dist: all closer, staggered
-        ("成人钙", "dist"):  {"full_above": ["200粒x2", "焕动力120粒"], "full_below": ["汤臣钙DK整体", "120粒"], "highpoint_above": ["钙尔奇D600 60片"], "default": "endpoints"},
+        ("成人钙", "dist"):  {"full_above": ["200粒x2", "焕动力120粒", "钙尔奇D600 60片"], "full_below": ["汤臣钙DK整体", "120粒"], "default": "endpoints"},
         # power: 200粒x2 above, 汤臣钙DK整体 below, 钙尔奇 start/end, 120粒 below
-        ("成人钙", "power"): {"full_above": ["200粒x2"], "full_below": ["汤臣钙DK整体", "120粒"], "default": "endpoints"},
+        ("成人钙", "power"): {"full_above": ["200粒x2"], "full_below": ["汤臣钙DK整体", "120粒"], "alternate_below": ["焕动力120粒"], "default": "endpoints"},
         # === 儿童钙 ===
-        ("儿童钙", "dist"):  {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "default": "endpoints"},
-        ("儿童钙", "power"): {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "default": "endpoints"},
+        ("儿童钙", "price"): {"product_month_yshift_delta": {"钙铁锌60片": {"25M7": -8}, "液体钙12袋": {"25M7": -8}}},
+        ("儿童钙", "dist"):  {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "month_xshift": {"25M1": -12, "26M6": 12}, "product_month_xshift": {"锌钙特葡萄糖酸钙锌口服液24袋": {"25M1": 12, "26M6": -12}}, "default": "endpoints"},
+        ("儿童钙", "power"): {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "product_month_yshift_delta": {"钙镁90片": {"25M1": -11, "26M6": -11}}, "default": "endpoints"},
         # === 成人多维 ===
         ("成人多维", "dist"):  {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
         ("成人多维", "power"): {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
@@ -3586,6 +3587,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     full_above = set(cfg.get("full_above", []))
     full_below = set(cfg.get("full_below", []))
     alternate_above = set(cfg.get("alternate_above", []))
+    alternate_below = set(cfg.get("alternate_below", []))
     highpoint_above = set(cfg.get("highpoint_above", []))
     default_mode = cfg.get("default", label_mode)
     start_from = cfg.get("start_from", {})  # {name: "25M5"} skip labels before this month
@@ -3625,7 +3627,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         annotate_indices = set()
         if name in full_above or name in full_below:
             annotate_indices = set(valid)
-        elif name in alternate_above:
+        elif name in alternate_above or name in alternate_below:
             for j in range(0, len(valid), 2):
                 annotate_indices.add(valid[j])
             annotate_indices.add(valid[-1])
@@ -3694,7 +3696,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             if _lbl in _ov:
                 _below = _ov[_lbl] == "below"
             else:
-                _below = name in full_below
+                _below = name in full_below or name in alternate_below
             # Also check hardcoded skip for start_from items
             if name in start_from:
                 try:
