@@ -221,7 +221,7 @@ def _parse_conclusion_markup(text):
     text = _re.sub(r'\[r\](.*?)\[/r\]', r'<span style="color:#FF0000;font-weight:700">\1</span>', text)
     text = _re.sub(r'\[b\](.*?)\[/b\]', r'<span style="font-weight:700;font-size:1.1em">\1</span>', text)
     text = _re.sub(r'\[o\](.*?)\[/o\]', r'<span style="color:#002060;font-weight:700">\1</span>', text)
-    text = _re.sub(r'\[s\](.*?)\[/s\]', r'<span style="font-size:0.8em">\1</span>', text)
+    text = _re.sub(r'\[s\](.*?)\[/s\]', r'<span style="font-size:0.85em">\1</span>', text)
     text = _re.sub(r'\[i\](.*?)\[/i\]', r'<span style="font-style:italic">\1</span>', text)
     text = _re.sub(r'\[u\](.*?)\[/u\]', r'<span style="text-decoration:underline">\1</span>', text)
     # Split by \n and wrap each paragraph in a div for visual separation
@@ -291,7 +291,7 @@ def render_conclusion(page_key, month):
         formatted_html = _parse_conclusion_markup(display_text)
         st.markdown(
             f'<div style="background:linear-gradient(135deg,#FFFBF0,#FFF8E1);border:2px solid #FFB300;'
-            f'border-radius:8px;padding:16px 20px;font-size:19px;line-height:1.9;color:#002060;">'
+            f'border-radius:8px;padding:16px 20px;font-size:19px;line-height:1.9;color:#002060;font-family:'Arial','Microsoft YaHei','微软雅黑',sans-serif;">'
             f'{formatted_html}</div>',
             unsafe_allow_html=True
         )
