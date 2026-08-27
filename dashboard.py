@@ -3549,7 +3549,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     _LC = {
         # === 蛋白粉 ===
         # price: 白金礼盒装 above, 金装礼盒 below, E钙蛋 above
-        ("蛋白粉", "price"): {"default": "all", "product_month_yshift_delta": {"白金480g": {"25M3": -11}}},
+        ("蛋白粉", "price"): {"default": "all", "product_month_yshift_delta": {"白金480g": {"25M3": -8}}},
         # 金装450g/白金480g use alternate labeling
         # dist: 汤臣整体 all above (close); others endpoints, staggered to avoid overlap
         ("蛋白粉", "dist"):  {"full_above": ["金装", "汤臣整体", "旧品"], "month_xshift": {"25M1": -12}, "month_yshift": {"25M1": -12}, "product_yshift_offset": {"白金": -11}, "product_month_yshift_delta": {"E钙": {"26M6": 12}, "白金": {"26M6": 8}, "金装": {"26M6": -12}}, "default": "endpoints"},
@@ -3561,9 +3561,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         # power: 200粒x2 above, 汤臣钙DK整体 below, 钙尔奇 start/end, 120粒 below
         ("成人钙", "power"): {"full_above": ["200粒x2"], "full_below": ["汤臣钙DK整体", "120粒"], "alternate_below": ["焕动力120粒"], "default": "endpoints"},
         # === 儿童钙 ===
-        ("儿童钙", "price"): {"product_month_yshift_delta": {"钙铁锌60片": {"25M7": -8}, "液体钙12袋": {"25M7": -8}}},
-        ("儿童钙", "dist"):  {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "month_xshift": {"25M1": -12, "26M6": 12}, "product_month_xshift": {"锌钙特葡萄糖酸钙锌口服液24袋": {"25M1": 12, "26M6": -12}}, "default": "endpoints"},
-        ("儿童钙", "power"): {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "product_month_yshift_delta": {"钙镁90片": {"25M1": -11, "26M6": -11}}, "default": "endpoints"},
+        ("儿童钙", "price"): {"product_month_yshift_delta": {"钙铁锌60片": {"25M7": -8}, "液体钙12袋": {"25M7": -8}}, "product_month_xshift": {"液体钙12袋": {"25M7": -8}}},
+        ("儿童钙", "dist"):  {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "month_xshift": {"25M1": -12, "26M6": 12}, "product_month_xshift": {"锌钙特葡萄糖酸钙锌口服液24袋": {"25M1": 12, "26M6": -12}}, "product_month_yshift_delta": {"钙镁90片": {"25M1": -8, "26M6": -11}}, "default": "endpoints"},
+        ("儿童钙", "power"): {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "product_month_yshift_delta": {"钙镁90片": {"25M1": -11, "26M6": -11}}, "product_month_xshift": {"钙镁90片": {"25M1": -8, "26M6": 8}}, "default": "endpoints"},
         # === 成人多维 ===
         ("成人多维", "dist"):  {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
         ("成人多维", "power"): {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
