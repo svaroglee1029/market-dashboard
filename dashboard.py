@@ -3822,7 +3822,13 @@ def render_charts(metric_df, cat_label):
             "line2": make_line_chart(metric_df, "dist", "动销铺货率（%）", dist_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label),
             "line3": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label),
         }
-        _figs["line1"].update_layout(title=dict(y=0.965))
+        _figs["line1"].update_layout(
+        title=dict(y=0.95),
+        legend=dict(orientation="h", yanchor="bottom", y=1.06, xanchor="center", x=0.5,
+                    font=dict(size=10, family="Microsoft YaHei"),
+                    itemsizing="constant", itemwidth=25),
+        margin=dict(t=140, b=48, l=10, r=54),
+    )
         st.session_state[_cache_key] = _figs
         st.session_state[f"{_cache_key}_h"] = _data_hash
 
