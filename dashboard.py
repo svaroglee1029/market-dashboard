@@ -3984,3 +3984,18 @@ with tab_b:
     </div>
     """, unsafe_allow_html=True)
     render_sku_analysis(selected_cat, selected_month, display_months)
+
+# ====================== 导出结论 ======================
+st.markdown("---")
+st.markdown('<p style="font-size:13px;color:#999;text-align:center;margin-bottom:8px">如需备份结论，请点击下方按钮下载 conclusions.json</p>', unsafe_allow_html=True)
+_concl_path = os.path.join(os.path.dirname(__file__), "conclusions.json")
+if os.path.exists(_concl_path):
+    with open(_concl_path, 'r', encoding='utf-8') as _f:
+        _concl_data = _f.read()
+    st.download_button(
+        label="导出结论 (conclusions.json)",
+        data=_concl_data.encode('utf-8'),
+        file_name="conclusions.json",
+        mime="application/json",
+        type="primary",
+    )
