@@ -3566,8 +3566,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("儿童钙", "power"): {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "product_month_yshift_delta": {"钙镁90片": {"25M1": -11, "26M6": -11}}, "product_month_xshift": {"钙镁90片": {"25M1": -8, "26M6": 8}}, "default": "endpoints"},
         # === 成人多维 ===
         ("成人多维", "price"): {"full_below": ["善存多维元素片(29)91sx2p", "女维60片"], "default": "all"},
-        ("成人多维", "dist"):  {"full_above": ["银善存91sx2p"], "full_below": ["善存多维元素片(29)91sx2p"], "alternate_above": ["男维120片"], "month_xshift": {"25M1": -8, "26M6": 8}, "default": "endpoints"},
-        ("成人多维", "power"): {"alternate_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "month_xshift": {"25M1": -4, "26M6": 4}, "product_month_yshift_delta": {"女维120片": {"25M1": 8, "26M6": 4}, "男维120片": {"25M1": 4, "26M6": 2}, "男维60片": {"25M1": -8, "26M6": -8}, "女维60片": {"25M1": -12, "26M6": -12}}, "product_month_xshift": {"女维120片": {"25M1": -4, "26M6": 4}, "男维120片": {"25M1": -4, "26M6": 4}}, "default": "endpoints"},
+        ("成人多维", "dist"):  {"full_above": ["银善存91sx2p"], "full_below": ["善存多维元素片(29)91sx2p"], "alternate_above": ["男维120片"], "month_xshift": {"25M1": -8, "26M6": 8}, "product_month_yshift_delta": {"女维120片": {"25M1": -4}, "男维60片": {"26M6": -8}}, "default": "endpoints"},
+        ("成人多维", "power"): {"alternate_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "month_xshift": {"25M1": -4, "26M6": 4}, "product_month_yshift_delta": {"女维120片": {"25M1": 8, "26M6": 4}, "男维120片": {"25M1": 4, "26M6": 2}, "男维60片": {"25M1": -8, "26M6": -8}, "女维60片": {"25M1": -12, "26M6": -12}}, "product_month_xshift": {"女维120片": {"25M1": -4, "26M6": 4}, "男维120片": {"25M1": -4, "26M6": 4}, "男维60片": {"25M1": -8, "26M6": 8}, "女维60片": {"25M1": -8, "26M6": 8}}, "default": "endpoints"},
         # === 鱼油 ===
         ("鱼油", "price"): {"full_above": ["200粒", "100粒", "晶纯60粒"], "default": "all", "yshift_base": 10},
         ("鱼油", "power"): {"full_above": ["汤臣鱼油总体", "100粒"], "product_mode": {"200粒": "endpoints"}, "product_month_yshift_delta": {"200粒": {"25M1": 19}, "晶纯60粒": {"25M5": -19, "25M6": 19}, "汤臣鱼油总体": {"25M3": 19, "25M4": 34}}, "default": "highlow"},
