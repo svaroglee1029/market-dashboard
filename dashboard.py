@@ -3800,29 +3800,49 @@ def render_charts(metric_df, cat_label):
     colors = {n: SA_COLORS[i % len(SA_COLORS)] for i, n in enumerate(all_names)}
     colors.update(cfg.get("bar_colors", {}))
 
-    left, mid, right = st.columns([0.34, 0.33, 0.33], gap="medium")
-    with left:
+    # Cache figures in session_state to avoid re-creating on every rerun
+    _cache_key = f"_sa_charts_{cat_label}"
+    _data_hash = hash(metric_df.to_csv().encode())
+
+    if _cache_key in st.session_state and st.session_state.get(f"{_cache_key}_h") == _data_hash:
+        _figs = st.session_state[_cache_key]
+    else:
         bar_names = cfg.get("bar", all_names)
         share_ymax = SHARE_YMAX.get(cat_label, 100)
         share_dec = SHARE_DECIMALS.get(cat_label, 0)
         _btn = cfg.get("brand_total_name")
-        st.plotly_chart(make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=437, brand_total_name=_btn), width='stretch')
-        st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax, brand_total_name=_btn), width='stretch')
-    with mid:
         price_names = cfg.get("price", all_names)
-        _mid_fig = make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=889, label_mode="alternate", cat_label=cat_label)
-        _mid_fig.update_layout(title=dict(y=0.965))
-        st.plotly_chart(_mid_fig, width='stretch')
-    with right:
         dist_names = cfg.get("dist", all_names)
         power_names = cfg.get("power", dist_names)
-        st.plotly_chart(make_line_chart(metric_df, "dist", "动销铺货率（%）", dist_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label), width='stretch')
-        st.plotly_chart(make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label), width='stretch')
+
+        _figs = {
+            "bar1": make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=437, brand_total_name=_btn),
+            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax, brand_total_name=_btn),
+            "line1": make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=889, label_mode="alternate", cat_label=cat_label),
+            "line2": make_line_chart(metric_df, "dist", "动销铺货率（%）", dist_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label),
+            "line3": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label),
+        }
+        _figs["line1"].update_layout(title=dict(y=0.965))
+        st.session_state[_cache_key] = _figs
+        st.session_state[f"{_cache_key}_h"] = _data_hash
+
+    _PCFG = {'displayModeBar': False, 'showTips': False}
+
+    left, mid, right = st.columns([0.34, 0.33, 0.33], gap="medium")
+    with left:
+        st.plotly_chart(_figs["bar1"], width='stretch', config=_PCFG)
+        st.plotly_chart(_figs["bar2"], width='stretch', config=_PCFG)
+    with mid:
+        st.plotly_chart(_figs["line1"], width='stretch', config=_PCFG)
+    with right:
+        st.plotly_chart(_figs["line2"], width='stretch', config=_PCFG)
+        st.plotly_chart(_figs["line3"], width='stretch', config=_PCFG)
         st.markdown("<p style='font-size:11px;color:#E53935;font-style:italic;margin-top:8px'>*单点卖力 = 销售额份额 / 动销铺货率 * 100</p>", unsafe_allow_html=True)
     with left:
         st.markdown("<p style='font-size:11px;color:#999;margin-top:2px'>&nbsp;</p>", unsafe_allow_html=True)
     with mid:
         st.markdown("<p style='font-size:11px;color:#999;margin-top:2px'>&nbsp;</p>", unsafe_allow_html=True)
+
 
 
 # ====================== Part B render_sku_analysis() ======================
