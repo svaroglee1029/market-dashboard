@@ -204,17 +204,22 @@ _MONTH_COLORS = [
 
 def _parse_conclusion_markup(text):
     """Parse conclusion markup tags to HTML.
+    Supports both half-width [r] and full-width brackets.
     [g]text[/g] -> green, [r]text[/r] -> red, [b]text[/b] -> bold, [o]text[/o] -> orange
     """
     import re as _re
     if not text:
         return ""
+    # Normalize full-width brackets to half-width before parsing
+    text = text.replace('\u3010', '[').replace('\u3011', ']')   # 【 】
+    text = text.replace('\uFF3B', '[').replace('\uFF3D', ']')   # full-width [ ]
+    text = text.replace('\u3014', '[').replace('\u3015', ']')   # 〔 〕
     # Escape HTML special chars
     text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-    # Parse markup tags first (on raw text with \n)
+    # Parse markup tags
     text = _re.sub(r'\[g\](.*?)\[/g\]', r'<span style="color:#008000;font-weight:700">\1</span>', text)
     text = _re.sub(r'\[r\](.*?)\[/r\]', r'<span style="color:#D32F2F;font-weight:700">\1</span>', text)
-    text = _re.sub(r'\[b\](.*?)\[/b\]', r'<span style="font-weight:700;font-size:1.05em">\1</span>', text)
+    text = _re.sub(r'\[b\](.*?)\[/b\]', r'<span style="font-weight:700;font-size:1.1em">\1</span>', text)
     text = _re.sub(r'\[o\](.*?)\[/o\]', r'<span style="color:#E65100;font-weight:700">\1</span>', text)
     # Split by \n and wrap each paragraph in a div for visual separation
     paragraphs = text.split('\n')
@@ -273,15 +278,17 @@ def render_conclusion(page_key, month):
         calc_height = 50
 
     st.markdown(
-        f'<div style="font-size:18px;font-weight:700;color:#9A5B00;margin-bottom:4px;padding-left:2px;">结论 ({month_label})</div>',
+        f'<div style="font-size:20px;font-weight:700;color:#9A5B00;margin-bottom:4px;padding-left:2px;">结论 ({month_label})</div>',
         unsafe_allow_html=True
     )
+    # Use latest text from session_state for immediate display update
+    display_text = st.session_state.get(widget_key, current_text)
     # Show formatted HTML display if text exists, otherwise show text_area
-    if current_text and current_text.strip():
-        formatted_html = _parse_conclusion_markup(current_text)
+    if display_text and display_text.strip():
+        formatted_html = _parse_conclusion_markup(display_text)
         st.markdown(
             f'<div style="background:linear-gradient(135deg,#FFFBF0,#FFF8E1);border:2px solid #FFB300;'
-            f'border-radius:8px;padding:14px 18px;font-size:17px;line-height:1.8;color:#333;">'
+            f'border-radius:8px;padding:16px 20px;font-size:19px;line-height:1.9;color:#333;">'
             f'{formatted_html}</div>',
             unsafe_allow_html=True
         )
@@ -294,7 +301,7 @@ def render_conclusion(page_key, month):
                 placeholder="请输入本页结论...",
                 label_visibility="collapsed"
             )
-    else:
+    elif not (display_text and display_text.strip()):
         st.text_area(
             f"结论 ({month_label})",
             height=calc_height,
