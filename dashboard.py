@@ -1262,19 +1262,19 @@ def page1(sel_ym, SEL_M):
             f3 = go.Figure()
             if show_vds:
                 f3.add_bar(x=[ly_label, ytd_label], y=[lpv, cpv], name="VDS",
-                           marker_color=C_VDS, width=0.38,
+                           marker_color=C_VDS, width=0.33,
                            text=[f"{lpv}", f"{cpv}"], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
                            cliponaxis=False, legendrank=1)
             if show_otc:
                 f3.add_bar(x=[ly_label, ytd_label], y=[lpo, cpo], name="OTC",
-                           marker_color=C_OTC, width=0.38,
+                           marker_color=C_OTC, width=0.33,
                            text=[f"{lpo}", f"{cpo}"], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
                            cliponaxis=False, legendrank=2)
             f3.update_layout(**BASE,
                 title=dict(text="品类平均单价<br><sup>(元/盒)</sup>", font_size=13),
-                barmode="group", bargap=0.30, bargroupgap=0.08, showlegend=False,
+                barmode="group", bargap=0.35, bargroupgap=0.18, showlegend=False,
                 xaxis=dict(tickfont=dict(size=13)))
             st.plotly_chart(f3, width='stretch')
 
