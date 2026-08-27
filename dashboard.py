@@ -3145,7 +3145,7 @@ CHART_NAMES = {
             "旧品": "#A6A6A6",
             "金装": "#4472C4",
             "白金": "#FFC000",
-            "E钙": "#92D050",
+            "E钙": "#00B050",
             "金装礼盒装300g*2p": "#5B9BD5",
             "白金礼盒装330g*2p": "#FFD966",
             "E钙蛋520g": "#00B050",
@@ -3549,12 +3549,12 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     _LC = {
         # === 蛋白粉 ===
         # price: 白金礼盒装 above, 金装礼盒 below, E钙蛋 above
-        ("蛋白粉", "price"): {"full_above": ["白金礼盒装330g*2p", "E钙蛋520g"], "full_below": ["金装礼盒装300g*2p"], "default": "endpoints"},
+        ("蛋白粉", "price"): {"default": "full_above"},
         # 金装450g/白金480g use alternate labeling
         # dist: 汤臣整体 all above (close); others endpoints, staggered to avoid overlap
-        ("蛋白粉", "dist"):  {"full_above": ["汤臣整体"], "full_below": ["E钙"], "default": "endpoints"},
+        ("蛋白粉", "dist"):  {"full_above": ["金装", "汤臣整体", "旧品"], "default": "endpoints"},
         # power: same pattern as dist
-        ("蛋白粉", "power"): {"full_above": ["汤臣整体"], "full_below": ["E钙"], "default": "endpoints"},
+        ("蛋白粉", "power"): {"full_above": ["汤臣整体"], "default": "endpoints"},
         # === 成人钙 ===
         # dist: all closer, staggered
         ("成人钙", "dist"):  {"full_above": ["200粒x2", "焕动力120粒"], "full_below": ["汤臣钙DK整体", "120粒"], "highpoint_above": ["钙尔奇D600 60片"], "default": "endpoints"},
@@ -3732,6 +3732,15 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     if metric == "power":
         if cat_label == "益生菌":
             fig.update_layout(yaxis=dict(range=[10, 60]))
+        elif cat_label == "蛋白粉":
+            _all_vals = []
+            for name in names:
+                _sub = df[df["name"] == name]
+                _vals = pd.to_numeric(_sub[metric], errors="coerce").dropna()
+                _all_vals.extend(_vals.tolist())
+            if _all_vals:
+                _y_max = max(_all_vals) * 1.15
+                fig.update_layout(yaxis=dict(range=[20, _y_max]))
         else:
             _all_vals = []
             for name in names:
