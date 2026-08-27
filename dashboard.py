@@ -303,10 +303,15 @@ def render_conclusion(page_key, month):
             label_visibility="collapsed"
         )
 
-    # 自动保存：比较当前值与已保存值
-    new_text = st.session_state.get(widget_key, "")
-    if new_text != current_text:
-        _save_conclusion(page_key, month, new_text)
+    # 自动保存：仅在非首次渲染时保存（防止页面刷新时清空结论）
+    first_render_key = f"_fr_{widget_key}"
+    is_first_render = first_render_key not in st.session_state
+    st.session_state[first_render_key] = True
+
+    if not is_first_render:
+        new_text = st.session_state.get(widget_key, "")
+        if new_text != current_text:
+            _save_conclusion(page_key, month, new_text)
 
     # 历史结论不再显示，只显示当月结论
 
