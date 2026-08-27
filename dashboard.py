@@ -3581,8 +3581,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("益生菌", "dist"):  {"alternate_above": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "include_months": {"畅护10袋": ["25M4"]}, "month_xshift": {"25M1": -4}, "default": "alternate"},
         ("益生菌", "power"): {"alternate_above": ["蓝帽48袋", "益倍适总体", "畅护10袋"], "start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "skip_months": {"畅护10袋": ["25M4"], "B420 20袋": ["25M4"]}, "null_months": {"畅护10袋": ["25M4"], "B420 20袋": ["26M4"]}, "month_yshift": {"B420 20袋": {"26M5": -3}}, "month_xshift": {"25M1": -4, "26M6": 4}, "default": "endpoints"},
         # === 儿童多维 ===
-        ("儿童多维", "dist"):  {"full_below": ["草仙药业五维赖氨酸片36片"], "default": "highlow"},
-        ("儿童多维", "power"): {"full_below": ["汤臣倍健多维咀嚼片60片"], "default": "highlow"},
+        ("儿童多维", "dist"):  {"full_above": ["汤臣倍健多维咀嚼片60片"], "full_below": ["草仙药业五维赖氨酸片36片"], "default": "all"},
+        ("儿童多维", "power"): {"full_above": ["草仙药业五维赖氨酸片36片"], "full_below": ["汤臣倍健多维咀嚼片60片"], "default": "all"},
     }
     cfg = _LC.get((cat_label, metric), {})
     full_above = set(cfg.get("full_above", []))
