@@ -211,14 +211,20 @@ def _parse_conclusion_markup(text):
         return ""
     # Escape HTML special chars
     text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-    # Convert \n to <br>
-    text = text.replace('\n', '<br>')
-    # Parse markup tags
+    # Parse markup tags first (on raw text with \n)
     text = _re.sub(r'\[g\](.*?)\[/g\]', r'<span style="color:#008000;font-weight:700">\1</span>', text)
     text = _re.sub(r'\[r\](.*?)\[/r\]', r'<span style="color:#D32F2F;font-weight:700">\1</span>', text)
     text = _re.sub(r'\[b\](.*?)\[/b\]', r'<span style="font-weight:700;font-size:1.05em">\1</span>', text)
     text = _re.sub(r'\[o\](.*?)\[/o\]', r'<span style="color:#E65100;font-weight:700">\1</span>', text)
-    return text
+    # Split by \n and wrap each paragraph in a div for visual separation
+    paragraphs = text.split('\n')
+    html_parts = []
+    for i, para in enumerate(paragraphs):
+        if i > 0:
+            html_parts.append('<div style="margin-top:8px">' + para + '</div>')
+        else:
+            html_parts.append('<div>' + para + '</div>')
+    return ''.join(html_parts)
 
 def _load_conclusions():
     """从 JSON 文件加载所有保存的结论"""
@@ -267,7 +273,7 @@ def render_conclusion(page_key, month):
         calc_height = 50
 
     st.markdown(
-        f'<div style="font-size:16px;font-weight:700;color:#9A5B00;margin-bottom:2px;padding-left:2px;">结论 ({month_label})</div>',
+        f'<div style="font-size:18px;font-weight:700;color:#9A5B00;margin-bottom:4px;padding-left:2px;">结论 ({month_label})</div>',
         unsafe_allow_html=True
     )
     # Show formatted HTML display if text exists, otherwise show text_area
@@ -275,7 +281,7 @@ def render_conclusion(page_key, month):
         formatted_html = _parse_conclusion_markup(current_text)
         st.markdown(
             f'<div style="background:linear-gradient(135deg,#FFFBF0,#FFF8E1);border:2px solid #FFB300;'
-            f'border-radius:8px;padding:12px 16px;font-size:14px;line-height:1.8;color:#333;">'
+            f'border-radius:8px;padding:14px 18px;font-size:17px;line-height:1.8;color:#333;">'
             f'{formatted_html}</div>',
             unsafe_allow_html=True
         )
