@@ -216,6 +216,8 @@ def _parse_conclusion_markup(text):
     text = text.replace('\u3014', '[').replace('\u3015', ']')   # 〔 〕
     # Escape HTML special chars
     text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    # Convert literal backslash-n to actual newlines
+    text = text.replace('\\n', '\n')
     # Parse markup tags
     text = _re.sub(r'\[g\](.*?)\[/g\]', r'<span style="color:#00B050;font-weight:700">\1</span>', text, flags=_re.DOTALL)
     text = _re.sub(r'\[r\](.*?)\[/r\]', r'<span style="color:#FF0000;font-weight:700">\1</span>', text, flags=_re.DOTALL)
