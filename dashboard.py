@@ -221,6 +221,7 @@ def _parse_conclusion_markup(text):
     text = _re.sub(r'\[r\](.*?)\[/r\]', r'<span style="color:#D32F2F;font-weight:700">\1</span>', text)
     text = _re.sub(r'\[b\](.*?)\[/b\]', r'<span style="font-weight:700;font-size:1.1em">\1</span>', text)
     text = _re.sub(r'\[o\](.*?)\[/o\]', r'<span style="color:#E65100;font-weight:700">\1</span>', text)
+    text = _re.sub(r'\[s\](.*?)\[/s\]', r'<span style="font-size:0.8em;color:#666">\1</span>', text)
     # Split by \n and wrap each paragraph in a div for visual separation
     paragraphs = text.split('\n')
     html_parts = []
