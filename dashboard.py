@@ -3826,7 +3826,7 @@ def render_charts(metric_df, cat_label):
         title=dict(y=0.95),
         legend=dict(orientation="h", yanchor="bottom", y=1.06, xanchor="center", x=0.5,
                     font=dict(size=10, family="Microsoft YaHei"),
-                    itemsizing="constant", itemwidth=25),
+                    itemsizing="constant", itemwidth=30),
         margin=dict(t=140, b=48, l=10, r=54),
     )
         st.session_state[_cache_key] = _figs
