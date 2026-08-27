@@ -3565,7 +3565,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("儿童钙", "dist"):  {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "month_xshift": {"25M1": -12, "26M6": 12}, "product_month_xshift": {"锌钙特葡萄糖酸钙锌口服液24袋": {"25M1": 12, "26M6": -12}}, "product_month_yshift_delta": {"钙镁90片": {"25M1": -8, "26M6": -11}}, "default": "endpoints"},
         ("儿童钙", "power"): {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "product_month_yshift_delta": {"钙镁90片": {"25M1": -11, "26M6": -11}}, "product_month_xshift": {"钙镁90片": {"25M1": -8, "26M6": 8}}, "default": "endpoints"},
         # === 成人多维 ===
-        ("成人多维", "price"): {"full_below": ["善存多维元素片(29)91sx2p", "女维60片"], "default": "all"},
+        ("成人多维", "price"): {"full_below": ["善存多维元素片(29)91sx2p", "女维60片"], "product_yshift_offset": {"女维120片": -8}, "default": "all"},
         ("成人多维", "dist"):  {"full_above": ["银善存91sx2p"], "full_below": ["善存多维元素片(29)91sx2p"], "alternate_above": ["男维120片"], "month_xshift": {"25M1": -8, "26M6": 8}, "product_month_yshift_delta": {"女维120片": {"25M1": -4}, "男维60片": {"26M6": -8}}, "default": "endpoints"},
         ("成人多维", "power"): {"alternate_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "month_xshift": {"25M1": -4, "26M6": 4}, "product_month_yshift_delta": {"女维120片": {"25M1": 8, "26M6": 4}, "男维120片": {"25M1": 4, "26M6": 2}, "男维60片": {"25M1": -8, "26M6": -8}, "女维60片": {"25M1": -12, "26M6": -12}}, "product_month_xshift": {"女维120片": {"25M1": -4, "26M6": 4}, "男维120片": {"25M1": -4, "26M6": 4}, "男维60片": {"25M1": -8, "26M6": 8}, "女维60片": {"25M1": -8, "26M6": 8}}, "default": "endpoints"},
         # === 鱼油 ===
