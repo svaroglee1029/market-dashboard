@@ -3823,7 +3823,7 @@ def render_charts(metric_df, cat_label):
         }
         _figs["line1"].update_layout(
         title=dict(y=0.95),
-        legend=dict(orientation="h", yanchor="bottom", y=1.06, xanchor="center", x=0.5,
+        legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="center", x=0.5,
                     font=dict(size=10, family="Microsoft YaHei"),
                     itemsizing="constant", itemwidth=30),
         margin=dict(t=140, b=48, l=10, r=54),
