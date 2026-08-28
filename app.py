@@ -1360,8 +1360,8 @@ def page1(sel_ym, SEL_M):
                 st.markdown(f"<b class='chart-title'>月度同比明细</b>", unsafe_allow_html=True)
                 mlst = mm["lb"].tolist()
                 n_m = len(mlst)
-                tfs = "14px"
-                hfs = "14px"
+                tfs = "11px"
+                hfs = "11px"
                 tdp = "6px 4px"
                 hdr = "".join(f"<th style='font-size:{hfs};padding:{tdp};text-align:center'>{m}</th>" for m in mlst)
                 vr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["VG"])
