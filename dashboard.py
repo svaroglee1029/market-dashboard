@@ -1354,7 +1354,7 @@ def page1(sel_ym, SEL_M):
                                  barmode="stack", bargap=0.15, showlegend=False,
                                  uniformtext=dict(minsize=16, mode="show"),
                                  title=dict(text="品类销售额by月度<br><sup>(单位：亿元)</sup>", font_size=14),
-                                 xaxis=dict(tickangle=-45, tickfont=dict(size=13), dtick=1, domain=[0.0, 1.0]))
+                                 xaxis=dict(tickangle=-45, tickfont=dict(size=11), dtick=1, domain=[0.0, 1.0]))
                 st.plotly_chart(fm, width='stretch')
 
                 st.markdown(f"<b class='chart-title'>月度同比明细</b>", unsafe_allow_html=True)
