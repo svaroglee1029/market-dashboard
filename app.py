@@ -238,11 +238,13 @@ def _parse_conclusion_markup(text):
 
 def _load_conclusions():
     """从 JSON 文件加载所有保存的结论"""
-    try:
-        with open(_CONCLUSION_FILE, "r", encoding="utf-8-sig") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
+    for enc in ("utf-8-sig", "utf-8", "gbk", "gb18030", "latin-1"):
+        try:
+            with open(_CONCLUSION_FILE, "r", encoding=enc) as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
+            continue
+    return {}
 
 def _save_conclusion(page_key, month, text):
     """保存单条结论到 JSON 文件 - 永不删除已有结论"""
