@@ -1361,7 +1361,7 @@ def page1(sel_ym, SEL_M):
                 mlst = mm["lb"].tolist()
                 n_m = len(mlst)
                 tfs = "11px"
-                hfs = "11px"
+                hfs = "10px"
                 tdp = "6px 4px"
                 hdr = "".join(f"<th style='font-size:{hfs};padding:{tdp};text-align:center'>{m}</th>" for m in mlst)
                 vr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["VG"])
@@ -3829,7 +3829,7 @@ def render_charts(metric_df, cat_label):
         _figs["line1"].update_layout(
         title=dict(y=0.96),
         legend=dict(orientation="h", yanchor="bottom", y=1.07, xanchor="center", x=0.5,
-                    font=dict(size=10, family="Microsoft YaHei"),
+                    font=dict(size=10, family="Microsoft YaHei")),
         margin=dict(t=140, b=48, l=10, r=54),
     )
         st.session_state[_cache_key] = _figs
