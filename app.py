@@ -3590,7 +3590,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     _LC = {
         # === 蛋白粉 ===
         # price: 白金礼盒装 above, 金装礼盒 below, E钙蛋 above
-        ("蛋白粉", "price"): {"default": "all", "product_month_yshift_delta": {"白金480g": {"25M3": -8}}},
+        ("蛋白粉", "price"): {"default": "alternate", "product_month_yshift_delta": {"白金480g": {"25M3": -8}}},
         # 金装450g/白金480g use alternate labeling
         # dist: 汤臣整体 all above (close); others endpoints, staggered to avoid overlap
         ("蛋白粉", "dist"):  {"full_above": ["金装", "汤臣整体", "旧品"], "month_xshift": {"25M1": -12}, "month_yshift": {"25M1": -12}, "product_yshift_offset": {"白金": -11}, "product_month_yshift_delta": {"E钙": {"26M6": 12}, "白金": {"26M6": 8}, "金装": {"26M6": -12}}, "default": "endpoints"},
@@ -3830,7 +3830,6 @@ def render_charts(metric_df, cat_label):
         title=dict(y=0.96),
         legend=dict(orientation="h", yanchor="bottom", y=1.07, xanchor="center", x=0.5,
                     font=dict(size=10, family="Microsoft YaHei"),
-                    itemsizing="constant", itemwidth=30),
         margin=dict(t=140, b=48, l=10, r=54),
     )
         st.session_state[_cache_key] = _figs
