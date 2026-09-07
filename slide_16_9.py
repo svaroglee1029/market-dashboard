@@ -16,64 +16,80 @@ Usage in dashboard.py:
     page_start("Page 1")
     page1(sel_ym, sel_m)
     page_end()
-
-    page_start("Page 2")
-    page2(sel_ym, sel_m)
-    page_end()
 """
 
 import streamlit as st
 import streamlit.components.v1 as components
 
 # ===================== CSS =====================
-_CSS = """
+_CSS = r"""
 <style>
-/* Slide container: 16:9 aspect ratio, fills viewport width */
-.ppt-slide-16x9 {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    overflow: hidden;
-    background: #FFFFFF;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    margin: 0 auto 16px;
-}
-/* Inner content wrapper for scaling */
-.ppt-slide-inner-16x9 {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    transform-origin: top left;
-    padding: 8px;
-    box-sizing: border-box;
-}
-/* Hide markers (they are just anchors for JS) */
-.slide-marker-16x9 {
-    display: none !important;
-}
-/* Optional slide label above each slide */
-.ppt-slide-label-16x9 {
-    font-size: 12px;
-    color: #94A3B8;
-    font-weight: 600;
-    text-align: center;
-    margin: 0 0 6px;
-    letter-spacing: 1px;
-}
-/* Hide the components.html iframe used for JS injection */
+/* ====== Global: hide Streamlit chrome that shows URLs etc. ====== */
+footer { display: none !important; }
+#st-bottom { display: none !important; }
+.stDeployButton { display: none !important; }
+[data-testid="stToolbar"] { display: none !important; }
+/* Hide the "Made with Streamlit" + URL footer */
+[class^="stViewer"] [class*="footer"] { display: none !important; }
+/* Hide any auto-generated link text containing https */
+a[href*="streamlit.app"] { display: none !important; }
+/* Hide the components iframe used for JS */
 iframe[title="streamlit_slideshow_js"] {
     display: none !important;
     width: 0 !important;
     height: 0 !important;
     border: none !important;
 }
+
+/* ====== Slide layout ====== */
+/* Each slide is a 16:9 container with hidden overflow */
+.ppt-slide-16x9 {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #FFFFFF;
+    border: 2px solid #00B050;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    margin: 0 auto 12px;
+}
+/* Inner content: absolute positioned to fill slide, scaled by JS */
+.ppt-slide-inner-16x9 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    transform-origin: top left;
+    padding: 6px;
+    box-sizing: border-box;
+}
+/* Markers are invisible anchors */
+.slide-marker-16x9 {
+    display: none !important;
+}
+/* Slide label */
+.ppt-slide-label-16x9 {
+    font-size: 12px;
+    color: #94A3B8;
+    font-weight: 600;
+    text-align: center;
+    margin: 0 0 4px;
+    letter-spacing: 1px;
+}
+
+/* Make Streamlit elements inside slides not add extra margin */
+.ppt-slide-inner-16x9 > div {
+    margin-bottom: 0 !important;
+}
+.ppt-slide-inner-16x9 .stMarkdown {
+    margin-bottom: 0 !important;
+}
 </style>
 """
 
 # ===================== JavaScript =====================
-_JS = """
+_JS = r"""
 <script>
 (function() {
     var doc = window.parent.document;
@@ -82,13 +98,16 @@ _JS = """
     var processed = new WeakSet();
     var debounceTimer = null;
 
+    // ====== Core: wrap markers into slides ======
     function wrapSlides() {
         var starts = doc.querySelectorAll('.slide-marker-16x9[data-slide="start"]');
         for (var i = 0; i < starts.length; i++) {
             var start = starts[i];
             if (processed.has(start)) continue;
 
-            // Find matching end marker (next sibling)
+            // Walk up to find the main Streamlit content container
+            // Markers are inside <div data-testid="stVerticalBlock">
+            // We need to grab all sibling elements between start and end markers
             var end = null;
             var node = start.nextElementSibling;
             while (node) {
@@ -131,33 +150,50 @@ _JS = """
         }
     }
 
+    // ====== Auto-scale: shrink content to fit 16:9 slide ======
     function autoScale(slide, inner) {
         var sw = slide.clientWidth;
         var sh = slide.clientHeight;
+        if (sw === 0 || sh === 0) {
+            setTimeout(function() { autoScale(slide, inner); }, 300);
+            return;
+        }
 
         // Reset to measure natural size
         inner.style.transform = 'none';
         inner.style.width = sw + 'px';
 
-        // Wait for content to render, then measure
+        // Force reflow
+        void inner.offsetHeight;
+
+        // Measure natural content height
         var ch = inner.scrollHeight;
         var cw = inner.scrollWidth;
 
         if (ch === 0 || cw === 0) {
-            // Content not ready, retry
             setTimeout(function() { autoScale(slide, inner); }, 500);
             return;
         }
 
+        // Scale down to fit (never scale up beyond 1)
         var scaleX = sw / cw;
         var scaleY = sh / ch;
         var scale = Math.min(scaleX, scaleY, 1);
 
         inner.style.transform = 'scale(' + scale + ')';
-        // Adjust width to compensate for scaling
         inner.style.width = (sw / scale) + 'px';
+
+        // If content is shorter than slide, center vertically
+        var scaledHeight = ch * scale;
+        if (scaledHeight < sh) {
+            var offsetY = (sh - scaledHeight) / 2;
+            inner.style.top = offsetY + 'px';
+        } else {
+            inner.style.top = '0px';
+        }
     }
 
+    // ====== Rescale all slides ======
     function rescaleAll() {
         var slides = doc.querySelectorAll('.ppt-slide-16x9');
         for (var i = 0; i < slides.length; i++) {
@@ -166,33 +202,49 @@ _JS = """
         }
     }
 
+    // ====== Debounce helper ======
     function debounce(fn, delay) {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(fn, delay);
     }
 
-    // Initial wrapping with retries for Streamlit/Plotly rendering
-    win.addEventListener('load', function() {
-        setTimeout(function() { wrapSlides(); rescaleAll(); }, 500);
-        setTimeout(function() { wrapSlides(); rescaleAll(); }, 1500);
-        setTimeout(function() { wrapSlides(); rescaleAll(); }, 3000);
-        setTimeout(function() { wrapSlides(); rescaleAll(); }, 5000);
-    });
+    // ====== Init ======
+    // Multiple retries because Streamlit/Plotly render asynchronously
+    function initSlides() {
+        wrapSlides();
+        rescaleAll();
+    }
 
-    // Re-scale on resize (debounced)
+    // Run on load
+    if (doc.readyState === 'complete') {
+        setTimeout(initSlides, 200);
+        setTimeout(initSlides, 800);
+        setTimeout(initSlides, 2000);
+        setTimeout(initSlides, 4000);
+        setTimeout(initSlides, 6000);
+    } else {
+        win.addEventListener('load', function() {
+            setTimeout(initSlides, 200);
+            setTimeout(initSlides, 800);
+            setTimeout(initSlides, 2000);
+            setTimeout(initSlides, 4000);
+            setTimeout(initSlides, 6000);
+        });
+    }
+
+    // Re-scale on resize
     win.addEventListener('resize', function() {
-        debounce(rescaleAll, 200);
+        debounce(rescaleAll, 250);
     });
 
-    // Watch for DOM changes (Streamlit re-renders)
+    // Watch for DOM changes (Streamlit re-renders on interaction)
     var observer = new MutationObserver(function() {
         debounce(function() {
             wrapSlides();
             rescaleAll();
-        }, 300);
+        }, 500);
     });
 
-    // Start observing when DOM is ready
     function startObserver() {
         var body = doc.querySelector('body');
         if (body) {
@@ -220,9 +272,6 @@ def page_start(title=""):
     """
     Insert a slide start marker.
     Call this before each page's content.
-
-    Args:
-        title: Optional label displayed above the slide (e.g., "Page 1: Market Overview")
     """
     if title:
         st.markdown(
