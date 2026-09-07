@@ -102,36 +102,36 @@ iframe[title="streamlit_slideshow_js"] {
         display: none !important;
     }
 
-    /* Reset page margins */
+    /* Page size: landscape A4 with 1cm margins */
     @page {
-        size: landscape;
-        margin: 0;
+        size: A4 landscape;
+        margin: 1cm;
     }
 
-    /* Each slide = one printed page */
+    /* Each slide = one printed page, 16:9 within the printable area */
     .ppt-slide-16x9 {
-        width: 100vw;
-        height: 100vh;
-        aspect-ratio: unset;
+        width: 100%;
+        aspect-ratio: 16 / 9;
         page-break-after: always;
         break-after: page;
         page-break-inside: avoid;
         break-inside: avoid;
         border: none;
         box-shadow: none;
-        margin: 0;
+        margin: 0 auto;
         border-radius: 0;
         overflow: hidden;
+        max-height: 100vh;
     }
     .ppt-slide-16x9:last-child {
         page-break-after: auto;
         break-after: auto;
     }
 
-    /* Fill the page */
+    /* Fill the slide area */
     .ppt-slide-inner-16x9 {
-        width: 100vw !important;
-        height: 100vh !important;
+        width: 100% !important;
+        height: 100% !important;
     }
 }
 </style>
@@ -292,17 +292,18 @@ _JS = r"""
         var inners = doc.querySelectorAll('.ppt-slide-inner-16x9');
         for (var i = 0; i < inners.length; i++) {
             inners[i].style.transform = 'none';
-            inners[i].style.width = '100vw';
+            inners[i].style.width = '100%';
             inners[i].style.top = '0px';
         }
-        // Re-scale to fit full page (not 16:9 aspect-ratio)
+        // Re-scale to fit each slide's actual 16:9 box
         setTimeout(function() {
             var slides = doc.querySelectorAll('.ppt-slide-16x9');
             for (var i = 0; i < slides.length; i++) {
                 var inner = slides[i].querySelector('.ppt-slide-inner-16x9');
                 if (!inner) continue;
-                var sw = win.innerWidth;
-                var sh = win.innerHeight;
+                var sw = slides[i].clientWidth;
+                var sh = slides[i].clientHeight;
+                if (sw === 0 || sh === 0) continue;
                 inner.style.transform = 'none';
                 inner.style.width = sw + 'px';
                 void inner.offsetHeight;
