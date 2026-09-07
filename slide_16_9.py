@@ -85,6 +85,55 @@ iframe[title="streamlit_slideshow_js"] {
 .ppt-slide-inner-16x9 .stMarkdown {
     margin-bottom: 0 !important;
 }
+
+/* ====== Print: force each slide to a separate page ====== */
+@media print {
+    /* Hide all Streamlit chrome, sidebars, buttons */
+    [data-testid="stSidebar"],
+    [data-testid="stToolbar"],
+    [data-testid="stHeader"],
+    footer,
+    #st-bottom,
+    .stDeployButton,
+    .ppt-slide-label-16x9,
+    iframe[title="streamlit_slideshow_js"],
+    .streamlit-expainer,
+    button {
+        display: none !important;
+    }
+
+    /* Reset page margins */
+    @page {
+        size: landscape;
+        margin: 0;
+    }
+
+    /* Each slide = one printed page */
+    .ppt-slide-16x9 {
+        width: 100vw;
+        height: 100vh;
+        aspect-ratio: unset;
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        border: none;
+        box-shadow: none;
+        margin: 0;
+        border-radius: 0;
+        overflow: hidden;
+    }
+    .ppt-slide-16x9:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+
+    /* Fill the page */
+    .ppt-slide-inner-16x9 {
+        width: 100vw !important;
+        height: 100vh !important;
+    }
+}
 </style>
 """
 
@@ -235,6 +284,45 @@ _JS = r"""
     // Re-scale on resize
     win.addEventListener('resize', function() {
         debounce(rescaleAll, 250);
+    });
+
+    // Re-scale before print (each slide fills a full landscape page)
+    win.addEventListener('beforeprint', function() {
+        // Reset transforms so content uses natural size for print
+        var inners = doc.querySelectorAll('.ppt-slide-inner-16x9');
+        for (var i = 0; i < inners.length; i++) {
+            inners[i].style.transform = 'none';
+            inners[i].style.width = '100vw';
+            inners[i].style.top = '0px';
+        }
+        // Re-scale to fit full page (not 16:9 aspect-ratio)
+        setTimeout(function() {
+            var slides = doc.querySelectorAll('.ppt-slide-16x9');
+            for (var i = 0; i < slides.length; i++) {
+                var inner = slides[i].querySelector('.ppt-slide-inner-16x9');
+                if (!inner) continue;
+                var sw = win.innerWidth;
+                var sh = win.innerHeight;
+                inner.style.transform = 'none';
+                inner.style.width = sw + 'px';
+                void inner.offsetHeight;
+                var ch = inner.scrollHeight;
+                var cw = inner.scrollWidth;
+                if (ch === 0) continue;
+                var scale = Math.min(sw / cw, sh / ch, 1);
+                inner.style.transform = 'scale(' + scale + ')';
+                inner.style.width = (sw / scale) + 'px';
+                var scaledH = ch * scale;
+                if (scaledH < sh) {
+                    inner.style.top = ((sh - scaledH) / 2) + 'px';
+                }
+            }
+        }, 100);
+    });
+
+    // Restore screen layout after print
+    win.addEventListener('afterprint', function() {
+        rescaleAll();
     });
 
     // Watch for DOM changes (Streamlit re-renders on interaction)
