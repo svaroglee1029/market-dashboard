@@ -16,6 +16,10 @@ import json
 
 st.set_page_config(page_title="市场分析综合仪表盘", layout="wide")
 
+# 16:9 PPT式布局
+from slide_16_9 import apply_layout, page_start, page_end
+apply_layout()
+
 # 隐藏 Streamlit Cloud 右下角浮窗（头像/反馈按钮）
 st.markdown("""
 <style>
@@ -3933,10 +3937,21 @@ with tab_a:
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 使用统一时间选择渲染四个页面
+    page_start("Page 1")
     page1(sel_ym_a, SEL_M_A)
+    page_end()
+
+    page_start("Page 2")
     page2(sel_ym_a, SEL_M_A)
+    page_end()
+
+    page_start("Page 3")
     page3(sel_ym_a, SEL_M_A)
+    page_end()
+
+    page_start("Page 4")
     page4(sel_ym_a)
+    page_end()
 
 # ====================== Tab B: 重点品类汤臣市场表现 ======================
 with tab_b:
@@ -3987,6 +4002,7 @@ with tab_b:
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ---- Section 一：品类概览 ----
+    page_start("品类概览")
     st.markdown("""
     <div class="section-header">
         <span class="num">1</span>
@@ -3994,8 +4010,10 @@ with tab_b:
     </div>
     """, unsafe_allow_html=True)
     render_first_page(selected_cat, selected_month, display_months)
+    page_end()
 
     # ---- Section 二：品牌竞争分析 ----
+    page_start("品牌竞争分析")
     st.markdown("""
     <div class="section-header">
         <span class="num">2</span>
@@ -4003,8 +4021,10 @@ with tab_b:
     </div>
     """, unsafe_allow_html=True)
     render_brand_analysis(selected_cat, selected_month, display_months)
+    page_end()
 
     # ---- Section 三：SKU/品线分析 ----
+    page_start("SKU/品线分析")
     st.markdown("""
     <div class="section-header">
         <span class="num">3</span>
@@ -4012,5 +4032,6 @@ with tab_b:
     </div>
     """, unsafe_allow_html=True)
     render_sku_analysis(selected_cat, selected_month, display_months)
+    page_end()
 
 
