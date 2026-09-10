@@ -1,9 +1,9 @@
 """
-slide_16x9.py v2
+slide_16x9.py v3
 
-16:9 slide layout with content auto-scaling.
-Each page is wrapped in a 16:9 container (338.7mm x 190.5mm for print).
-JS measures content height and applies transform: scale() to fit.
+16:9 slide layout with aggressive content auto-scaling.
+- CSS: shrinks all fonts, paddings, gaps, table cells inside slides
+- JS: forces Plotly inline heights to auto, measures true content height, applies uniform scale
 
 Usage:
     from slide_16x9 import apply_layout, page_start, page_end
@@ -34,22 +34,22 @@ a[href*="streamlit.app"] { display: none !important; }
 .ppt-slide-16x9 {
     width: 100%;
     aspect-ratio: 16 / 9;
-    max-width: calc((100vh - 60px) * 16 / 9);
-    margin: 6px auto;
+    max-width: calc((100vh - 40px) * 16 / 9);
+    margin: 4px auto;
     overflow: hidden;
     position: relative;
     background: white;
     border: 1px solid #d0d5dd;
-    border-radius: 4px;
-    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+    border-radius: 3px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
 }
 
 /* Slide title label */
 .ppt-slide-title {
     position: absolute;
-    top: 2px;
-    left: 10px;
-    font-size: 10px;
+    top: 1px;
+    left: 8px;
+    font-size: 9px;
     color: #94A3B8;
     font-weight: 600;
     z-index: 100;
@@ -66,63 +66,75 @@ a[href*="streamlit.app"] { display: none !important; }
     position: relative;
 }
 
-/* ===== Adapt content inside slides ===== */
-/* Reduce Streamlit block gaps inside slides */
+/* ===== AGGRESSIVE content adaptation inside slides ===== */
+
+/* Block gaps: near zero */
 .ppt-slide-content [data-testid="stVerticalBlock"] {
-    gap: 0.3rem !important;
+    gap: 0.1rem !important;
 }
 .ppt-slide-content [data-testid="stVerticalBlock"] > div {
-    padding-top: 0.2rem !important;
-    padding-bottom: 0.2rem !important;
+    padding-top: 0.1rem !important;
+    padding-bottom: 0.1rem !important;
 }
 
-/* Streamlit main container inside slides */
+/* Main container: minimal padding */
 .ppt-slide-content .main .block-container,
-.ppt-slide-content .block-container {
-    padding: 0.2rem 0.5rem !important;
+.ppt-slide-content .block-container,
+.ppt-slide-content [data-testid="stAppViewContainer"] > div > div {
+    padding: 0.1rem 0.3rem !important;
     max-width: 100% !important;
 }
 
-/* Reduce markdown element spacing */
+/* Markdown: zero spacing */
 .ppt-slide-content [data-testid="stMarkdown"] {
     margin: 0 !important;
     padding: 0 !important;
+    font-size: 10px !important;
 }
 .ppt-slide-content [data-testid="stMarkdown"] > div {
     margin: 0 !important;
     padding: 0 !important;
 }
 .ppt-slide-content p {
-    margin: 2px 0 !important;
+    margin: 1px 0 !important;
+    line-height: 1.2 !important;
+    font-size: 10px !important;
 }
 .ppt-slide-content hr {
-    margin: 2px 0 !important;
+    margin: 1px 0 !important;
     border: none !important;
     border-top: 1px solid #E4E9F0 !important;
 }
 
-/* Plotly charts: full width, reduce container padding */
+/* ===== Plotly charts: override inline heights ===== */
 .ppt-slide-content [data-testid="stPlotlyChart"] {
     margin: 0 !important;
     padding: 0 !important;
 }
-.ppt-slide-content .stPlotlyChart,
-.ppt-slide-content div[data-testid="stPlotlyChart"] > div {
+/* Force Plotly's inner div (with inline height:XXXpx) to auto */
+.ppt-slide-content [data-testid="stPlotlyChart"] > div,
+.ppt-slide-content .js-plotly-plot,
+.ppt-slide-content .plot-container,
+.ppt-slide-content .plotly,
+.ppt-slide-content .svg-container {
+    height: auto !important;
+    max-height: none !important;
     margin: 0 !important;
     padding: 0 !important;
-    height: auto !important;
 }
+/* Plotly svg: responsive */
+.ppt-slide-content .js-plotly-plot .plotly-notifier { display: none !important; }
 
-/* Streamlit columns: reduce gap */
+/* Streamlit columns: minimal gap */
 .ppt-slide-content [data-testid="stHorizontalBlock"] {
-    gap: 0.3rem !important;
+    gap: 0.1rem !important;
 }
 .ppt-slide-content [data-testid="stHorizontalBlock"] > div {
-    padding-left: 0.2rem !important;
-    padding-right: 0.2rem !important;
+    padding-left: 0.1rem !important;
+    padding-right: 0.1rem !important;
 }
 
-/* Tables: reduce cell padding inside slides */
+/* ===== Tables: ultra-compact ===== */
 .ppt-slide-content .dt,
 .ppt-slide-content .dt-p2,
 .ppt-slide-content .dt-p3,
@@ -130,76 +142,148 @@ a[href*="streamlit.app"] { display: none !important; }
 .ppt-slide-content .metric-table,
 .ppt-slide-content .brand-table,
 .ppt-slide-content .growth-table {
-    font-size: 11px !important;
+    font-size: 9px !important;
+    line-height: 1.1 !important;
 }
 .ppt-slide-content .dt th,
 .ppt-slide-content .dt td {
-    padding: 3px 5px !important;
+    padding: 1px 3px !important;
     height: auto !important;
-    font-size: 11px !important;
+    font-size: 9px !important;
+    line-height: 1.1 !important;
 }
 .ppt-slide-content .dt-p2 th,
 .ppt-slide-content .dt-p2 td {
-    padding: 3px 5px !important;
+    padding: 1px 3px !important;
     height: auto !important;
-    font-size: 11px !important;
+    font-size: 9px !important;
+    line-height: 1.1 !important;
 }
 .ppt-slide-content .dt-p2,
 .ppt-slide-content .dt-p2 tr {
     height: auto !important;
 }
+.ppt-slide-content .dt-p3 th,
+.ppt-slide-content .dt-p3 td {
+    padding: 1px 3px !important;
+    font-size: 9px !important;
+    height: auto !important;
+}
 .ppt-slide-content .dashboard-table th,
 .ppt-slide-content .dashboard-table td {
-    padding: 3px 4px !important;
-    font-size: 11px !important;
+    padding: 1px 3px !important;
+    font-size: 9px !important;
+    height: auto !important;
+    line-height: 1.1 !important;
 }
 .ppt-slide-content .metric-table th,
 .ppt-slide-content .metric-table td {
-    padding: 3px 5px !important;
-    font-size: 11px !important;
+    padding: 1px 3px !important;
+    font-size: 9px !important;
+    height: auto !important;
+    line-height: 1.1 !important;
 }
 .ppt-slide-content .brand-table th,
 .ppt-slide-content .brand-table td {
-    padding: 2px 4px !important;
-    font-size: 10px !important;
+    padding: 1px 2px !important;
+    font-size: 8px !important;
     height: auto !important;
+    line-height: 1.1 !important;
 }
-.ppt-slide-content .brand-table tr {
+.ppt-slide-content .brand-table tr,
+.ppt-slide-content .brand-table {
     height: auto !important;
 }
 .ppt-slide-content .growth-table th,
 .ppt-slide-content .growth-table td {
-    padding: 2px 4px !important;
-    font-size: 10px !important;
+    padding: 1px 2px !important;
+    font-size: 8px !important;
+    height: auto !important;
 }
 
-/* Reduce header/overview area padding */
+/* ===== Headers/overlays: compact ===== */
 .ppt-slide-content .phdr {
-    padding: 3px 12px !important;
+    padding: 2px 8px !important;
+}
+.ppt-slide-content .phdr h2 {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
 }
 .ppt-slide-content .partb-header {
-    padding: 3px 12px !important;
-    margin: 0 !important;
-}
-.ppt-slide-content .time-selector-wrap {
-    margin: 0 !important;
     padding: 2px 8px !important;
+    margin: 0 !important;
+    font-size: 10px !important;
 }
+.ppt-slide-content .time-selector-wrap,
 .ppt-slide-content .cat-selector-wrap {
     margin: 0 !important;
-    padding: 2px 8px !important;
+    padding: 1px 6px !important;
+}
+.ppt-slide-content .time-selector-label,
+.ppt-slide-content .cat-selector-label {
+    font-size: 8px !important;
 }
 
-/* Conclusion boxes: reduce padding */
-.ppt-slide-content .conclusion-box {
-    padding: 4px 8px !important;
-    margin: 2px 0 !important;
+/* ===== Conclusions: ultra-small ===== */
+.ppt-slide-content [style*="gold"],
+.ppt-slide-content [style*="FFF8E1"],
+.ppt-slide-content [style*="FFA500"],
+.ppt-slide-content [style*="background:linear-gradient"] {
+    padding: 2px 6px !important;
+    margin: 1px 0 !important;
+    font-size: 8px !important;
+    line-height: 1.15 !important;
+}
+/* Target conclusion spans and divs */
+.ppt-slide-content div[style*="margin-top:8px"],
+.ppt-slide-content div[style*="margin-top: 8px"] {
+    margin-top: 2px !important;
+    font-size: 8px !important;
+    line-height: 1.15 !important;
+}
+.ppt-slide-content span[style*="font-size:1.1em"] {
+    font-size: 8.5px !important;
+}
+.ppt-slide-content span[style*="font-size:0.85em"] {
+    font-size: 7px !important;
+}
+.ppt-slide-content span[style*="color:#00B050"],
+.ppt-slide-content span[style*="color: #00B050"] {
+    font-size: 8px !important;
+}
+.ppt-slide-content span[style*="color:#FF0000"],
+.ppt-slide-content span[style*="color: #FF0000"] {
+    font-size: 8px !important;
+}
+.ppt-slide-content span[style*="color:#002060"],
+.ppt-slide-content span[style*="color: #002060"] {
+    font-size: 8px !important;
 }
 
 /* Tab buttons: smaller */
 .ppt-slide-content .stTabs [data-baseweb="tab"] {
-    padding: 2px 8px !important;
+    padding: 1px 6px !important;
+    font-size: 10px !important;
+    height: auto !important;
+}
+
+/* stMetric: compact */
+.ppt-slide-content [data-testid="stMetric"] {
+    padding: 2px 4px !important;
+}
+.ppt-slide-content [data-testid="stMetricLabel"] {
+    font-size: 9px !important;
+}
+.ppt-slide-content [data-testid="stMetricValue"] {
     font-size: 12px !important;
+}
+
+/* Selectbox/slider: compact */
+.ppt-slide-content [data-testid="stSelectbox"] > div > div {
+    min-height: 24px !important;
+    padding: 0 6px !important;
+    font-size: 10px !important;
 }
 
 /* ===== Print: 338.7mm x 190.5mm ===== */
@@ -208,16 +292,13 @@ a[href*="streamlit.app"] { display: none !important; }
         size: 338.7mm 190.5mm;
         margin: 0;
     }
-
     body { background: white !important; }
-
     [data-testid="stSidebar"],
     [data-testid="stHeader"],
     [data-testid="stToolbar"],
     footer, #st-bottom, .stDeployButton,
     .ppt-slide-title,
     button { display: none !important; }
-
     .ppt-slide-16x9 {
         page-break-after: always;
         page-break-inside: avoid;
@@ -231,7 +312,6 @@ a[href*="streamlit.app"] { display: none !important; }
         max-width: none !important;
         overflow: hidden !important;
     }
-
     .ppt-slide-content {
         transform: none !important;
         width: 100% !important;
@@ -245,116 +325,64 @@ _JS = r"""
 <script>
 (function() {
     var doc;
-    try {
-        doc = window.parent.document;
-    } catch(e) {
-        doc = document;
-    }
+    try { doc = window.parent.document; } catch(e) { doc = document; }
 
-    var runCount = 0;
-    var MAX_RUNS = 30;
-    var scaleRunCount = 0;
-    var MAX_SCALE_RUNS = 30;
+    var wrapRun = 0;
+    var MAX_WRAP = 30;
+    var scaleRun = 0;
+    var MAX_SCALE = 40;
 
     function wrapSlides() {
-        if (runCount >= MAX_RUNS) return;
-        runCount++;
-
+        if (wrapRun >= MAX_WRAP) return;
+        wrapRun++;
         var markers = doc.querySelectorAll('.slide-marker-start:not([data-wrapped="true"])');
         if (markers.length === 0) {
-            if (runCount < MAX_RUNS) {
-                setTimeout(wrapSlides, 500);
-            }
+            if (wrapRun < MAX_WRAP) setTimeout(wrapSlides, 400);
             return;
         }
 
-        var markerData = [];
+        var md = [];
         for (var i = 0; i < markers.length; i++) {
             var m = markers[i];
-            var wrapper = m.closest('[data-testid="stMarkdown"]') || m.parentElement;
-            var blockChild = wrapper;
-            var safety = 0;
-            while (blockChild && blockChild.parentElement &&
-                   blockChild.parentElement.getAttribute &&
-                   blockChild.parentElement.getAttribute('data-testid') !== 'stVerticalBlock' &&
-                   blockChild.parentElement.getAttribute('data-testid') !== 'stMainBlockContainer' &&
-                   safety < 15) {
-                blockChild = blockChild.parentElement;
-                safety++;
+            var w = m.closest('[data-testid="stMarkdown"]') || m.parentElement;
+            var bc = w;
+            var s = 0;
+            while (bc && bc.parentElement && bc.parentElement.getAttribute &&
+                   bc.parentElement.getAttribute('data-testid') !== 'stVerticalBlock' &&
+                   bc.parentElement.getAttribute('data-testid') !== 'stMainBlockContainer' && s < 15) {
+                bc = bc.parentElement; s++;
             }
-            markerData.push({
-                marker: m,
-                wrapper: wrapper,
-                blockChild: blockChild,
-                title: m.getAttribute('data-title') || '',
-                pageNum: m.getAttribute('data-page') || '0'
-            });
+            md.push({ m: m, w: w, bc: bc, t: m.getAttribute('data-title')||'', p: m.getAttribute('data-page')||'0' });
         }
 
-        for (var i = 0; i < markerData.length; i++) {
-            var data = markerData[i];
-            if (data.marker.getAttribute('data-wrapped') === 'true') continue;
-
-            var startNode = data.blockChild;
-            if (!startNode) continue;
-
-            var blockParent = startNode.parentElement;
-            if (!blockParent) continue;
-
-            var nextBlockChild = null;
-            if (i + 1 < markerData.length) {
-                nextBlockChild = markerData[i + 1].blockChild;
-            }
+        for (var i = 0; i < md.length; i++) {
+            var d = md[i];
+            if (d.m.getAttribute('data-wrapped') === 'true') continue;
+            var sn = d.bc; if (!sn) continue;
+            var bp = sn.parentElement; if (!bp) continue;
+            var nbc = (i+1 < md.length) ? md[i+1].bc : null;
 
             var slide = doc.createElement('div');
             slide.className = 'ppt-slide-16x9';
-            slide.setAttribute('data-slide-num', data.pageNum);
-
-            if (data.title) {
-                var label = doc.createElement('div');
-                label.className = 'ppt-slide-title';
-                label.textContent = data.title;
-                slide.appendChild(label);
-            }
-
+            slide.setAttribute('data-slide-num', d.p);
+            if (d.t) { var lb = doc.createElement('div'); lb.className='ppt-slide-title'; lb.textContent=d.t; slide.appendChild(lb); }
             var content = doc.createElement('div');
             content.className = 'ppt-slide-content';
             slide.appendChild(content);
 
-            var node = startNode.nextElementSibling;
-            while (node && node !== nextBlockChild) {
-                var next = node.nextElementSibling;
-                content.appendChild(node);
-                node = next;
-            }
-
-            if (nextBlockChild) {
-                blockParent.insertBefore(slide, nextBlockChild);
-            } else {
-                blockParent.appendChild(slide);
-            }
-
-            if (data.wrapper && data.wrapper !== blockParent) {
-                data.wrapper.remove();
-            } else if (startNode && startNode.parentElement === blockParent) {
-                startNode.remove();
-            }
-
-            data.marker.setAttribute('data-wrapped', 'true');
+            var node = sn.nextElementSibling;
+            while (node && node !== nbc) { var nx = node.nextElementSibling; content.appendChild(node); node = nx; }
+            if (nbc) bp.insertBefore(slide, nbc); else bp.appendChild(slide);
+            if (d.w && d.w !== bp) d.w.remove();
+            else if (sn && sn.parentElement === bp) sn.remove();
+            d.m.setAttribute('data-wrapped', 'true');
         }
 
-        var endMarkers = doc.querySelectorAll('.slide-marker-end');
-        endMarkers.forEach(function(e) {
-            var wrapper = e.closest('[data-testid="stMarkdown"]') || e.parentElement;
-            if (wrapper) wrapper.remove();
-        });
+        var ems = doc.querySelectorAll('.slide-marker-end');
+        ems.forEach(function(e) { var w = e.closest('[data-testid="stMarkdown"]') || e.parentElement; if (w) w.remove(); });
 
-        // Start scaling after wrapping
-        setTimeout(scaleSlides, 100);
-
-        if (runCount < MAX_RUNS) {
-            setTimeout(wrapSlides, 500);
-        }
+        setTimeout(scaleSlides, 50);
+        if (wrapRun < MAX_WRAP) setTimeout(wrapSlides, 400);
     }
 
     function scaleSlides() {
@@ -364,74 +392,64 @@ _JS = r"""
             var content = slide.querySelector('.ppt-slide-content');
             if (!content) continue;
 
-            // Reset previous scale
+            // Reset
             content.style.transform = 'none';
             content.style.width = '100%';
+            content.style.height = 'auto';
 
-            // Wait for layout
+            // Force all inline height styles to auto inside content
+            // This is critical for Plotly charts which set height:XXXpx inline
+            var els = content.querySelectorAll('[style*="height"]');
+            els.forEach(function(el) {
+                var st = el.getAttribute('style') || '';
+                if (st.indexOf('height') >= 0) {
+                    el.style.height = 'auto';
+                }
+            });
+            // Also target Plotly specifically
+            var plotlyEls = content.querySelectorAll('.js-plotly-plot, .plot-container, .svg-container, [data-testid="stPlotlyChart"] > div');
+            plotlyEls.forEach(function(el) { el.style.height = 'auto'; el.style.maxHeight = 'none'; });
+
             var slideH = slide.clientHeight;
             if (slideH < 10) continue;
 
-            // Measure content natural height
-            // Temporarily set height to auto to measure
-            var savedH = content.style.height;
+            // Measure natural content height
             content.style.height = 'auto';
-            var contentH = content.scrollHeight;
-            content.style.height = savedH || '100%';
+            var contentH = content.offsetHeight;
+            content.style.height = '100%';
 
             if (contentH < 10) continue;
 
-            // Calculate scale
+            // Calculate uniform scale
             var scale = slideH / contentH;
-            
-            // Only scale down, never scale up beyond 1.0
-            if (scale < 0.98) {
-                content.style.transform = 'scale(1, ' + scale + ')';
-                content.style.transformOrigin = 'top left';
-                // Adjust width to compensate for vertical scale
-                content.style.width = (100 / scale * 1) + '%';
-                // But this makes content wider, so also scale X
-                // Better: use uniform scale
+            if (scale < 0.99) {
                 content.style.transform = 'scale(' + scale + ')';
+                content.style.transformOrigin = 'top left';
                 content.style.width = (100 / scale) + '%';
+                content.style.height = (100 / scale) + '%';
             } else {
                 content.style.transform = 'none';
                 content.style.width = '100%';
+                content.style.height = '100%';
             }
         }
 
-        // Re-run to catch charts that finished loading
-        scaleRunCount++;
-        if (scaleRunCount < MAX_SCALE_RUNS) {
-            setTimeout(scaleSlides, 500);
-        }
+        scaleRun++;
+        if (scaleRun < MAX_SCALE) setTimeout(scaleSlides, 300);
     }
 
-    // Start after Streamlit renders
-    setTimeout(wrapSlides, 1000);
-
-    // Run scaling on window resize
-    window.addEventListener('resize', function() {
-        scaleRunCount = 0;
-        setTimeout(scaleSlides, 200);
-    });
-
-    // Run before printing
+    setTimeout(wrapSlides, 800);
+    window.addEventListener('resize', function() { scaleRun = 0; setTimeout(scaleSlides, 150); });
     window.addEventListener('beforeprint', function() {
-        runCount = 0;
-        scaleRunCount = 0;
+        wrapRun = 0; scaleRun = 0;
         wrapSlides();
         setTimeout(function() {
-            // For print: remove transform, let CSS handle it
             var slides = doc.querySelectorAll('.ppt-slide-16x9');
             slides.forEach(function(slide) {
-                var content = slide.querySelector('.ppt-slide-content');
-                if (content) {
-                    content.style.transform = 'none';
-                    content.style.width = '100%';
-                }
+                var c = slide.querySelector('.ppt-slide-content');
+                if (c) { c.style.transform = 'none'; c.style.width = '100%'; c.style.height = '100%'; }
             });
-        }, 500);
+        }, 400);
     });
 })();
 </script>
