@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 # 市场分析综合仪表盘 - 合并版
 # Tab 1: 全国药店VDS市场表现 (page1-page4)
 # Tab 2: 重点品类汤臣市场表现 (render_first_page/render_brand_analysis/render_sku_analysis)
@@ -6,6 +6,7 @@
 
 # ====================== 1. Imports ======================
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -13,7 +14,11 @@ from datetime import datetime
 import calendar
 import json
 
-st.set_page_config(page_title="市场分析综合仪表盘 v2", layout="wide")
+st.set_page_config(page_title="市场分析综合仪表盘（Y25起）", layout="wide")
+
+# 16:9 PPT式布局
+from slide_16_9 import apply_layout, page_start, page_end
+apply_layout()
 
 # 隐藏 Streamlit Cloud 右下角浮窗（头像/反馈按钮）
 st.markdown("""
@@ -32,7 +37,7 @@ QTY_COL = "销售量-Pack('00))"
 DIST_COL = "加权铺货率"
 
 SKU_COLS = ["year_month", "品类", "品牌", "品牌产品", "产品包装", "品名(含属性)", "集团权益", "处方性质", SALES_COL, QTY_COL, DIST_COL]
-BRAND_COLS = ["year_month", "品类", "品牌", "品牌产品", SALES_COL, QTY_COL, DIST_COL]
+BRAND_COLS = ["year_month", "品类", "品牌", "品牌产品", "处方性质", SALES_COL, QTY_COL, DIST_COL]
 DIST_COLS = ["year_month", "品牌_NEW", DIST_COL, SALES_COL]
 IND_COLS = ["year_month", "品类", "品牌", SALES_COL, QTY_COL]
 
@@ -171,6 +176,28 @@ def ym_lab(ym):
     return f"{str(ym)[2:4]}M{int(str(ym)[4:])}"
 
 
+def period_labels(ym_str):
+    """Return (ytd_label, ly_label, l3m_label, yy, lyy) for a given YYYYMM string.
+    At quarter-end months (M3/M6/M9/M12), labels reflect accumulated periods.
+    """
+    yr = int(ym_str[:4])
+    mo = int(ym_str[4:])
+    yy = str(yr)[2:]
+    lyy = str(yr - 1)[2:]
+
+    if mo == 3:
+        ytd = f"{yy}Q1"; ly = f"{lyy}Q1"; l3m = f"{lyy}Q4"
+    elif mo == 6:
+        ytd = f"{yy}H1"; ly = f"{lyy}H1"; l3m = f"{yy}Q1"
+    elif mo == 9:
+        ytd = f"{yy}Q1-Q3"; ly = f"{lyy}Q1-Q3"; l3m = f"{yy}Q2"
+    elif mo == 12:
+        ytd = f"{yy}H2"; ly = f"{lyy}H2"; l3m = f"{yy}Q3"
+    else:
+        ytd = "YTD"; ly = "LY"; l3m = "L3M"
+    return ytd, ly, l3m, yy, lyy
+
+
 # ====================== 结论持久化存储 ======================
 _CONCLUSION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "conclusions.json")
 
@@ -180,23 +207,58 @@ _MONTH_COLORS = [
     "#00838F", "#F57F17", "#283593", "#558B2F", "#AD1457",
 ]
 
+def _parse_conclusion_markup(text):
+    """Parse conclusion markup tags to HTML.
+    Supports both half-width [r] and full-width brackets.
+    [g]text[/g] -> green, [r]text[/r] -> red, [b]text[/b] -> bold, [o]text[/o] -> orange
+    """
+    import re as _re
+    if not text:
+        return ""
+    # Normalize full-width brackets to half-width before parsing
+    text = text.replace('\u3010', '[').replace('\u3011', ']')   # 【 】
+    text = text.replace('\uFF3B', '[').replace('\uFF3D', ']')   # full-width [ ]
+    text = text.replace('\u3014', '[').replace('\u3015', ']')   # 〔 〕
+    # Escape HTML special chars
+    text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    # Convert literal backslash-n to actual newlines
+    text = text.replace('\\n', '\n')
+    # Parse markup tags
+    text = _re.sub(r'\[g\](.*?)\[/g\]', r'<span style="color:#00B050;font-weight:700">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[r\](.*?)\[/r\]', r'<span style="color:#FF0000;font-weight:700">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[b\](.*?)\[/b\]', r'<span style="font-weight:700;font-size:1.1em">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[o\](.*?)\[/o\]', r'<span style="color:#002060;font-weight:700">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[s\](.*?)\[/s\]', r'<span style="font-size:0.85em">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[i\](.*?)\[/i\]', r'<span style="font-style:italic">\1</span>', text, flags=_re.DOTALL)
+    text = _re.sub(r'\[u\](.*?)\[/u\]', r'<span style="text-decoration:underline">\1</span>', text, flags=_re.DOTALL)
+    # Split by \n and wrap each paragraph in a div for visual separation
+    paragraphs = text.split('\n')
+    html_parts = []
+    for i, para in enumerate(paragraphs):
+        if i > 0:
+            html_parts.append('<div style="margin-top:8px">' + para + '</div>')
+        else:
+            html_parts.append('<div>' + para + '</div>')
+    return ''.join(html_parts)
+
 def _load_conclusions():
     """从 JSON 文件加载所有保存的结论"""
-    try:
-        with open(_CONCLUSION_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
+    for enc in ("utf-8-sig", "utf-8", "gbk", "gb18030", "latin-1"):
+        try:
+            with open(_CONCLUSION_FILE, "r", encoding=enc) as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
+            continue
+    return {}
 
 def _save_conclusion(page_key, month, text):
-    """保存单条结论到 JSON 文件"""
+    """保存单条结论到 JSON 文件 - 永不删除已有结论"""
+    if not text or not text.strip():
+        return  # 空文本不保存也不删除，防止意外清空
     data = _load_conclusions()
     if page_key not in data:
         data[page_key] = {}
-    if text and text.strip():
-        data[page_key][month] = text.strip()
-    elif month in data[page_key]:
-        del data[page_key][month]
+    data[page_key][month] = text.strip()
     try:
         with open(_CONCLUSION_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
@@ -227,44 +289,49 @@ def render_conclusion(page_key, month):
         calc_height = 50
 
     st.markdown(
-        f'<div style="font-size:16px;font-weight:700;color:#9A5B00;margin-bottom:2px;padding-left:2px;">结论 ({month_label})</div>',
+        f'<div style="font-size:20px;font-weight:700;color:#9A5B00;margin-bottom:4px;padding-left:2px;">结论 ({month_label})</div>',
         unsafe_allow_html=True
     )
-    st.text_area(
-        f"结论 ({month_label})",
-        height=calc_height,
-        key=widget_key,
-        placeholder="请输入本页结论...",
-        label_visibility="collapsed"
-    )
-
-    # 自动保存：比较当前值与已保存值
-    new_text = st.session_state.get(widget_key, "")
-    if new_text != current_text:
-        _save_conclusion(page_key, month, new_text)
-
-    # 展示历史结论（排除当前月）
-    history = {m: t for m, t in page_conclusions.items() if m != month}
-    if history:
-        sorted_months = sorted(history.keys(), reverse=True)
-        items_html = ""
-        for idx, m in enumerate(sorted_months):
-            m_label = ym_lab(m)
-            text = history[m]
-            color = _MONTH_COLORS[idx % len(_MONTH_COLORS)]
-            items_html += (
-                f'<div class="conclusion-history-item" style="border-left-color:{color}">'
-                f'<span class="conclusion-history-month" style="color:{color}">{m_label}</span>'
-                f'<span class="conclusion-history-text">{text}</span>'
-                f'</div>'
-            )
+    # Use latest text from session_state for immediate display update
+    display_text = st.session_state.get(widget_key, current_text)
+    # Show formatted HTML display if text exists, otherwise show text_area
+    if display_text and display_text.strip():
+        formatted_html = _parse_conclusion_markup(display_text)
         st.markdown(
-            f'<div class="conclusion-history">'
-            f'<div class="conclusion-history-title">📋 历史结论</div>'
-            f'{items_html}'
-            f'</div>',
+            f'<div style="background:linear-gradient(135deg,#FFFBF0,#FFF8E1);border:2px solid #FFB300;'
+            'border-radius:8px;padding:16px 20px;font-size:19px;line-height:1.6;color:#002060;font-family:Arial,Microsoft YaHei,微软雅黑,sans-serif;">'
+            f'{formatted_html}</div>',
             unsafe_allow_html=True
         )
+        # Editable area inside expander
+        with st.expander("编辑结论", expanded=False):
+            st.text_area(
+                f"结论 ({month_label})",
+                height=calc_height,
+                key=widget_key,
+                placeholder="请输入本页结论...",
+                label_visibility="collapsed"
+            )
+    elif not (display_text and display_text.strip()):
+        st.text_area(
+            f"结论 ({month_label})",
+            height=calc_height,
+            key=widget_key,
+            placeholder="请输入本页结论...",
+            label_visibility="collapsed"
+        )
+
+    # 自动保存：仅在非首次渲染时保存（防止页面刷新时清空结论）
+    first_render_key = f"_fr_{widget_key}"
+    is_first_render = first_render_key not in st.session_state
+    st.session_state[first_render_key] = True
+
+    if not is_first_render:
+        new_text = st.session_state.get(widget_key, current_text)
+        if new_text != current_text and new_text and new_text.strip():
+            _save_conclusion(page_key, month, new_text)
+
+    # 历史结论不再显示，只显示当月结论
 
 # ====================== v2 Helper: sparse x-axis labels ======================
 
@@ -295,11 +362,9 @@ ind_months = sorted(df_ind["year_month"].unique())
 ym_id_map = dict(zip(sku_df["year_month"], sku_df["ym_id"]))
 YM_LABS = [ym_lab(m) for m in ind_months]
 
-# ====== Y25 版本：时间选择器只显示 25M1 起的月份 ======
+# ====== Y25 版本：时间选择器只显示 2025 年起的月份 ======
 # 完整数据保留 (all_months / ind_months 不变，用于同比计算)
-# 但选择器只展示 202501 及以后
 _DISPLAY_START = "202501"
-# Tab A (industry 表) 显示用月份
 _ind_start_idx = 0
 for _i, _m in enumerate(ind_months):
     if _m >= _DISPLAY_START:
@@ -308,7 +373,6 @@ for _i, _m in enumerate(ind_months):
 ind_months_display = ind_months[_ind_start_idx:]
 YM_LABS_DISPLAY = [ym_lab(m) for m in ind_months_display]
 
-# Tab B (sku 表) 显示用月份
 _all_start_idx = 0
 for _i, _m in enumerate(all_months):
     if _m >= _DISPLAY_START:
@@ -379,9 +443,9 @@ st.markdown("""
         border-radius: 8px; overflow: hidden;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         table-layout: fixed;
-        height: 440px;
+        height: 460px;
     }
-    .dt-p2 tr { height: calc(440px / 6); }
+    .dt-p2 tr { height: calc(460px / 6); }
     .dt-p2 th { border: 1px solid #E4E9F0; background: #EEF2FA; font-weight: 600; color: #1A1A2E; font-size: 16px; padding: 6px 6px; line-height: 1.2; text-align: center; vertical-align: middle; }
     .dt-p2 td { border: 1px solid #E4E9F0; padding: 6px 10px; text-align: center; vertical-align: middle; font-size: 16px; }
     .dt-p2 td:first-child { text-align: left; font-weight: 600; }
@@ -394,7 +458,7 @@ st.markdown("""
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         table-layout: fixed;
     }
-    .dt-p3 th, .dt-p3 td { border: 1px solid #E4E9F0; padding: 6px 4px; text-align: center; vertical-align: middle; }
+    .dt-p3 th, .dt-p3 td { border: 1px solid #E4E9F0; padding: 6px 4px; text-align: center; vertical-align: middle; font-size: 13px; }
     .dt-p3 th { background: #EEF2FA; font-weight: 600; color: #1A1A2E; font-size: 13px; }
     .dt-p3 td:first-child { text-align: left; font-weight: 600; padding-left: 10px; }
     .dt-p3 th:first-child { text-align: left; padding-left: 10px; }
@@ -445,6 +509,7 @@ st.markdown("""
     .cat-name .sub-no-otc { font-size: 13px; color: #000000; font-weight: bold; margin-left: 3px; }
     .cat-name .sub-yes-otc { font-size: 13px; color: #888888; font-weight: normal; margin-left: 3px; }
     .brand-name { font-weight: 600; color: #1B4F8E; width: 100px; }
+    .brand-name .brand-sub { font-size: 13px; color: #1B4F8E; font-weight: normal; margin-left: 2px; }
     .num { font-variant-numeric: tabular-nums; width: 68px; position: relative; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .sales-bold { font-weight: 700; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .bar-cell { position: relative; overflow: hidden; }
@@ -545,14 +610,14 @@ st.markdown("""
         background: linear-gradient(135deg, #1B4F8E 0%, #102F57 100%);
         color: white;
         border-radius: 10px;
-        padding: 10px 18px;
+        padding: 4px 18px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 12px;
         box-shadow: 0 3px 12px rgba(27,79,142,0.18);
     }
-    .phdr h2 { margin: 0; font-size: 15px; color: white; font-weight: 800; letter-spacing: 0.02em; }
+    .phdr h2 { margin: 0; font-size: 15px; color: white; font-weight: 800; letter-spacing: 0.02em; line-height: 1.2; }
     .fcard {
         background: #fff;
         border: 1px solid #DCE3EF;
@@ -590,9 +655,9 @@ st.markdown("""
         vertical-align: middle;
         white-space: nowrap;
     }
-    .metric-table th { line-height: 1.5; background: #EEF2FA; font-weight: 700; color: #1A1A2E; font-size: 16px; padding: 12px 6px; }
-    .metric-table td { line-height: 1.5; padding: 42px 6px; font-size: 16px; }
-    .metric-table.compact td { line-height: 1.5; padding: 54px 6px; font-size: 16px; }
+    .metric-table th { line-height: 1.5; background: #EEF2FA; font-weight: 700; color: #1A1A2E; font-size: 16px; padding: 8px 6px; }
+    .metric-table td { line-height: 1.5; padding: 8px 6px; font-size: 16px; }
+    .metric-table.compact td { line-height: 1.5; padding: 8px 6px; font-size: 16px; }
     .metric-table td:first-child { text-align: left; font-weight: 700; padding-left: 12px; min-width: 126px; }
     .metric-table .value { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .metric-table tbody tr:hover td { background: #F0F4FF; }
@@ -601,13 +666,13 @@ st.markdown("""
     .metric-table .vds-h { background: #FFEBC1; color: #1A1A2E; }
     .metric-table .brand-h { background: #D6EAF8; color: #1A1A2E; }
     .left-content-wrap {
-        height: 590px;
         display: flex;
         flex-direction: column;
     }
     .left-content-wrap .metric-table {
         flex: 1 1 auto;
         height: 100%;
+        width: 100%;
     }
     .chart-title {
         font-size: 14px;
@@ -647,6 +712,7 @@ st.markdown("""
     div[data-testid="stPlotlyChart"] {
         margin-top: 0 !important;
         margin-bottom: 0 !important;
+        margin-right: 0 !important;
     }
     /* Tighten gap between consecutive plotly charts only (not text/table elements) */
     div[data-testid="stColumn"] > div[data-testid="stVerticalBlock"] > div[data-testid="stPlotlyChart"] + div[data-testid="stPlotlyChart"] {
@@ -657,6 +723,7 @@ st.markdown("""
     .brand-table th, .brand-table td { border: 1px solid #D6DDE8; padding: 6px 4px; text-align: center; vertical-align: middle !important; white-space: nowrap; line-height: 1.35; height: 29px; font-family: Arial, "Microsoft YaHei", sans-serif; }
     .brand-table th { background: #B0B0B0; color: #111827; font-weight: 800; }
     .brand-table .brand-col { width: 88px; }
+    .brand-table .attr-col { width: 70px; font-size: 12px; }
     .brand-table .group-head { background: #B0B0B0; font-size: 13px; font-weight: 800; }
     .brand-table .sub-head { background: #B0B0B0; font-size: 12px; }
     .brand-table .cat-row td { background: #F2F2F2; font-weight: 800; }
@@ -977,7 +1044,9 @@ def total_vds_sales(df, months):
     return df.loc[mask, SALES_COL].sum()
 
 def brand_sales(df, months, brand=None):
-    mask = (df["品类"] == "VDS") & (df["year_month"].isin(months))
+    # 汤臣倍健用CHC(营养补充剂)代表VDS（含OTC），其他品牌用VDS
+    cat = "CHC(营养补充剂)" if brand == "汤臣倍健" else "VDS"
+    mask = (df["品类"] == cat) & (df["year_month"].isin(months))
     if brand:
         mask = mask & (df["品牌"] == brand)
     return df.loc[mask, SALES_COL].sum()
@@ -1040,10 +1109,22 @@ def get_months(year, month, count=1):
     return sorted(months)
 
 def sales_by_source(source, months, filters):
-    df = df_ind if source == "industry" else sku_df
-    mask = df["year_month"].isin(months)
+    if source == "brand":
+        df = brand_df
+        half_periods = set()
+        for m in months:
+            y = int(m[:4])
+            mo = int(m[4:])
+            half_periods.add(f"{y}H1" if mo <= 6 else f"{y}H2")
+        mask = df["year_month"].isin(half_periods)
+    else:
+        df = df_ind if source == "industry" else sku_df
+        mask = df["year_month"].isin(months)
     for k, v in filters.items():
-        mask = mask & (df[k] == v)
+        if isinstance(v, list):
+            mask = mask & df[k].isin(v)
+        else:
+            mask = mask & (df[k] == v)
     return df.loc[mask, SALES_COL].sum() / 1000
 
 def growth_rate(curr, ly):
@@ -1087,6 +1168,7 @@ def circle_svg(color):
 
 # ====================== Part A PAGE 1: VDS+OTC 品类市场规模 ======================
 def page1(sel_ym, SEL_M):
+    ytd_label, ly_label, l3m_label, yy, lyy = period_labels(sel_ym)
     sl_l = ym_lab(SEL_M[0])
     sl_r = ym_lab(SEL_M[-1])
     st.markdown(f"""
@@ -1164,14 +1246,14 @@ def page1(sel_ym, SEL_M):
         with cc1:
             f1 = go.Figure()
             if show_otc:
-                f1.add_bar(x=["LY", "YTD"], y=[low, cow], name="OTC",
+                f1.add_bar(x=[ly_label, ytd_label], y=[low, cow], name="OTC",
                            marker_color=C_OTC, width=BW,
                            text=[fn(low), fn(cow)], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
                            textangle=0, cliponaxis=False, legendrank=2)
             if show_vds:
                 vds_base = [low, cow] if show_otc else [0, 0]
-                f1.add_bar(x=["LY", "YTD"], y=[lvw, cvw], name="VDS",
+                f1.add_bar(x=[ly_label, ytd_label], y=[lvw, cvw], name="VDS",
                            marker_color=C_VDS, base=vds_base, width=BW,
                            text=[fn(lvw), fn(cvw)], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
@@ -1185,14 +1267,14 @@ def page1(sel_ym, SEL_M):
         with cc2:
             f2 = go.Figure()
             if show_otc:
-                f2.add_bar(x=["LY", "YTD"], y=[lqow, cqow], name="OTC",
+                f2.add_bar(x=[ly_label, ytd_label], y=[lqow, cqow], name="OTC",
                            marker_color=C_OTC, width=BW,
                            text=[fn(lqow), fn(cqow)], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
                            textangle=0, cliponaxis=False, legendrank=2)
             if show_vds:
                 vds_base = [lqow, cqow] if show_otc else [0, 0]
-                f2.add_bar(x=["LY", "YTD"], y=[lqvw, cqvw], name="VDS",
+                f2.add_bar(x=[ly_label, ytd_label], y=[lqvw, cqvw], name="VDS",
                            marker_color=C_VDS, base=vds_base, width=BW,
                            text=[fn(lqvw), fn(cqvw)], textposition="outside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color=C_TXT, family="Arial, sans-serif"),
@@ -1206,24 +1288,24 @@ def page1(sel_ym, SEL_M):
         with cc3:
             f3 = go.Figure()
             if show_vds:
-                f3.add_bar(x=["LY", "YTD"], y=[lpv, cpv], name="VDS",
-                           marker_color=C_VDS, width=0.38,
+                f3.add_bar(x=[ly_label, ytd_label], y=[lpv, cpv], name="VDS",
+                           marker_color=C_VDS, width=0.33,
                            text=[f"{lpv}", f"{cpv}"], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
                            cliponaxis=False, legendrank=1)
             if show_otc:
-                f3.add_bar(x=["LY", "YTD"], y=[lpo, cpo], name="OTC",
-                           marker_color=C_OTC, width=0.38,
+                f3.add_bar(x=[ly_label, ytd_label], y=[lpo, cpo], name="OTC",
+                           marker_color=C_OTC, width=0.33,
                            text=[f"{lpo}", f"{cpo}"], textposition="inside",
                            insidetextanchor="middle", textfont=dict(size=FZ, color="white", family="Arial, sans-serif"),
                            cliponaxis=False, legendrank=2)
             f3.update_layout(**BASE,
                 title=dict(text="品类平均单价<br><sup>(元/盒)</sup>", font_size=13),
-                barmode="group", bargap=0.30, bargroupgap=0.08, showlegend=False,
+                barmode="group", bargap=0.35, bargroupgap=0.18, showlegend=False,
                 xaxis=dict(tickfont=dict(size=13)))
             st.plotly_chart(f3, width='stretch')
 
-        st.markdown(f"<b class='chart-title'>YTD 同比增速</b>", unsafe_allow_html=True)
+        st.markdown(f"<b class='chart-title'>{ytd_label} 同比增速</b>", unsafe_allow_html=True)
         st.markdown(f"""
         <table class="dt">
         <tr>
@@ -1296,15 +1378,16 @@ def page1(sel_ym, SEL_M):
                                  barmode="stack", bargap=0.15, showlegend=False,
                                  uniformtext=dict(minsize=16, mode="show"),
                                  title=dict(text="品类销售额by月度<br><sup>(单位：亿元)</sup>", font_size=14),
-                                 xaxis=dict(tickangle=-45, tickfont=dict(size=13), dtick=1, domain=[0.0, 1.0]))
+                                 xaxis=dict(tickangle=-45, tickfont=dict(size=11), dtick=1, domain=[0.0, 1.0]))
                 st.plotly_chart(fm, width='stretch')
 
                 st.markdown(f"<b class='chart-title'>月度同比明细</b>", unsafe_allow_html=True)
                 mlst = mm["lb"].tolist()
                 n_m = len(mlst)
-                tfs = "14px"
+                tfs = "11px"
+                hfs = "10px"
                 tdp = "6px 4px"
-                hdr = "".join(f"<th style='font-size:{tfs};padding:{tdp};text-align:center'>{m}</th>" for m in mlst)
+                hdr = "".join(f"<th style='font-size:{hfs};padding:{tdp};text-align:center'>{m}</th>" for m in mlst)
                 vr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["VG"])
                 orr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["OG"])
                 trr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["TG"])
@@ -1326,6 +1409,7 @@ def page1(sel_ym, SEL_M):
 
 # ====================== Part A PAGE 2: VDS 品牌份额 ======================
 def page2(sel_month, trend_months):
+    ytd_label, ly_label, l3m_label, yy, lyy = period_labels(sel_month)
     st.markdown(f"""
     <div class="phdr">
         <h2>VDS-Top5 品牌市场份额</h2>
@@ -1356,6 +1440,11 @@ def page2(sel_month, trend_months):
 
     brand_ytd = df_ind[(df_ind["品类"] == "VDS") & (df_ind["year_month"].isin(ytd_months)) &
                        (~df_ind["品牌"].str.contains("others|其他", case=False, na=False))].groupby("品牌")[SALES_COL].sum().sort_values(ascending=False)
+    # 汤臣倍健用CHC(营养补充剂)替代VDS
+    if "汤臣倍健" in brand_ytd.index:
+        _tang_chc = df_ind[(df_ind["品类"] == "CHC(营养补充剂)") & (df_ind["品牌"] == "汤臣倍健") & (df_ind["year_month"].isin(ytd_months))][SALES_COL].sum()
+        brand_ytd["汤臣倍健"] = _tang_chc
+        brand_ytd = brand_ytd.sort_values(ascending=False)
     top5_brands = brand_ytd.head(5).index.tolist()
 
     if vds_ytd_total == 0 or vds_curr_total == 0:
@@ -1401,14 +1490,14 @@ def page2(sel_month, trend_months):
             for b in top5_brands:
                 m = metrics_df[metrics_df["品牌"] == b].iloc[0]
                 fig.add_trace(go.Bar(
-                    x=["LY"], y=[m["LY份额"]], name=b,
+                    x=[ly_label], y=[m["LY份额"]], name=b,
                     marker_color=color_map[b], width=0.6,
                     text=[f"{m['LY份额']:.1f}"], textposition="inside",
                     insidetextanchor="middle", textfont=dict(size=16, color="white", family="Arial, sans-serif"),
                     showlegend=False
                 ))
                 fig.add_trace(go.Bar(
-                    x=["YTD"], y=[m["YTD份额"]], name=b,
+                    x=[ytd_label], y=[m["YTD份额"]], name=b,
                     marker_color=color_map[b], width=0.6,
                     text=[f"{m['YTD份额']:.1f}"], textposition="inside",
                     insidetextanchor="middle", textfont=dict(size=16, color="white", family="Arial, sans-serif"),
@@ -1417,12 +1506,12 @@ def page2(sel_month, trend_months):
 
             cr5_ly = metrics_df["LY份额"].sum()
             cr5_ytd = metrics_df["YTD份额"].sum()
-            fig.add_annotation(x="LY", y=cr5_ly, text=f"<b>{cr5_ly:.1f}</b>",
+            fig.add_annotation(x=ly_label, y=cr5_ly, text=f"<b>{cr5_ly:.1f}</b>",
                                showarrow=False, font=dict(size=16, color=C_TXT, family="Arial, sans-serif"), yshift=12)
-            fig.add_annotation(x="YTD", y=cr5_ytd, text=f"<b>{cr5_ytd:.1f}</b>",
+            fig.add_annotation(x=ytd_label, y=cr5_ytd, text=f"<b>{cr5_ytd:.1f}</b>",
                                showarrow=False, font=dict(size=16, color=C_TXT, family="Arial, sans-serif"), yshift=12)
 
-            # Single total share change annotation between LY and YTD
+            # Single total share change annotation between LY and YTD (dynamic labels)
             _total_diff = cr5_ytd - cr5_ly
             if not pd.isna(_total_diff):
                 _tclr = "#00B050" if _total_diff >= 0 else "#E53935"
@@ -1432,31 +1521,32 @@ def page2(sel_month, trend_months):
                 fig.add_annotation(x=0.5, y=_tmax, text=f"<b>{_tarr}</b>",
                                    showarrow=False,
                                    font=dict(size=34, color=_tclr, family="Arial, sans-serif"),
-                                   xshift=-20, yshift=24)
+                                   xshift=-40, yshift=24, xanchor="center")
                 # Value annotation - bold
                 fig.add_annotation(x=0.5, y=_tmax, text=f"<b>{_total_diff:+.1f}</b>",
                                    showarrow=False,
                                    font=dict(size=22, color=_tclr, family="Arial, sans-serif"),
-                                   xshift=14, yshift=22)
+                                   xshift=0, yshift=22, xanchor="center")
                 fig.update_layout(xaxis=dict(range=[-0.5, 1.5]))
 
+            _y_max = max(cr5_ly, cr5_ytd) * 1.12
             fig.update_layout(
-                height=400,
+                height=460,
                 barmode="stack",
                 bargap=0.35,
-                margin=dict(t=30, b=30, l=10, r=55),
+                margin=dict(t=30, b=25, l=10, r=55),
                 paper_bgcolor="white",
                 plot_bgcolor="white",
                 font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-                xaxis=dict(showgrid=False, tickfont=dict(size=13)),
-                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                xaxis=dict(showgrid=False, tickfont=dict(size=8)),
+                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[0, _y_max]),
                 showlegend=False,
                 uniformtext=dict(mode="show", minsize=16),
             )
             st.plotly_chart(fig, width='stretch')
 
         with cL_table:
-            st.markdown("<b class='chart-title'>YTD 规模同比 & 份额变化</b>", unsafe_allow_html=True)
+            st.markdown(f"<b class='chart-title'>{ytd_label} 规模同比 & 份额变化</b>", unsafe_allow_html=True)
             table_rows = []
             for _, r in metrics_df[::-1].iterrows():
                 sy = r["YTD规模同比"]
@@ -1483,7 +1573,7 @@ def page2(sel_month, trend_months):
             table_html = (
                 f"<table class='dt-p2'>"
                 f"<colgroup><col style='width:35%'><col style='width:21.67%'><col style='width:21.67%'><col style='width:21.67%'></colgroup>"
-                f"<thead><tr><th>品牌</th><th>YTD<br>规模同比</th><th>YTD<br>份额同比</th><th>{sel_month[2:4]}M{sel_mon}<br>份额环比</th></tr></thead>"
+                f"<thead><tr><th>品牌</th><th>{ytd_label}<br>规模同比</th><th>{ytd_label}<br>份额同比</th><th>{sel_month[2:4]}M{sel_mon}<br>份额环比</th></tr></thead>"
                 f"<tbody>{''.join(table_rows)}</tbody></table>"
             )
             st.markdown(table_html, unsafe_allow_html=True)
@@ -1516,8 +1606,8 @@ def page2(sel_month, trend_months):
             ))
 
         fig2.update_layout(
-            height=400,
-            margin=dict(t=30, b=30, l=40, r=20),
+            height=460,
+            margin=dict(t=55, b=25, l=40, r=20),
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
@@ -1554,7 +1644,7 @@ def page3(sel_ym, SEL_MONTHS):
     all_records = []
     for m in ind_months:
         vds_total = ind_sales(m, {"品类": "VDS"})
-        tang_group_total = ind_sales(m, {"品类": "VDS", "品牌": "汤臣倍健"})
+        tang_group_total = ind_sales(m, {"品类": "CHC(营养补充剂)", "品牌": "汤臣倍健"})
         tang_key = sku_sales(m, {"集团权益": "汤臣倍健"})
         tang_other = tang_group_total - tang_key
         share = (tang_group_total / vds_total * 100) if vds_total > 0 else np.nan
@@ -1670,7 +1760,7 @@ def page3(sel_ym, SEL_MONTHS):
         paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(size=15, family="Microsoft YaHei, sans-serif"),
-        xaxis=dict(showgrid=False, tickfont=dict(size=13), dtick=1, tickangle=0, domain=[0.12, 1.0], automargin=False, range=[-0.5, len(df_data) - 0.5]),
+        xaxis=dict(showgrid=False, tickfont=dict(size=13), dtick=1, tickangle=0, domain=[0.08, 1.0], automargin=False, range=[-0.5, len(df_data) - 0.5]),
         yaxis=dict(
             title="",
             showgrid=False,
@@ -1729,7 +1819,7 @@ def page3(sel_ym, SEL_MONTHS):
         table_rows.append("<tr>" + "".join(cells) + "</tr>")
 
     _n_p3 = len(SEL_MONTHS)
-    _label_w = 12  # Must match xaxis domain left value (0.12)
+    _label_w = 8  # Must match xaxis domain left value (0.08)
     _data_w = round((100 - _label_w) / _n_p3, 2) if _n_p3 > 0 else 0
     header_cells = [f"<th style='text-align:center;padding:6px 4px'>{ym_lab(m)}</th>" for m in SEL_MONTHS]
     _p3_cols = f"<colgroup><col style='width:{_label_w}%'>" + "".join(f"<col style='width:{_data_w}%'>" for _ in range(_n_p3)) + "</colgroup>"
@@ -1757,13 +1847,63 @@ def page4(selected_month):
     CUR_MONTH = int(selected_month[4:])
 
     YTD_MONTHS = get_months(CUR_YEAR, CUR_MONTH, CUR_MONTH)
-    L3M_MONTHS = get_months(CUR_YEAR, CUR_MONTH, 3)
     CUR_MONTH_STR = f"{CUR_YEAR}{str(CUR_MONTH).zfill(2)}"
     PRE_MONTH_STR = get_months(CUR_YEAR, CUR_MONTH, 2)[0]
 
     YTD_LY_MONTHS = get_months(CUR_YEAR - 1, CUR_MONTH, CUR_MONTH)
-    L3M_LY_MONTHS = get_months(CUR_YEAR - 1, CUR_MONTH, 3)
     CUR_LY_MONTH_STR = f"{CUR_YEAR - 1}{str(CUR_MONTH).zfill(2)}"
+
+    yy = str(CUR_YEAR)[2:]
+    lyy = str(CUR_YEAR - 1)[2:]
+
+    # Quarter-end: L3M = previous completed quarter, not trailing 3 months
+    q_end = CUR_MONTH in (3, 6, 9, 12)
+    if q_end:
+        if CUR_MONTH == 3:
+            l3m_label = f"{lyy}Q4"
+            L3M_MONTHS = [f"{CUR_YEAR-1}10", f"{CUR_YEAR-1}11", f"{CUR_YEAR-1}12"]
+            L3M_LY_MONTHS = [f"{CUR_YEAR-2}10", f"{CUR_YEAR-2}11", f"{CUR_YEAR-2}12"]
+        elif CUR_MONTH == 6:
+            l3m_label = f"{yy}Q1"
+            L3M_MONTHS = [f"{CUR_YEAR}01", f"{CUR_YEAR}02", f"{CUR_YEAR}03"]
+            L3M_LY_MONTHS = [f"{CUR_YEAR-1}01", f"{CUR_YEAR-1}02", f"{CUR_YEAR-1}03"]
+        elif CUR_MONTH == 9:
+            l3m_label = f"{yy}Q2"
+            L3M_MONTHS = [f"{CUR_YEAR}04", f"{CUR_YEAR}05", f"{CUR_YEAR}06"]
+            L3M_LY_MONTHS = [f"{CUR_YEAR-1}04", f"{CUR_YEAR-1}05", f"{CUR_YEAR-1}06"]
+        elif CUR_MONTH == 12:
+            l3m_label = f"{yy}Q3"
+            L3M_MONTHS = [f"{CUR_YEAR}07", f"{CUR_YEAR}08", f"{CUR_YEAR}09"]
+            L3M_LY_MONTHS = [f"{CUR_YEAR-1}07", f"{CUR_YEAR-1}08", f"{CUR_YEAR-1}09"]
+    else:
+        l3m_label = "L3M"
+        L3M_MONTHS = get_months(CUR_YEAR, CUR_MONTH, 3)
+        L3M_LY_MONTHS = get_months(CUR_YEAR - 1, CUR_MONTH, 3)
+
+    # YTD label: H1 at M6, H2 at M12, Q1 at M3, etc.
+    if CUR_MONTH == 3:
+        ytd_label = f"{yy}Q1"
+    elif CUR_MONTH == 6:
+        ytd_label = f"{yy}H1"
+    elif CUR_MONTH == 9:
+        ytd_label = f"{yy}Q1-Q3"
+    elif CUR_MONTH == 12:
+        ytd_label = f"{yy}H2"
+    else:
+        ytd_label = "YTD"
+
+    # LY YTD label
+    if CUR_MONTH == 3:
+        ytd_ly_label = f"{lyy}Q1"
+    elif CUR_MONTH == 6:
+        ytd_ly_label = f"{lyy}H1"
+    elif CUR_MONTH == 9:
+        ytd_ly_label = f"{lyy}Q1-Q3"
+    elif CUR_MONTH == 12:
+        ytd_ly_label = f"{lyy}H2"
+    else:
+        ytd_ly_label = "LY"
+
 
     ROWS = [
         {
@@ -1775,36 +1915,58 @@ def page4(selected_month):
         {
             "name": "VDS", "sub": "",
             "cat_source": "industry", "cat_filter": {"品类": "VDS"},
-            "brand_source": "industry", "brand_filter": {"品类": "VDS", "品牌": "汤臣倍健"},
+            "brand_source": "industry", "brand_filter": {"品类": "CHC(营养补充剂)", "品牌": "汤臣倍健"},
             "brand_display": "汤臣倍健集团", "has_bar": False,
         },
-        {"name": "蛋白粉", "sub": "（不含OTC）", "cat_source": "sku", "cat_filter": {"品类": "蛋白粉"}, "brand_source": "sku", "brand_filter": {"品类": "蛋白粉", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "成人钙", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "钙-成人"}, "brand_source": "sku", "brand_filter": {"品类": "钙-成人", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "儿童钙", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "钙-儿童"}, "brand_source": "sku", "brand_filter": {"品类": "钙-儿童", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "成人多维", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "多维-成人"}, "brand_source": "sku", "brand_filter": {"品类": "多维-成人", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "儿童多维", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "多维-儿童"}, "brand_source": "sku", "brand_filter": {"品类": "多维-儿童", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "鱼油", "sub": "（不含OTC）", "cat_source": "sku", "cat_filter": {"品类": "鱼油"}, "brand_source": "sku", "brand_filter": {"品类": "鱼油", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
-        {"name": "氨糖", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "关节护理"}, "brand_source": "sku", "brand_filter": {"品类": "关节护理", "品牌": "健力多"}, "brand_display": "健力多", "has_bar": True},
-        {"name": "益生菌", "sub": "（含OTC）", "cat_source": "sku", "cat_filter": {"品类": "益生菌"}, "brand_source": "sku", "brand_filter": {"品类": "益生菌", "品牌": "Life-Space"}, "brand_display": "Life-Space", "has_bar": True},
+        {"name": "蛋白粉", "sub": "不含OTC", "cat_source": "sku", "cat_filter": {"品类": "蛋白粉"}, "brand_source": "sku", "brand_filter": {"品类": "蛋白粉", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "成人钙", "sub": "含OTC", "cat_source": "sku", "cat_filter": {"品类": "钙-成人"}, "brand_source": "sku", "brand_filter": {"品类": "钙-成人", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "儿童钙", "sub": "含OTC", "cat_source": "sku", "cat_filter": {"品类": "钙-儿童"}, "brand_source": "sku", "brand_filter": {"品类": "钙-儿童", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "成人多维", "sub": "含OTC", "cat_source": "sku", "cat_filter": {"品类": "多维-成人"}, "brand_source": "sku", "brand_filter": {"品类": "多维-成人", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "儿童多维", "sub": "含OTC", "cat_source": "sku", "cat_filter": {"品类": "多维-儿童"}, "brand_source": "sku", "brand_filter": {"品类": "多维-儿童", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "维B", "sub": "含OTC", "cat_source": "brand", "cat_filter": {"品类": "维生素B"}, "brand_source": "brand", "brand_filter": {"品类": "维生素B", "品牌": ["汤臣倍健", "维满B"]}, "brand_display": "汤臣倍健(含维满)", "has_bar": True, "semi_annual": True},
+        {"name": "维C", "sub": "含OTC", "cat_source": "brand", "cat_filter": {"品类": "维生素C"}, "brand_source": "brand", "brand_filter": {"品类": "维生素C", "品牌": ["汤臣倍健", "维满C"]}, "brand_display": "汤臣倍健(含维满)", "has_bar": True, "semi_annual": True},
+        {"name": "鱼油", "sub": "不含OTC", "cat_source": "sku", "cat_filter": {"品类": "鱼油"}, "brand_source": "sku", "brand_filter": {"品类": "鱼油", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True},
+        {"name": "褪黑素", "sub": "含OTC", "cat_source": "brand", "cat_filter": {"品类": "褪黑素"}, "brand_source": "brand", "brand_filter": {"品类": "褪黑素", "品牌": "汤臣倍健"}, "brand_display": "汤臣倍健", "has_bar": True, "semi_annual": True},
+        {"name": "氨糖", "sub": "含OTC", "cat_source": "sku", "cat_filter": {"品类": "关节护理"}, "brand_source": "sku", "brand_filter": {"品类": "关节护理", "品牌": "健力多"}, "brand_display": "健力多", "has_bar": True},
+        {"name": "益生菌", "sub": "含OTC", "cat_source": "sku", "cat_filter": {"品类": "益生菌"}, "brand_source": "sku", "brand_filter": {"品类": "益生菌", "品牌": "Life-Space"}, "brand_display": "Life-Space", "has_bar": True},
     ]
+
+    # Semi-annual categories only show at half-year boundaries (June or December)
+    is_half_year = CUR_MONTH in (6, 12)
+    ROWS = [r for r in ROWS if not r.get('semi_annual', False) or is_half_year]
 
     table_data = []
     for r in ROWS:
+        is_semi = r.get("semi_annual", False)
         cat_ytd = sales_by_source(r["cat_source"], YTD_MONTHS, r["cat_filter"])
-        cat_l3m = sales_by_source(r["cat_source"], L3M_MONTHS, r["cat_filter"])
-        cat_m4 = sales_by_source(r["cat_source"], [CUR_MONTH_STR], r["cat_filter"])
-        cat_m3 = sales_by_source(r["cat_source"], [PRE_MONTH_STR], r["cat_filter"])
         cat_ytd_ly = sales_by_source(r["cat_source"], YTD_LY_MONTHS, r["cat_filter"])
-        cat_l3m_ly = sales_by_source(r["cat_source"], L3M_LY_MONTHS, r["cat_filter"])
-        cat_m4_ly = sales_by_source(r["cat_source"], [CUR_LY_MONTH_STR], r["cat_filter"])
+        if is_semi:
+            cat_l3m = np.nan
+            cat_m4 = np.nan
+            cat_m3 = np.nan
+            cat_l3m_ly = np.nan
+            cat_m4_ly = np.nan
+        else:
+            cat_l3m = sales_by_source(r["cat_source"], L3M_MONTHS, r["cat_filter"])
+            cat_m4 = sales_by_source(r["cat_source"], [CUR_MONTH_STR], r["cat_filter"])
+            cat_m3 = sales_by_source(r["cat_source"], [PRE_MONTH_STR], r["cat_filter"])
+            cat_l3m_ly = sales_by_source(r["cat_source"], L3M_LY_MONTHS, r["cat_filter"])
+            cat_m4_ly = sales_by_source(r["cat_source"], [CUR_LY_MONTH_STR], r["cat_filter"])
 
         brand_ytd = sales_by_source(r["brand_source"], YTD_MONTHS, r["brand_filter"])
-        brand_l3m = sales_by_source(r["brand_source"], L3M_MONTHS, r["brand_filter"])
-        brand_m4 = sales_by_source(r["brand_source"], [CUR_MONTH_STR], r["brand_filter"])
-        brand_m3 = sales_by_source(r["brand_source"], [PRE_MONTH_STR], r["brand_filter"])
         brand_ytd_ly = sales_by_source(r["brand_source"], YTD_LY_MONTHS, r["brand_filter"])
-        brand_l3m_ly = sales_by_source(r["brand_source"], L3M_LY_MONTHS, r["brand_filter"])
-        brand_m4_ly = sales_by_source(r["brand_source"], [CUR_LY_MONTH_STR], r["brand_filter"])
+        if is_semi:
+            brand_l3m = np.nan
+            brand_m4 = np.nan
+            brand_m3 = np.nan
+            brand_l3m_ly = np.nan
+            brand_m4_ly = np.nan
+        else:
+            brand_l3m = sales_by_source(r["brand_source"], L3M_MONTHS, r["brand_filter"])
+            brand_m4 = sales_by_source(r["brand_source"], [CUR_MONTH_STR], r["brand_filter"])
+            brand_m3 = sales_by_source(r["brand_source"], [PRE_MONTH_STR], r["brand_filter"])
+            brand_l3m_ly = sales_by_source(r["brand_source"], L3M_LY_MONTHS, r["brand_filter"])
+            brand_m4_ly = sales_by_source(r["brand_source"], [CUR_LY_MONTH_STR], r["brand_filter"])
 
         share_ytd = (brand_ytd / cat_ytd * 100) if cat_ytd > 0 else np.nan
         share_l3m = (brand_l3m / cat_l3m * 100) if cat_l3m > 0 else np.nan
@@ -1853,21 +2015,21 @@ def page4(selected_month):
           <th colspan="7" class="share-header">汤臣倍健市场份额 (%)</th>
         </tr>
         <tr class="sub-header">
-          <th class="sales-header-a">YTD</th>
-          <th class="growth-header-a">YTD<br>同比</th>
-          <th class="growth-header-a">L3M<br>同比</th>
-          <th class="growth-header-a">{str(CUR_YEAR)[2:]}M{CUR_MONTH}<br>同比</th>
-          <th class="growth-header-a">{str(CUR_YEAR)[2:]}M{CUR_MONTH}<br>环比</th>
-          <th class="sales-header-b">YTD</th>
-          <th class="growth-header-b">YTD<br>同比</th>
-          <th class="growth-header-b">L3M<br>同比</th>
-          <th class="growth-header-b">{str(CUR_YEAR)[2:]}M{CUR_MONTH}<br>同比</th>
-          <th class="growth-header-b">{str(CUR_YEAR)[2:]}M{CUR_MONTH}<br>环比</th>
-          <th class="share-header">YTD</th>
+          <th class="sales-header-a">{ytd_label}</th>
+          <th class="growth-header-a">{ytd_label}<br>同比</th>
+          <th class="growth-header-a">{l3m_label}<br>同比</th>
+          <th class="growth-header-a">{yy}M{CUR_MONTH}<br>同比</th>
+          <th class="growth-header-a">{yy}M{CUR_MONTH}<br>环比</th>
+          <th class="sales-header-b">{ytd_label}</th>
+          <th class="growth-header-b">{ytd_label}<br>同比</th>
+          <th class="growth-header-b">{l3m_label}<br>同比</th>
+          <th class="growth-header-b">{yy}M{CUR_MONTH}<br>同比</th>
+          <th class="growth-header-b">{yy}M{CUR_MONTH}<br>环比</th>
+          <th class="share-header">{ytd_label}</th>
           <th class="share-header">同比</th>
-          <th class="share-header">L3M</th>
+          <th class="share-header">{l3m_label}</th>
           <th class="share-header">同比</th>
-          <th class="share-header">{str(CUR_YEAR)[2:]}M{CUR_MONTH}</th>
+          <th class="share-header">{yy}M{CUR_MONTH}</th>
           <th class="share-header">同比</th>
           <th class="share-header">环比</th>
         </tr>
@@ -1893,10 +2055,10 @@ def page4(selected_month):
         return f'<td class="num">{format_share(v)}</td>'
 
     def td_share_change(v):
+        if pd.isna(v):
+            return '<td class="num share-change">-</td>'
         c_color, f_color = share_change_color(v)
-        s = format_share(v)
-        if not pd.isna(v):
-            s = f"{v:+.1f}"
+        s = f"{v:+.1f}"
         return f'<td class="num share-change" style="color:{f_color}">{circle_svg(c_color)}<span>{s}</span></td>'
 
     def td_sales_plain(v):
@@ -1906,7 +2068,8 @@ def page4(selected_month):
 
     def build_row(row):
         _sub_cls = "sub-no-otc" if "不含" in row["sub"] else "sub-yes-otc"
-        name_cell = f'<td class="cat-name">{row["name"]}<span class="{_sub_cls}">{row["sub"]}</span></td>'
+        _sub_text = f'({row["sub"]})' if row["sub"] else ""
+        name_cell = f'<td class="cat-name">{row["name"]} <span class="{_sub_cls}">{_sub_text}</span></td>'
         cat_sales = td_bar_sales(row["cat_ytd"], max_cat_ytd, BAR_A_START, BAR_A_END) if row["has_bar"] else td_sales_plain(row["cat_ytd"])
         cat_growth = "".join([
             td_growth(row["cat_ytd_yoy"]),
@@ -1914,7 +2077,12 @@ def page4(selected_month):
             td_growth(row["cat_m4_yoy"]),
             td_growth(row["cat_m4_mom"]),
         ])
-        brand_cell = f'<td class="brand-name">{row["brand_display"]}</td>'
+        _bd = row["brand_display"]
+        if "(" in _bd:
+            _bd_main, _bd_suffix = _bd.split("(", 1)
+            brand_cell = f'<td class="brand-name">{_bd_main}<span class="brand-sub">({_bd_suffix}</span></td>'
+        else:
+            brand_cell = f'<td class="brand-name">{_bd}</td>'
         brand_sales = td_bar_sales(row["brand_ytd"], max_brand_ytd, BAR_B_START, BAR_B_END) if row["has_bar"] else td_sales_plain(row["brand_ytd"])
         brand_growth = "".join([
             td_growth(row["brand_ytd_yoy"]),
@@ -2083,6 +2251,7 @@ def render_first_page(selected_cat, selected_month, display_months):
     CUR_YEAR = int(selected_month[:4])
     CUR_MONTH = int(selected_month[4:])
     CUR_M_STR = selected_month
+    ytd_label, ly_label, l3m_label, yy, lyy = period_labels(selected_month)
     LY_M_STR = fp_get_ly_month(selected_month)
     YTD_MONTHS = fp_get_ytd_months(CUR_YEAR, CUR_MONTH)
     YTD_LY_MONTHS = fp_get_ytd_months(CUR_YEAR - 1, CUR_MONTH)
@@ -2092,7 +2261,7 @@ def render_first_page(selected_cat, selected_month, display_months):
     <b>口径：</b>当前月 = {CUR_M_STR}（{ym_lab(CUR_M_STR)}）&nbsp;|&nbsp;
     YTD = {CUR_YEAR}年1-{CUR_MONTH}月累计 &nbsp;|&nbsp;
     同比 = 本期 / 去年同期 - 1 &nbsp;|&nbsp;
-    销售额单位：百万元；销售量单位：百盒；单价单位：元/盒
+    销售额单位：百万元
     </div>
     """, unsafe_allow_html=True)
     render_conclusion(f"fp_{selected_cat}", selected_month)
@@ -2107,13 +2276,19 @@ def render_first_page(selected_cat, selected_month, display_months):
     monthly_df = fp_build_monthly_data(display_months, config["cat"], config["brand"], has_otc)
     is_kids_ca = (selected_cat == "儿童钙")
 
-    left_content_height = 680 if has_otc else 620
     if is_kids_ca:
-        right_chart_height = 440
+        right_chart_height = 470
     elif has_otc:
-        right_chart_height = 420
+        right_chart_height = 450
     else:
-        right_chart_height = 440
+        right_chart_height = 470
+    # Calculate left content height to match right side (chart + gap + growth table)
+    n_growth_data_rows = (4 if has_otc else 2)
+    n_growth_total_rows = n_growth_data_rows + 1  # +1 for header
+    growth_row_h = 26  # estimated px per growth table row (font 12px + padding 10px + border 2px)
+    growth_table_est = n_growth_total_rows * growth_row_h
+    streamlit_gap = 18  # vertical gap between plotly chart and markdown table
+    left_content_height = right_chart_height + streamlit_gap + growth_table_est
 
     cL, cR = st.columns([0.49, 0.51], gap="medium")
     with cL:
@@ -2127,7 +2302,7 @@ def render_first_page(selected_cat, selected_month, display_months):
         top_header += "</tr>"
         sub_header = "<tr>"
         for _ in metric_rows:
-            sub_header += f"<th>{ym_lab(CUR_M_STR)}</th><th>YTD</th>"
+            sub_header += f"<th>{ym_lab(CUR_M_STR)}</th><th>{ytd_label}</th>"
         sub_header += "</tr>"
 
         def metric_tr(label, curr_key, ytd_key, is_pct=True):
@@ -2257,13 +2432,13 @@ def render_first_page(selected_cat, selected_month, display_months):
         ))
         fig.update_layout(
             barmode="stack",
-            bargap=0.25,
+            bargap=0.20,
             height=right_chart_height,
-            margin=dict(t=42, b=22, l=10, r=10),
+            margin=dict(t=72, b=55, l=0, r=0),
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-            xaxis=dict(showgrid=False, tickfont=dict(size=11), tickangle=-45, automargin=False, domain=[0.12, 0.98]),
+            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.08, 1.0], range=[-0.375, len(monthly_df) - 0.625]),
             uniformtext=dict(minsize=13, mode="show"),
             yaxis=dict(
                 showgrid=False, showticklabels=False, zeroline=False,
@@ -2297,32 +2472,35 @@ def render_first_page(selected_cat, selected_month, display_months):
         # 下方增长率表
         growth_rows = []
         growth_rows.append({
-            "label": f"{selected_cat}同比",
+            "label": "品类同比",
             "values": [fp_calc_yoy(r["cat"], r["cat_ly"]) for _, r in monthly_df.iterrows()]
         })
         if has_otc:
             growth_rows.append({
-                "label": "OTC同比",
+                "label": "OTC",
                 "values": [fp_calc_yoy(r["otc"], r["otc_ly"]) for _, r in monthly_df.iterrows()]
             })
             growth_rows.append({
-                "label": "VDS同比",
+                "label": "VDS",
                 "values": [fp_calc_yoy(r["vds"], r["vds_ly"]) for _, r in monthly_df.iterrows()]
             })
+        _bl = config["brand_label"]
+        _bl_short = {"汤臣倍健": "汤臣", "健力多": "健力多", "Life-Space": "益倍适"}.get(_bl, _bl)
         growth_rows.append({
-            "label": f"{config['brand_label']}同比",
+            "label": f"{_bl_short}同比",
             "values": [fp_calc_yoy(r["brand"], r["brand_ly"]) for _, r in monthly_df.iterrows()]
         })
         n_months = len(display_months)
-        label_w = 12  # percentage for label column
+        label_w = 8  # percentage for label column (reduced for alignment)
         data_w = round((100 - label_w) / n_months, 2) if n_months > 0 else 0
         _cols = f"<colgroup><col style='width:{label_w}%'>" + "".join(f"<col style='width:{data_w}%'>" for _ in range(n_months)) + "</colgroup>"
         header = "<tr><th style='white-space:nowrap;font-size:12px'>增长率</th>" + "".join([f"<th style='font-size:10px;white-space:nowrap;padding:4px 1px'>{ym_lab(m)}</th>" for m in display_months]) + "</tr>"
         body = ""
         for gr in growth_rows:
-            cells = [f"<td style='white-space:nowrap;font-size:11px;padding:4px 2px'>{gr['label']}</td>"]
+            _align = "text-align:right" if gr['label'] in ("OTC", "VDS") else "text-align:left"
+            cells = [f"<td style='white-space:nowrap;font-size:11px;padding:4px 2px;{_align}'>{gr['label']}</td>"]
             for v in gr["values"]:
-                cells.append(f"<td style='color:{fp_growth_color(v)};white-space:nowrap;font-size:11px;padding:4px 1px'>{fp_fmt_pct(v)}</td>")
+                cells.append(f"<td style='color:{fp_growth_color(v)};white-space:nowrap;font-size:11px;padding:4px 1px;text-align:center'>{fp_fmt_pct(v)}</td>")
             body += "<tr>" + "".join(cells) + "</tr>"
 
         growth_html = f"<table class='growth-table' style='font-size:12px;table-layout:fixed;width:100%'>{_cols}" + header + body + "</table>"
@@ -2527,14 +2705,44 @@ def row_metrics(label, cat, brand, current_ym):
     }
 
 
+def get_brand_attribute(cat, brand, ytd_months):
+    """Get brand attribute (VDS/OTC/mixed) based on 处方性质 distribution."""
+    if brand is None:
+        return "-"
+    mask = sku_df["year_month"].isin(ytd_months) & sku_df["品类"].eq(cat) & sku_df["品牌"].isin(brand_filter_values(brand))
+    sub = sku_df.loc[mask]
+    otc_sales = sub[sub["处方性质"] == "OTC"]["sales_m"].sum()
+    vds_sales = sub[sub["处方性质"] != "OTC"]["sales_m"].sum()
+    total = otc_sales + vds_sales
+    if total == 0:
+        return "-"
+    if otc_sales == 0:
+        return ("VDS", None)
+    if vds_sales == 0:
+        return ("OTC", None)
+    # Mixed: show the LARGER attribute with its percentage
+    otc_pct = otc_sales / total * 100
+    vds_pct = vds_sales / total * 100
+    if otc_pct >= 99.5:
+        return ("OTC", None)
+    if vds_pct >= 99.5:
+        return ("VDS", None)
+    if otc_pct >= vds_pct:
+        return ("OTC", otc_pct)
+    else:
+        return ("VDS", vds_pct)
+
+
 def build_table_html(cat_label, cat, table_brands, current_ym):
+    ytd_label, _, _, _, _ = period_labels(current_ym)
     rows = [row_metrics(cat_label, cat, None, current_ym)]
     rows.extend([row_metrics(brand_name(b), cat, b, current_ym) for b in table_brands])
     html = [
         "<table class='brand-table'>",
-        "<tr><th rowspan='2' class='brand-col'>TOP品牌</th><th colspan='1' class='group-head'>销售额<br>百万元</th><th colspan='3' class='group-head'>同比增长率</th><th colspan='2' class='group-head'>销售额增长率</th><th colspan='5' class='group-head'>市场份额(%)</th></tr>",
-        f"<tr><th class='sub-head'>YTD</th><th class='sub-head'>销售额</th><th class='sub-head'>销售量</th><th class='sub-head'>单盒均价</th><th class='sub-head'>{ym_lab(current_ym)}<br>同比</th><th class='sub-head'>{ym_lab(current_ym)}<br>环比</th><th class='sub-head'>{ym_lab(current_ym)}</th><th class='sub-head'>同比</th><th class='sub-head'>环比</th><th class='sub-head'>YTD</th><th class='sub-head'>同比</th></tr>",
+        "<tr><th rowspan='2' class='brand-col'>TOP品牌</th><th rowspan='2' class='attr-col'>属性</th><th colspan='1' class='group-head'>销售额<br>百万元</th><th colspan='3' class='group-head'>同比增长率</th><th colspan='2' class='group-head'>销售额增长率</th><th colspan='5' class='group-head'>市场份额(%)</th></tr>",
+        f"<tr><th class='sub-head'>{ytd_label}</th><th class='sub-head'>销售额</th><th class='sub-head'>销售量</th><th class='sub-head'>单盒均价</th><th class='sub-head'>{ym_lab(current_ym)}<br>同比</th><th class='sub-head'>{ym_lab(current_ym)}<br>环比</th><th class='sub-head'>{ym_lab(current_ym)}</th><th class='sub-head'>同比</th><th class='sub-head'>环比</th><th class='sub-head'>{ytd_label}</th><th class='sub-head'>同比</th></tr>",
     ]
+    ytd_months = period_months("YTD", current_ym)
     for idx, r in enumerate(rows):
         classes = []
         if idx == 0:
@@ -2548,6 +2756,16 @@ def build_table_html(cat_label, cat, table_brands, current_ym):
             classes.append("share-growth-row")
         html.append(f"<tr class='{' '.join(classes)}'>")
         html.append(td(r["label"], "plain"))
+        attr = get_brand_attribute(cat, r["brand"], ytd_months)
+        if isinstance(attr, tuple):
+            attr_type, attr_pct = attr
+            if attr_pct is not None:
+                attr_html = f"{attr_type} <span style='color:#E53935;font-size:9px'>{attr_pct:.0f}%</span>"
+            else:
+                attr_html = attr_type
+        else:
+            attr_html = str(attr)
+        html.append(td(attr_html, "plain"))
         html.append(td(fmt_num(r["sales_ytd"])))
         for key in ["sales_yoy", "qty_yoy", "price_yoy", "m_sales_yoy", "m_sales_mom"]:
             raw = r[key]
@@ -2570,6 +2788,7 @@ def build_table_html(cat_label, cat, table_brands, current_ym):
 
 
 def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=690):
+    ytd_label, ly_label, _, _, _ = period_labels(current_ym)
     ytd_months = period_months("YTD", current_ym)
     ly_months = period_months("YTD_LY", current_ym)
     fig = go.Figure()
@@ -2585,7 +2804,7 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
         show_text = True
         fig.add_trace(
             go.Bar(
-                x=["LY", "YTD"],
+                x=[ly_label, ytd_label],
                 y=[0 if pd.isna(ly_val) else ly_val, 0 if pd.isna(ytd_val) else ytd_val],
                 name=brand_name(brand),
                 marker=dict(
@@ -2595,7 +2814,7 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
                 text=[fmt_share(ly_val) if show_text else "", fmt_share(ytd_val) if show_text else ""],
                 textposition="inside",
                 insidetextanchor="middle",
-                textfont=dict(color="white", size=13 if show_text else 9, family="Arial, sans-serif"),
+                textfont=dict(color="white", size=14 if show_text else 9, family="Arial, sans-serif"),
                 hovertemplate="%{fullData.name}<br>%{x}份额：%{y:.3f}%<extra></extra>",
                 showlegend=False,
             )
@@ -2630,8 +2849,8 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
             font=dict(size=14, color="#333", family="Microsoft YaHei"),
         )
 
-    fig.add_annotation(x="LY", y=total_ly + 1.5, text=f"<b>{fmt_share(total_ly)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
-    fig.add_annotation(x="YTD", y=total_ytd + 1.5, text=f"<b>{fmt_share(total_ytd)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
+    fig.add_annotation(x=ly_label, y=total_ly + 1.5, text=f"<b>{fmt_share(total_ly)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
+    fig.add_annotation(x=ytd_label, y=total_ytd + 1.5, text=f"<b>{fmt_share(total_ytd)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
     fig.add_annotation(
         x=0.5, y=1.02,
         xref="x", yref="paper",
@@ -2647,7 +2866,7 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
         paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(family="Microsoft YaHei", size=14),
-        xaxis=dict(showgrid=False, tickfont=dict(size=16)),
+        xaxis=dict(showgrid=False, tickfont=dict(size=10)),
         yaxis=dict(showgrid=False, showticklabels=False, range=[0, max(total_ly, total_ytd) + 3]),
         showlegend=False,
     )
@@ -2656,8 +2875,18 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
 
 def make_trend_chart(cat_label, cat, brands, months):
     fig = go.Figure()
+    _TREND_YMAX = {"蛋白粉": 65, "成人钙": 40, "儿童钙": 40, "成人多维": 45, "儿童多维": 40, "鱼油": 55, "氨糖": 45, "益生菌": 35}
+    # Pre-calculate all brand values for overlap detection
+    _brand_vals = []
+    for brand in brands:
+        _bv = [calc_share([m], cat, brand) for m in months]
+        _brand_vals.append(_bv)
+    _all_vals_flat = [v for bv in _brand_vals for v in bv if not pd.isna(v)]
+    _y_max = _TREND_YMAX.get(cat_label, max(_all_vals_flat) * 1.25 if _all_vals_flat else 100)
+    _overlap_thresh = _y_max * 0.03  # 3% of y-axis range = "overlapping"
+
     for i, brand in enumerate(brands):
-        vals = [calc_share([m], cat, brand) for m in months]
+        vals = _brand_vals[i]
         _bn = brand_name(brand)
         _valid_idx = [j for j, v in enumerate(vals) if not pd.isna(v)]
         if cat_label == "成人钙" and "励全" in _bn and len(_valid_idx) >= 2:
@@ -2666,6 +2895,61 @@ def make_trend_chart(cat_label, cat, brands, months):
             _text[_valid_idx[-1]] = fmt_share(vals[_valid_idx[-1]])
         else:
             _text = [fmt_share(v) if not pd.isna(v) else "" for v in vals]
+
+        # Blank out 25M10 for 九力 in 氨糖 (replaced by custom annotation with higher offset)
+        if cat_label == "氨糖" and "九力" in _bn:
+            for _j, _m in enumerate(months):
+                if ym_lab(_m) == "25M10" and not pd.isna(vals[_j]):
+                    _text[_j] = ""
+        # Blank out 25M2 for 草仙药业 in 儿童多维 (replaced by custom annotation lower)
+        if cat_label == "儿童多维" and "草仙" in _bn:
+            for _j, _m in enumerate(months):
+                if ym_lab(_m) == "25M2" and not pd.isna(vals[_j]):
+                    _text[_j] = ""
+
+        # Build textposition: if lines overlap at a month, higher->top, lower->bottom
+        _tp = []
+        for j, m in enumerate(months):
+            _my_val = vals[j]
+            _lbl = ym_lab(m)
+            if pd.isna(_my_val):
+                _tp.append("top center")
+                continue
+            # Check for overlap with other brands at this month
+            _overlap = False
+            _am_higher = True
+            for k in range(len(brands)):
+                if k == i:
+                    continue
+                _other_val = _brand_vals[k][j] if j < len(_brand_vals[k]) else None
+                if _other_val is None or pd.isna(_other_val):
+                    continue
+                if abs(_my_val - _other_val) < _overlap_thresh:
+                    _overlap = True
+                    if _my_val < _other_val:
+                        _am_higher = False
+                    break
+            if _overlap:
+                _tp.append("top center" if _am_higher else "bottom center")
+            else:
+                # No overlap: use existing default rules
+                if (cat_label == "氨糖" and "九力" in _bn and _lbl in ["25M10", "25M11", "25M12", "26M2"]):
+                    _tp.append("top center")
+                elif (cat_label == "儿童多维" and "汤臣倍健" in _bn and _lbl == "25M2"):
+                    _tp.append("top center")
+                elif (cat_label == "氨糖" and "九力" in _bn):
+                    _tp.append("bottom center")
+                elif (cat_label == "成人钙" and "汤臣倍健" in _bn):
+                    _tp.append("bottom center")
+                elif (cat_label == "儿童钙" and "汤臣倍健" in _bn):
+                    _tp.append("bottom center")
+                elif (cat_label == "儿童多维" and "汤臣倍健" in _bn):
+                    _tp.append("bottom center")
+                elif (cat_label == "益生菌" and "Life-Space" in _bn):
+                    _tp.append("bottom center")
+                else:
+                    _tp.append("top center")
+
         fig.add_trace(
             go.Scatter(
                 x=[ym_lab(m) for m in months],
@@ -2675,14 +2959,45 @@ def make_trend_chart(cat_label, cat, brands, months):
                 line=dict(width=3, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], shape="spline", smoothing=1.3),
                 marker=dict(size=6),
                 text=_text,
-                textposition="bottom center" if ((cat_label == "氨糖" and "九力" in _bn) or (cat_label == "成人钙" and "汤臣倍健" in _bn)) else "top center",
+                textposition=_tp,
                 textfont=dict(size=14, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], family="Arial, sans-serif"),
                 hovertemplate="%{fullData.name}<br>%{x}份额：%{y:.3f}%<extra></extra>",
             )
         )
-    _all_vals = [v for v in vals if not pd.isna(v)]
-    _TREND_YMAX = {"蛋白粉": 65, "成人钙": 40, "儿童钙": 40, "成人多维": 45, "儿童多维": 40, "鱼油": 55, "氨糖": 45, "益生菌": 35}
-    _y_max = _TREND_YMAX.get(cat_label, max(_all_vals) * 1.25 if _all_vals else 100)
+    # Custom annotation: 九力 25M10 label moved ~0.1cm higher (yshift=18)
+    if cat_label == "氨糖":
+        for i, brand in enumerate(brands):
+            _bn = brand_name(brand)
+            if "九力" in _bn:
+                for j, m in enumerate(months):
+                    if ym_lab(m) == "25M10":
+                        _val = _brand_vals[i][j]
+                        if not pd.isna(_val):
+                            fig.add_annotation(
+                                x=ym_lab(m), y=_val,
+                                text=fmt_share(_val),
+                                showarrow=False, yshift=18,
+                                font=dict(size=14, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], family="Arial, sans-serif"),
+                            )
+                        break
+                break
+    # Custom annotation: 草仙药业 25M2 label moved ~0.8cm lower (yshift=-30)
+    if cat_label == "儿童多维":
+        for i, brand in enumerate(brands):
+            _bn = brand_name(brand)
+            if "草仙" in _bn:
+                for j, m in enumerate(months):
+                    if ym_lab(m) == "25M2":
+                        _val = _brand_vals[i][j]
+                        if not pd.isna(_val):
+                            fig.add_annotation(
+                                x=ym_lab(m), y=_val,
+                                text=fmt_share(_val),
+                                showarrow=False, yshift=-30,
+                                font=dict(size=14, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], family="Arial, sans-serif"),
+                            )
+                        break
+                break
     fig.update_layout(
         title=dict(text=f"{cat_label}-重点品牌份额(%)趋势", x=0.5, font=dict(size=16, color="#666")),
         height=315,
@@ -2691,7 +3006,7 @@ def make_trend_chart(cat_label, cat, brands, months):
         plot_bgcolor="white",
         font=dict(family="Microsoft YaHei", size=13),
         xaxis=dict(showgrid=False, tickangle=-45, automargin=False),
-        yaxis=dict(showgrid=True, gridcolor="#EEF2FA", showticklabels=False, zeroline=False, range=[0, _y_max]),
+        yaxis=dict(showgrid=True, gridcolor="#EEF2FA", showticklabels=False, zeroline=False, range=[8 if cat_label == "氨糖" else (-5 if cat_label == "儿童钙" else 0), 25 if cat_label == "氨糖" else _y_max]),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     fig.update_xaxes(range=[-0.5, len(months) - 0.5])
@@ -2702,13 +3017,14 @@ def make_trend_chart(cat_label, cat, brands, months):
 def render_brand_analysis(selected_cat, selected_month, display_months):
     config = BA_CATEGORY_CONFIG[selected_cat]
     source_cat = config["cat"]
+    ytd_label, ly_label, l3m_label, yy, lyy = period_labels(selected_month)
 
     st.markdown(
         f"""
         <div class="note-bar">
         <b>口径：</b>数据来自 <b>test.sku</b>；当前月 = {selected_month}（{ym_lab(selected_month)}）；
-        YTD = 当年1月至当前月；MAT = 含当期向上滚动12个月；L3M = 含当期过去3个月；
-        销售额单位由千元换算为百万元，销售量单位为百盒，平均单价 = 销售额 / 销售量 × 10。
+        YTD/L3M = 按季度/半年度口径；MAT = 含当期向上滚动12个月；
+        销售额单位由千元换算为百万元。
         </div>
         """,
         unsafe_allow_html=True,
@@ -2724,7 +3040,13 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
     else:
         if "汤臣倍健" not in table_brands and ba_calc_agg(ytd_months, cat=source_cat, brand="汤臣倍健")["sales"] > 0:
             table_brands.append("汤臣倍健")
-    left_chart_height = 760 + max(0, len(table_brands) - 10) * 28
+    # Calculate left chart height to match right side (table + gap + trend chart)
+    n_table_rows = len(table_brands) + 3  # +1 category row, +2 header rows
+    table_row_h = 30  # brand-table row height - reduced to align with trend chart bottom
+    table_height = n_table_rows * table_row_h
+    trend_chart_h = 351  # make_trend_chart height
+    streamlit_gap_ba = 18  # gap between table and trend chart
+    left_chart_height = table_height + streamlit_gap_ba + trend_chart_h
 
     left_col, right_col = st.columns([0.28, 0.72], gap="medium")
     with left_col:
@@ -2746,6 +3068,8 @@ SA_CATEGORY_CONFIG = {
             {"name": "金装礼盒装300g*2p", "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健金装(蛋白粉)", "产品包装": "300gx2p"}},
             {"name": "白金礼盒装330g*2p", "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健白金(蛋白粉)", "产品包装": "330gx2p"}},
             {"name": "E钙蛋520g",          "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健(钙维生素E蛋白粉)", "产品包装": "520g"}},
+            {"name": "金装450g",          "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健金装(蛋白粉)", "产品包装": "450g"}},
+            {"name": "白金480g",          "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健白金(蛋白粉)", "产品包装": "480g"}},
             {"name": "汤臣整体",           "source": "sku", "filters": {"品类": "蛋白粉", "品牌": "汤臣倍健"}, "dist_source": "distribution", "dist_filters": {"品牌_NEW": "汤臣倍健蛋白粉"}},
         ],
     },
@@ -2762,6 +3086,7 @@ SA_CATEGORY_CONFIG = {
             ]},
             {"name": "钙尔奇D600 60片", "source": "sku", "filters": {"品类": "钙-成人", "品牌产品": "钙尔奇D600(碳酸钙D3片(Ⅰ))", "产品包装": "0.6gx60s"}},
             {"name": "汤臣钙DK整体",   "source": "brand", "filters": {"品类": "钙-成人", "品牌产品": "汤臣倍健(钙维生素D维生素K软胶囊)"}},
+            {"name": "汤臣钙整体",     "source": "sku", "filters": {"品类": "钙-成人", "品牌": "汤臣倍健"}},
         ],
     },
     "儿童钙": {
@@ -2772,6 +3097,7 @@ SA_CATEGORY_CONFIG = {
             {"name": "钙铁锌60片",   "source": "sku", "filters": {"品类": "钙-儿童", "品牌产品": "汤臣倍健(钙铁锌咀嚼片)", "产品包装": "1.5gx60s"}},
             {"name": "钙镁90片",     "source": "sku", "filters": {"品类": "钙-儿童", "品牌产品": "汤臣倍健(钙镁咀嚼片)", "产品包装": "1.6gx90s"}},
             {"name": "锌钙特葡萄糖酸钙锌口服液24袋", "source": "sku", "filters": {"品类": "钙-儿童", "品牌产品": "锌钙特(葡萄糖酸钙锌口服溶液)", "产品包装": "10ml:0.73gx24z"}},
+            {"name": "汤臣儿童钙整体", "source": "sku", "filters": {"品类": "钙-儿童", "品牌": "汤臣倍健"}},
         ],
     },
     "成人多维": {
@@ -2783,6 +3109,7 @@ SA_CATEGORY_CONFIG = {
             {"name": "男维60片",  "source": "sku", "filters": {"品类": "多维-成人", "品牌产品": "汤臣倍健(多种维生素矿物质片)", "品名(含属性)": "多种维生素矿物质片|男士型|", "产品包装": "1.5gx60s"}},
             {"name": "银善存91sx2p", "source": "sku", "filters": {"品类": "多维-成人", "品牌产品": "银善存(多维元素片(29-Ⅱ))", "产品包装": "91sx2p"}},
             {"name": "善存多维元素片(29)91sx2p", "source": "sku", "filters": {"品类": "多维-成人", "品牌产品": "善存(多维元素片(29))", "产品包装": "91sx2p"}},
+            {"name": "汤臣多维整体", "source": "sku", "filters": {"品类": "多维-成人", "品牌": "汤臣倍健"}},
         ],
     },
     "儿童多维": {
@@ -2792,6 +3119,7 @@ SA_CATEGORY_CONFIG = {
             {"name": "仁合堂药业五维赖氨酸口服液12袋", "source": "sku", "filters": {"品类": "多维-儿童", "品牌产品": "五维赖氨酸口服溶液(黑龙江仁合堂药业)", "产品包装": "10mlx12z"}},
             {"name": "草仙药业五维赖氨酸片36片", "source": "sku", "filters": {"品类": "多维-儿童", "品牌产品": "五维赖氨酸片(草仙药业)", "产品包装": "36s"}},
             {"name": "小施尔康多维咀嚼片(10)30片", "source": "sku", "filters": {"品类": "多维-儿童", "品牌产品": "小施尔康(小儿多维生素咀嚼片(10))", "产品包装": "30s"}},
+            {"name": "汤臣儿童多维整体", "source": "sku", "filters": {"品类": "多维-儿童", "品牌": "汤臣倍健"}},
         ],
     },
     "鱼油": {
@@ -2814,6 +3142,7 @@ SA_CATEGORY_CONFIG = {
             {"name": "白金150片",       "source": "sku", "filters": {"品类": "关节护理", "品牌产品": "健力多白金氨糖(氨糖硫酸软骨素钙片)", "产品包装": "1.16gx150s"}},
             {"name": "OTC60粒",         "source": "sku", "filters": {"品类": "关节护理", "品牌产品": "健力多(硫酸氨基葡萄糖胶囊)", "产品包装": "0.25gx60s"}},
             {"name": "蓝氨糖120片",     "source": "sku", "filters": {"品类": "关节护理", "品牌产品": "健力多蓝氨糖(氨糖软骨素钙片)", "产品包装": "0.9gx120s"}},
+            {"name": "健力多整体",       "source": "sku", "filters": {"品类": "关节护理", "品牌": "健力多"}},
         ],
     },
     "益生菌": {
@@ -2873,56 +3202,104 @@ SHARE_DECIMALS = {
 CHART_NAMES = {
     "蛋白粉": {
         "bar":    ["旧品", "金装", "白金", "E钙"],
-        "price":  ["金装礼盒装300g*2p", "白金礼盒装330g*2p", "E钙蛋520g"],
+        "brand_total_name": "汤臣整体",
+        "price":  ["金装礼盒装300g*2p", "白金礼盒装330g*2p", "E钙蛋520g", "金装450g", "白金480g"],
         "dist":   ["旧品", "金装", "白金", "E钙", "汤臣整体"],
         "power":  ["旧品", "金装", "白金", "E钙", "汤臣整体"],
+        "bar_colors": {
+            "旧品": "#A6A6A6",
+            "金装": "#4472C4",
+            "白金": "#FFC000",
+            "E钙": "#92D050",
+            "金装礼盒装300g*2p": "#5B9BD5",
+            "白金礼盒装330g*2p": "#FFD966",
+            "E钙蛋520g": "#00B050",
+            "金装450g": "#2F5597",
+            "白金480g": "#BF9000",
+            "汤臣整体": "#7030A0",
+        },
     },
     "成人钙": {
-        "bar":    ["200粒x2", "120粒", "焕动力120粒", "其他"],
+        "bar":    ["其他", "200粒x2", "120粒", "焕动力120粒"],
+        "brand_total_name": "汤臣钙整体",
         "price":  ["200粒x2", "120粒", "焕动力120粒", "钙尔奇D600 60片"],
         "dist":   ["200粒x2", "120粒", "焕动力120粒", "汤臣钙DK整体", "钙尔奇D600 60片"],
         "power":  ["200粒x2", "120粒", "焕动力120粒", "汤臣钙DK整体", "钙尔奇D600 60片"],
-        "bar_colors": {"200粒x2": "#4472C4", "120粒": "#FFC000", "焕动力120粒": "#ED7D31", "其他": "#A6A6A6"},
+        "bar_colors": {
+            "200粒x2": "#4472C4", "120粒": "#FFC000", "焕动力120粒": "#92D050", "其他": "#A6A6A6",
+            "汤臣钙DK整体": "#7030A0", "钙尔奇D600 60片": "#7F6000", "汤臣钙整体": "#7030A0",
+        },
     },
     "儿童钙": {
         "bar":    ["牛初乳60片*2", "钙铁锌60片", "钙镁90片", "液体钙12袋"],
+        "brand_total_name": "汤臣儿童钙整体",
         "price":  ["牛初乳60片*2", "钙镁90片", "液体钙12袋", "钙铁锌60片", "锌钙特葡萄糖酸钙锌口服液24袋"],
         "dist":   ["牛初乳60片*2", "钙镁90片", "液体钙12袋", "钙铁锌60片", "锌钙特葡萄糖酸钙锌口服液24袋"],
         "power":  ["牛初乳60片*2", "钙镁90片", "液体钙12袋", "钙铁锌60片", "锌钙特葡萄糖酸钙锌口服液24袋"],
-        "bar_colors": {"牛初乳60片*2": "#9C6ADE", "钙铁锌60片": "#FFC000", "钙镁90片": "#ED7D31", "液体钙12袋": "#92D050"},
+        "bar_colors": {
+            "牛初乳60片*2": "#A6A6A6", "钙铁锌60片": "#FFC000", "钙镁90片": "#5B9BD5", "液体钙12袋": "#92D050",
+            "锌钙特葡萄糖酸钙锌口服液24袋": "#7F6000", "汤臣儿童钙整体": "#7030A0",
+        },
     },
     "成人多维": {
-        "bar":    ["女维120片", "女维60片", "男维120片", "男维60片"],
+        "bar":    ["男维60片", "男维120片", "女维60片", "女维120片"],
+        "brand_total_name": "汤臣多维整体",
         "price":  ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
         "dist":   ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
         "power":  ["女维120片", "女维60片", "男维120片", "男维60片", "银善存91sx2p", "善存多维元素片(29)91sx2p"],
+        "bar_colors": {
+            "女维120片": "#FFC000", "女维60片": "#FFD966",
+            "男维120片": "#4472C4", "男维60片": "#5B9BD5",
+            "银善存91sx2p": "#7F6000", "善存多维元素片(29)91sx2p": "#BF9000", "汤臣多维整体": "#7030A0",
+        },
     },
     "儿童多维": {
         "bar":    ["汤臣倍健多维咀嚼片60片"],
+        "brand_total_name": "汤臣儿童多维整体",
         "price":  ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "dist":   ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
         "power":  ["汤臣倍健多维咀嚼片60片", "仁合堂药业五维赖氨酸口服液12袋", "草仙药业五维赖氨酸片36片", "小施尔康多维咀嚼片(10)30片"],
-        "bar_colors": {"汤臣倍健多维咀嚼片60片": "#4472C4"},
+        "bar_colors": {
+            "汤臣倍健多维咀嚼片60片": "#F4B084",
+            "仁合堂药业五维赖氨酸口服液12袋": "#7F6000",
+            "草仙药业五维赖氨酸片36片": "#BF9000",
+            "小施尔康多维咀嚼片(10)30片": "#4472C4", "汤臣儿童多维整体": "#F4B084",
+        },
     },
     "鱼油": {
         "bar":    ["200粒", "100粒", "晶纯60粒"],
+        "brand_total_name": "汤臣鱼油总体",
         "price":  ["200粒", "100粒", "晶纯60粒"],
         "dist":   ["200粒", "100粒", "晶纯60粒", "汤臣鱼油总体"],
         "power":  ["200粒", "100粒", "晶纯60粒", "汤臣鱼油总体"],
-        "bar_colors": {"200粒": "#4472C4", "100粒": "#FFC000", "晶纯60粒": "#ED7D31"},
+        "bar_colors": {
+            "200粒": "#4472C4", "100粒": "#FFC000", "晶纯60粒": "#92D050",
+            "汤臣鱼油总体": "#7030A0",
+        },
     },
     "氨糖": {
         "bar":    ["旧品", "金装", "白金", "OTC"],
+        "brand_total_name": "健力多整体",
         "price":  ["金装280片礼盒装", "白金150片", "OTC60粒", "蓝氨糖120片"],
         "dist":   ["旧品", "金装", "白金", "OTC"],
         "power":  ["旧品", "金装", "白金", "OTC"],
+        "bar_colors": {
+            "旧品": "#A6A6A6", "金装": "#4472C4", "白金": "#FFC000", "OTC": "#92D050",
+            "金装280片礼盒装": "#5B9BD5", "白金150片": "#FFD966",
+            "OTC60粒": "#00B050", "蓝氨糖120片": "#ED7D31", "健力多整体": "#7030A0",
+        },
     },
     "益生菌": {
-        "bar":    ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "其他"],
+        "bar":    ["其他", "蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋"],
+        "brand_total_name": "益倍适总体",
         "price":  ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益君康30片"],
         "dist":   ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益倍适总体", "益君康30片"],
         "power":  ["蓝帽20袋", "蓝帽48袋", "畅护10袋", "B420 20袋", "益倍适总体", "益君康30片"],
-        "bar_colors": {"蓝帽20袋": "#4472C4", "蓝帽48袋": "#FFC000", "畅护10袋": "#ED7D31", "B420 20袋": "#92D050", "其他": "#A6A6A6"},
+        "bar_colors": {
+            "蓝帽20袋": "#4472C4", "蓝帽48袋": "#2F5597", "畅护10袋": "#FFC000",
+            "B420 20袋": "#92D050", "其他": "#A6A6A6",
+            "益倍适总体": "#7030A0", "益君康30片": "#7F6000",
+        },
     },
 }
 
@@ -3102,7 +3479,19 @@ def _chart_base(fig, title, height=380, legend_y=1.08, show_yaxis=False, legend_
     return fig
 
 
-def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=380, legend_y=1.08, y_max=None):
+# New products that must always show 环比 annotation even if share is small
+NEW_PRODUCTS = {
+    "E钙", "E钙蛋520g",
+    "焕动力120粒",
+    "液体钙12袋",
+    "晶纯60粒",
+    "OTC", "OTC60粒",
+    "B420 20袋",
+    "蓝氨糖120片",
+}
+
+
+def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=380, legend_y=1.08, y_max=None, brand_total_name=None):
     fig = go.Figure()
     labels = df["label"].drop_duplicates().tolist()
     for idx, name in enumerate(names):
@@ -3115,13 +3504,13 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
         for v in vals:
             if v <= 0:
                 text_labels.append("")
-                _bar_font_sizes.append(10)
+                _bar_font_sizes.append(12)
             elif v < 1:
                 text_labels.append(f"{v:.{text_decimals}f}")
-                _bar_font_sizes.append(10)
+                _bar_font_sizes.append(12)
             else:
                 text_labels.append(f"{v:.{text_decimals}f}")
-                _bar_font_sizes.append(13 if v >= 3 else 11)
+                _bar_font_sizes.append(12)
         fig.add_bar(
             x=labels, y=vals, name=name, marker_color=c,
             text=text_labels,
@@ -3131,6 +3520,45 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
             hovertemplate=f"{name}<br>%{{x}}：%{{y:.{text_decimals}f}}<extra></extra>",
         )
     fig.update_layout(barmode="stack")
+
+    # --- Add total annotations above each bar ---
+    # Use brand total data for the displayed value, but position at stacked bar top
+    _totals_display = []   # brand total value (for text)
+    _totals_position = []  # stacked bar sum (for y position)
+    for _lbl in labels:
+        # Calculate stacked bar sum for positioning
+        _stack_sum = 0.0
+        for _name in names:
+            _sub = df[(df["label"] == _lbl) & (df["name"] == _name)]
+            _v = pd.to_numeric(_sub[metric], errors="coerce").fillna(0)
+            if len(_v) > 0:
+                _stack_sum += float(_v.iloc[0])
+        _totals_position.append(_stack_sum)
+        # Get brand total for display
+        if brand_total_name:
+            _bt = df[(df["label"] == _lbl) & (df["name"] == brand_total_name)]
+            _v = pd.to_numeric(_bt[metric], errors="coerce").fillna(0)
+            _t = float(_v.iloc[0]) if len(_v) > 0 else 0.0
+        else:
+            _t = _stack_sum
+        _totals_display.append(_t)
+    _max_pos = max(_totals_position) if _totals_position else 0
+    _decimals = text_decimals if metric == "share" else 0
+    for _i, _lbl in enumerate(labels):
+        _t_display = _totals_display[_i]
+        _t_pos = _totals_position[_i]
+        if _t_display > 0:
+            fig.add_annotation(
+                x=_lbl, y=_t_pos,
+                text=f"<b>{_t_display:.{_decimals}f}</b>",
+                showarrow=False,
+                yshift=10,
+                font=dict(size=14, color="#FF0000", family="Arial, sans-serif"),
+            )
+    # Set y-axis range for sales chart to accommodate annotations
+    if metric != "share" and _max_pos > 0:
+        fig.update_layout(yaxis=dict(showgrid=False, zeroline=False, visible=True, range=[0, _max_pos * 1.15]))
+
     if metric == "share" and len(labels) >= 2:
         last_label, prev_label = labels[-1], labels[-2]
         month_num = last_label.split("M")[-1] if "M" in last_label else ""
@@ -3140,28 +3568,34 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
             xshift=36, yshift=0, font=dict(size=14, color="#333"),
         )
         y_cursor = 0.0
-        for name in names:
+        for _hb_idx, name in enumerate(names):
             last_v = pd.to_numeric(df.loc[(df["label"] == last_label) & (df["name"] == name), metric], errors="coerce")
             prev_v = pd.to_numeric(df.loc[(df["label"] == prev_label) & (df["name"] == name), metric], errors="coerce")
             if last_v.notna().any() and prev_v.notna().any():
                 val = float(last_v.iloc[0]); base = float(prev_v.iloc[0])
                 diff = val - base
                 y_center = y_cursor + val / 2
-                # Stagger annotations vertically to avoid overlap for small segments
-                _hb_yshift = 0
-                if val < (ymax * 0.08):
-                    _hb_yshift = 10 if idx % 2 == 0 else -10
-                fig.add_annotation(
-                    x=last_label, y=y_center, text=f"{diff:+.1f}", showarrow=False,
-                    xshift=36, yshift=_hb_yshift,
-                    font=dict(size=15, color="#00A85A" if diff >= 0 else "#E53935", family="Microsoft YaHei", weight="bold"),
-                )
+                # Skip 环比 annotation only for non-新产品 with very small share
+                # Use relative threshold: 3% of y-axis max (scales with category)
+                _skip_threshold = ymax * 0.03
+                if val >= _skip_threshold or name in NEW_PRODUCTS:
+                    # Stagger annotations vertically to avoid overlap for small segments
+                    _hb_yshift = 0
+                    if val < (ymax * 0.05):
+                        _stagger = [8, -8, 5, -5, 10, -10]
+                        _hb_yshift = _stagger[_hb_idx % len(_stagger)]
+                    _hb_dec = 2 if abs(diff) < 0.05 else 1
+                    fig.add_annotation(
+                        x=last_label, y=y_center, text=f"{diff:+.{_hb_dec}f}", showarrow=False,
+                        xshift=36, yshift=_hb_yshift,
+                        font=dict(size=13, color="#00A85A" if diff >= 0 else "#E53935", family="Microsoft YaHei", weight="bold"),
+                    )
                 y_cursor += val
             else:
                 y_cursor += float(last_v.iloc[0]) if last_v.notna().any() else 0
     fig = _chart_base(fig, title, height, legend_y, show_yaxis=True, legend_below=True)
     fig.update_layout(showlegend=True)
-    fig.update_xaxes(tickangle=-45, tickfont=dict(size=11, family="Microsoft YaHei"))
+    fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
     if metric == "share":
         ymax = y_max if y_max is not None else 100
         fig.update_layout(yaxis=dict(showgrid=False, zeroline=False, visible=True, range=[0, ymax * 1.25]))
@@ -3180,42 +3614,71 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     _LC = {
         # === 蛋白粉 ===
         # price: 白金礼盒装 above, 金装礼盒 below, E钙蛋 above
-        ("蛋白粉", "price"): {"full_above": ["白金礼盒装330g*2p", "E钙蛋520g"], "full_below": ["金装礼盒装300g*2p"], "default": "endpoints"},
+        ("蛋白粉", "price"): {"default": "alternate", "product_month_yshift_delta": {"白金480g": {"25M3": -8}}},
+        # 金装450g/白金480g use alternate labeling
         # dist: 汤臣整体 all above (close); others endpoints, staggered to avoid overlap
-        ("蛋白粉", "dist"):  {"full_above": ["汤臣整体"], "full_below": ["E钙"], "default": "endpoints"},
+        ("蛋白粉", "dist"):  {"full_above": ["金装", "汤臣整体", "旧品"], "month_xshift": {"25M1": -12}, "month_yshift": {"25M1": -12}, "product_yshift_offset": {"白金": -11}, "product_month_yshift_delta": {"E钙": {"26M6": 12}, "白金": {"26M6": 8}, "金装": {"26M6": -12}}, "default": "endpoints"},
         # power: same pattern as dist
-        ("蛋白粉", "power"): {"full_above": ["汤臣整体"], "full_below": ["E钙"], "default": "endpoints"},
+        ("蛋白粉", "power"): {"full_above": ["汤臣整体"], "product_month_xshift": {"金装": {"26M6": 8}, "白金": {"26M6": 8}, "旧品": {"26M6": 8}}, "product_month_yshift_delta": {"旧品": {"26M6": 4}, "白金": {"25M1": -19}}, "default": "endpoints"},
         # === 成人钙 ===
         # dist: all closer, staggered
-        ("成人钙", "dist"):  {"full_above": ["200粒x2", "焕动力120粒"], "full_below": ["汤臣钙DK整体", "120粒"], "highpoint_above": ["钙尔奇D600 60片"], "default": "endpoints"},
+        ("成人钙", "dist"):  {"full_above": ["200粒x2", "焕动力120粒", "钙尔奇D600 60片"], "full_below": ["汤臣钙DK整体", "120粒"], "default": "endpoints"},
         # power: 200粒x2 above, 汤臣钙DK整体 below, 钙尔奇 start/end, 120粒 below
-        ("成人钙", "power"): {"full_above": ["200粒x2"], "full_below": ["汤臣钙DK整体", "120粒"], "default": "endpoints"},
+        ("成人钙", "power"): {"full_above": ["200粒x2"], "full_below": ["汤臣钙DK整体", "120粒"], "alternate_below": ["焕动力120粒"], "default": "endpoints"},
         # === 儿童钙 ===
-        ("儿童钙", "dist"):  {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "default": "endpoints"},
-        ("儿童钙", "power"): {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "default": "endpoints"},
+        ("儿童钙", "price"): {"product_month_yshift_delta": {"钙铁锌60片": {"25M7": -8}, "液体钙12袋": {"25M7": -8}}, "product_month_xshift": {"液体钙12袋": {"25M7": -8}}},
+        ("儿童钙", "dist"):  {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "month_xshift": {"25M1": -12, "26M6": 12}, "product_month_xshift": {"锌钙特葡萄糖酸钙锌口服液24袋": {"25M1": 12, "26M6": -12}}, "product_month_yshift_delta": {"钙镁90片": {"25M1": -8, "26M6": -11}}, "default": "endpoints"},
+        ("儿童钙", "power"): {"full_above": ["锌钙特葡萄糖酸钙锌口服液24袋"], "product_month_yshift_delta": {"钙镁90片": {"25M1": -11, "26M6": -11}}, "product_month_xshift": {"钙镁90片": {"25M1": -8, "26M6": 8}}, "default": "endpoints"},
         # === 成人多维 ===
-        ("成人多维", "dist"):  {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
-        ("成人多维", "power"): {"highpoint_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "default": "endpoints"},
+        ("成人多维", "price"): {"full_below": ["善存多维元素片(29)91sx2p", "女维60片"], "product_yshift_offset": {"女维60片": -8}, "default": "all"},
+        ("成人多维", "dist"):  {"full_above": ["银善存91sx2p"], "full_below": ["善存多维元素片(29)91sx2p"], "alternate_above": ["男维120片"], "month_xshift": {"25M1": -8, "26M6": 8}, "product_month_yshift_delta": {"女维120片": {"25M1": -4}, "男维60片": {"26M6": -8}}, "default": "endpoints"},
+        ("成人多维", "power"): {"alternate_above": ["善存多维元素片(29)91sx2p", "银善存91sx2p"], "month_xshift": {"25M1": -4, "26M6": 4}, "product_month_yshift_delta": {"女维120片": {"25M1": 8, "26M6": 4}, "男维120片": {"25M1": 4, "26M6": 2}, "男维60片": {"25M1": -8, "26M6": -8}, "女维60片": {"25M1": -12, "26M6": -12}}, "product_month_xshift": {"女维120片": {"25M1": -4, "26M6": 4}, "男维120片": {"25M1": -4, "26M6": 4}, "男维60片": {"25M1": -8, "26M6": 8}, "女维60片": {"25M1": -8, "26M6": 8}}, "default": "endpoints"},
         # === 鱼油 ===
-        ("鱼油", "power"): {"default": "endpoints"},
-        ("鱼油", "dist"):  {"full_above": ["200粒"], "full_below": ["100粒"], "default": "endpoints"},
+        ("鱼油", "price"): {"full_above": ["200粒", "100粒", "晶纯60粒"], "default": "all", "yshift_base": 10},
+        ("鱼油", "power"): {"full_above": ["汤臣鱼油总体", "100粒"], "product_mode": {"200粒": "endpoints"}, "product_month_yshift_delta": {"200粒": {"25M1": 19}, "晶纯60粒": {"25M5": -19, "25M6": 19}, "汤臣鱼油总体": {"25M3": 19, "25M4": 34}}, "default": "highlow"},
+        ("鱼油", "dist"):  {"full_above": ["200粒"], "full_below": ["100粒", "晶纯60粒"], "product_month_yshift_delta": {"100粒": {"25M1": -19, "25M2": -19, "25M3": 19, "25M4": -19, "26M6": 15}}, "default": "all"},
         # === 氨糖 ===
-        ("氨糖", "power"): {"default": "endpoints"},
-        ("氨糖", "dist"):  {"full_above": ["金装", "白金"], "full_below": ["旧品", "OTC"], "default": "endpoints"},
+        ("氨糖", "price"): {"full_below": ["OTC60粒"], "default": "all"},
+        ("氨糖", "power"): {"full_above": ["OTC", "金装"], "month_override": {"OTC": {"26M2": "below"}}, "month_xshift": {"25M1": -8, "26M6": 8}, "product_month_xshift": {"OTC": {"25M9": -8, "25M10": -8}}, "default": "endpoints"},
+        ("氨糖", "dist"):  {"full_above": ["金装", "白金"], "full_below": ["旧品", "OTC"], "month_xshift": {"25M1": -8, "26M6": 8}, "product_yshift_offset": {"旧品": -8}, "default": "endpoints"},
         # === 益生菌 ===
-        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋"], "default": "alternate"},
-        ("益生菌", "dist"):  {"default": "endpoints"},
-        ("益生菌", "power"): {"default": "endpoints"},
+        ("益生菌", "price"): {"full_above": ["蓝帽48袋", "蓝帽20袋", "益君康30片"], "full_below": ["畅护10袋", "B420 20袋"], "month_override": {"B420 20袋": {"26M4": "below", "26M6": "above"}}, "month_yshift": {"B420 20袋": {"26M4": 12}}, "default": "alternate"},
+        ("益生菌", "dist"):  {"alternate_above": ["畅护10袋"], "start_from": {"畅护10袋": "25M5"}, "include_months": {"畅护10袋": ["25M4"]}, "month_xshift": {"25M1": -4}, "default": "alternate"},
+        ("益生菌", "power"): {"alternate_above": ["蓝帽48袋", "益倍适总体", "畅护10袋"], "start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"}, "skip_months": {"畅护10袋": ["25M4"], "B420 20袋": ["25M4"]}, "null_months": {"畅护10袋": ["25M4"], "B420 20袋": ["26M4"]}, "month_yshift": {"B420 20袋": {"26M5": -3}}, "month_xshift": {"25M1": -4, "26M6": 4}, "default": "endpoints"},
+        # === 儿童多维 ===
+        ("儿童多维", "dist"):  {"full_above": ["汤臣倍健多维咀嚼片60片"], "full_below": ["草仙药业五维赖氨酸片36片"], "default": "all"},
+        ("儿童多维", "power"): {"alternate_above": ["草仙药业五维赖氨酸片36片"], "alternate_below": ["汤臣倍健多维咀嚼片60片"], "product_month_yshift_delta": {"汤臣倍健多维咀嚼片60片": {"25M1": -8, "25M3": -8, "25M5": -8, "26M1": -8, "26M3": -8, "26M5": -8, "26M6": -8}}, "default": "alternate"},
     }
     cfg = _LC.get((cat_label, metric), {})
     full_above = set(cfg.get("full_above", []))
     full_below = set(cfg.get("full_below", []))
+    alternate_above = set(cfg.get("alternate_above", []))
+    alternate_below = set(cfg.get("alternate_below", []))
     highpoint_above = set(cfg.get("highpoint_above", []))
+    highpoint_below = set(cfg.get("highpoint_below", []))
     default_mode = cfg.get("default", label_mode)
+    start_from = cfg.get("start_from", {})  # {name: "25M5"} skip labels before this month
+    month_override = cfg.get("month_override", {})  # {name: {"26M4": "below", "26M6": "above"}}
+    yshift_base = cfg.get("yshift_base", 6)  # base yshift for labels
+    skip_months = cfg.get("skip_months", {})  # {name: ["25M4"]} skip specific month labels
+    null_months = cfg.get("null_months", {})  # {name: ["25M4"]} null out data (removes line+point)
+    month_yshift = cfg.get("month_yshift", {})  # {name: {"26M4": -23}} override yshift for specific months
+    month_xshift = cfg.get("month_xshift", {})  # {"25M1": -2} global xshift by month (all products)
+    include_months = cfg.get("include_months", {})  # {"name": ["25M4"]} force include months (overrides start_from)
+    product_yshift_offset = cfg.get("product_yshift_offset", {})  # {"name": -8} per-product yshift offset
+    product_month_xshift = cfg.get("product_month_xshift", {})  # {"OTC": {"25M9": -8}} per-product per-month xshift
+    product_month_yshift_delta = cfg.get("product_month_yshift_delta", {})  # {"100粒": {"25M1": -19}} per-product per-month yshift delta
+    product_mode = cfg.get("product_mode", {})  # {"200粒": "endpoints"} per-product mode override
 
     for idx, name in enumerate(names):
         sub = df[df["name"] == name].set_index("label").reindex(labels)
         vals = pd.to_numeric(sub[metric], errors="coerce")
+        # Apply null_months: set specific months to NaN (removes data point + line)
+        if name in null_months:
+            _null_set = set(null_months[name])
+            for _ni in range(len(labels)):
+                if str(labels[_ni]) in _null_set and _ni < len(vals):
+                    vals.iloc[_ni] = float('nan')
         c = colors.get(name, SA_COLORS[idx % len(SA_COLORS)])
         fig.add_scatter(
             x=labels, y=vals, mode="lines+markers", name=name,
@@ -3231,11 +3694,16 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         annotate_indices = set()
         if name in full_above or name in full_below:
             annotate_indices = set(valid)
-        elif name in highpoint_above:
+        elif name in alternate_above or name in alternate_below:
+            for j in range(0, len(valid), 2):
+                annotate_indices.add(valid[j])
+            annotate_indices.add(valid[-1])
+        elif name in highpoint_above or name in highpoint_below:
             annotate_indices = {valid[0], valid[-1]}
             max_idx = max(valid, key=lambda i: vals.iloc[i])
             annotate_indices.add(max_idx)
         else:
+            default_mode = product_mode.get(name, default_mode)
             if default_mode == "endpoints":
                 annotate_indices = {valid[0], valid[-1]}
             elif default_mode == "all":
@@ -3246,23 +3714,111 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 annotate_indices.add(valid[-1])
             elif default_mode == "skip_start":
                 annotate_indices = set(valid[1:])
+            elif default_mode == "highlow":
+                # Show start, end, and 3-5 high/low points
+                annotate_indices = {valid[0], valid[-1]}
+                _sorted_idx = sorted(valid, key=lambda i: vals.iloc[i], reverse=True)
+                _n_extra = min(5, len(_sorted_idx) - 2)
+                for i in _sorted_idx[:_n_extra]:
+                    annotate_indices.add(i)
+
+        # --- Apply start_from filter: skip labels before specified month ---
+        if name in start_from:
+            _sf = start_from[name]
+            _sf_val = int(_sf.split("M")[0]) * 12 + int(_sf.split("M")[1])
+            _sf_idx = len(labels)
+            for i, lbl in enumerate(labels):
+                try:
+                    _ls = str(lbl)
+                    _lv = int(_ls.split("M")[0]) * 12 + int(_ls.split("M")[1])
+                    if _lv >= _sf_val:
+                        _sf_idx = i
+                        break
+                except:
+                    pass
+            annotate_indices = {i for i in annotate_indices if i >= _sf_idx}
+
+        # --- Apply include_months: force include specific months (overrides start_from) ---
+        if name in include_months:
+            _inc_set = set(include_months[name])
+            for i in range(len(labels)):
+                if str(labels[i]) in _inc_set and i < len(vals) and not pd.isna(vals.iloc[i]):
+                    annotate_indices.add(i)
+
+        # --- Apply skip_months filter: remove specific months ---
+        if name in skip_months:
+            _skip_set = set(skip_months[name])
+            annotate_indices = {i for i in annotate_indices if str(labels[i]) not in _skip_set}
 
         # --- Determine yshift: above (positive) or below (negative) ---
-        # Labels close to line but not overlapping; stagger by line index
-        # Closer spacing (base 8px, stagger 3px per index)
-        if name in full_below:
-            yshift = -(8 + idx * 3)
-        else:
-            yshift = 8 + idx * 3
+        # Labels close to data point, not overlapping; tight stagger
+        _ov = month_override.get(name, {})
 
+        _ys = month_yshift.get(name, {})
         for i in sorted(annotate_indices):
+            _lbl = str(labels[i]) if i < len(labels) else ""
+            # Hardcoded skip: 益生菌 power 25M4 for 畅护10袋 & B420 20袋
+            if cat_label == "益生菌" and metric == "power" and _lbl == "25M4" and name in ("畅护10袋", "B420 20袋"):
+                continue
+            if _lbl in _ov:
+                _below = _ov[_lbl] == "below"
+            else:
+                _below = name in full_below or name in alternate_below or name in highpoint_below
+            # Also check hardcoded skip for start_from items
+            if name in start_from:
+                try:
+                    _my_lv = int(_lbl.split("M")[0]) * 12 + int(_lbl.split("M")[1])
+                    _sf_val2 = int(str(start_from[name]).split("M")[0]) * 12 + int(str(start_from[name]).split("M")[1])
+                    if _my_lv < _sf_val2:
+                        _inc_check = include_months.get(name, set())
+                        if _lbl not in _inc_check:
+                            continue
+                except:
+                    pass
+            # Apply month_yshift override or default
+            if _lbl in _ys:
+                yshift = _ys[_lbl]
+            else:
+                yshift = -(yshift_base + idx * 2) if _below else (yshift_base + idx * 2)
+                if metric == "price":
+                    yshift += 2  # Global price label upward shift ~0.05cm
+            yshift += product_yshift_offset.get(name, 0)
+            _pmdelta = product_month_yshift_delta.get(name, {})
+            if _lbl in _pmdelta:
+                yshift += _pmdelta[_lbl]
+            _xshift = month_xshift.get(_lbl, 0)
+            _pxshift = product_month_xshift.get(name, {})
+            if _lbl in _pxshift:
+                _xshift += _pxshift[_lbl]
             fig.add_annotation(
                 x=labels[i], y=vals.iloc[i], text=f"{vals.iloc[i]:.{decimals}f}",
-                showarrow=False, xshift=0, yshift=yshift,
+                showarrow=False, xshift=_xshift, yshift=yshift,
                 font=dict(size=12, color=c, family="Arial, sans-serif"),
             )
     fig = _chart_base(fig, title, height, 1.08, legend_below=True)
     fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
+    # Auto-range y-axis for power charts to fit all data + labels
+    if metric == "power":
+        if cat_label == "益生菌":
+            fig.update_layout(yaxis=dict(range=[10, 60]))
+        elif cat_label == "蛋白粉":
+            _all_vals = []
+            for name in names:
+                _sub = df[df["name"] == name]
+                _vals = pd.to_numeric(_sub[metric], errors="coerce").dropna()
+                _all_vals.extend(_vals.tolist())
+            if _all_vals:
+                _y_max = max(_all_vals) * 1.15
+                fig.update_layout(yaxis=dict(range=[20, _y_max]))
+        else:
+            _all_vals = []
+            for name in names:
+                _sub = df[df["name"] == name]
+                _vals = pd.to_numeric(_sub[metric], errors="coerce").dropna()
+                _all_vals.extend(_vals.tolist())
+            if _all_vals:
+                _y_max = max(_all_vals) * 1.15
+                fig.update_layout(yaxis=dict(range=[0, _y_max]))
     return fig
 
 
@@ -3272,34 +3828,63 @@ def render_charts(metric_df, cat_label):
     colors = {n: SA_COLORS[i % len(SA_COLORS)] for i, n in enumerate(all_names)}
     colors.update(cfg.get("bar_colors", {}))
 
-    left, mid, right = st.columns([0.34, 0.33, 0.33], gap="medium")
-    with left:
+    # Cache figures in session_state to avoid re-creating on every rerun
+    _cache_key = f"_sa_charts_{cat_label}"
+    _data_hash = hash(metric_df.to_csv().encode())
+
+    if _cache_key in st.session_state and st.session_state.get(f"{_cache_key}_h") == _data_hash:
+        _figs = st.session_state[_cache_key]
+    else:
         bar_names = cfg.get("bar", all_names)
         share_ymax = SHARE_YMAX.get(cat_label, 100)
         share_dec = SHARE_DECIMALS.get(cat_label, 0)
-        st.plotly_chart(make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=420), width='stretch')
-        st.plotly_chart(make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=420, y_max=share_ymax), width='stretch')
-    with mid:
+        _btn = cfg.get("brand_total_name")
         price_names = cfg.get("price", all_names)
-        st.plotly_chart(make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=860, label_mode="alternate", cat_label=cat_label), width='stretch')
-    with right:
         dist_names = cfg.get("dist", all_names)
         power_names = cfg.get("power", dist_names)
-        st.plotly_chart(make_line_chart(metric_df, "dist", "动销铺货率（%）", dist_names, colors, decimals=0, height=420, label_mode="alternate", cat_label=cat_label), width='stretch')
-        st.plotly_chart(make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=420, label_mode="alternate", cat_label=cat_label), width='stretch')
-        st.markdown("<p style='font-size:11px;color:#E53935;font-style:italic;margin-top:2px'>*单点卖力 = 销售额份额 / 动销铺货率 * 100</p>", unsafe_allow_html=True)
+
+        _figs = {
+            "bar1": make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=0, height=437, brand_total_name=_btn),
+            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax, brand_total_name=_btn),
+            "line1": make_line_chart(metric_df, "price", "平均单价（元/盒）", price_names, colors, decimals=0, height=889, label_mode="alternate", cat_label=cat_label),
+            "line2": make_line_chart(metric_df, "dist", "动销铺货率（%）", dist_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label),
+            "line3": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label),
+        }
+        _figs["line1"].update_layout(
+        title=dict(y=0.96),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5,
+                    font=dict(size=10, family="Microsoft YaHei")),
+        margin=dict(t=140, b=48, l=10, r=54),
+    )
+        st.session_state[_cache_key] = _figs
+        st.session_state[f"{_cache_key}_h"] = _data_hash
+
+    _PCFG = {'displayModeBar': False, 'showTips': False}
+
+    left, mid, right = st.columns([0.34, 0.33, 0.33], gap="medium")
+    with left:
+        st.plotly_chart(_figs["bar1"], width='stretch', config=_PCFG)
+        st.plotly_chart(_figs["bar2"], width='stretch', config=_PCFG)
+    with mid:
+        st.plotly_chart(_figs["line1"], width='stretch', config=_PCFG)
+    with right:
+        st.plotly_chart(_figs["line2"], width='stretch', config=_PCFG)
+        st.plotly_chart(_figs["line3"], width='stretch', config=_PCFG)
+        st.markdown("<p style='font-size:11px;color:#E53935;font-style:italic;margin-top:8px'>*单点卖力 = 销售额份额 / 动销铺货率 * 100</p>", unsafe_allow_html=True)
     with left:
         st.markdown("<p style='font-size:11px;color:#999;margin-top:2px'>&nbsp;</p>", unsafe_allow_html=True)
     with mid:
         st.markdown("<p style='font-size:11px;color:#999;margin-top:2px'>&nbsp;</p>", unsafe_allow_html=True)
+
 
 
 # ====================== Part B render_sku_analysis() ======================
 def render_sku_analysis(selected_cat, selected_month, display_months):
     config = SA_CATEGORY_CONFIG[selected_cat]
+    ytd_label, ly_label, l3m_label, yy, lyy = period_labels(selected_month)
 
     st.markdown(
-        f"<div class='note-bar'><b>数据来源：</b>test.sku、test.brand、test.brand_distribution_rate；当前月 = {selected_month}（{ym_lab(selected_month)}）</div>",
+        f"<div class='note-bar'><b>口径：</b>当前月 = {selected_month}（{ym_lab(selected_month)}）&nbsp;|&nbsp;YTD/L3M = 按季度/半年度口径 &nbsp;|&nbsp; 同比 = 本期/去年同期-1</div>",
         unsafe_allow_html=True,
     )
     render_conclusion(f"sa_{selected_cat}", selected_month)
@@ -3311,7 +3896,7 @@ def render_sku_analysis(selected_cat, selected_month, display_months):
         metric_df = build_metrics_cached(config["cat"], row_keys_json, months_json)
         st.markdown(f"<h3 style='text-align:center;margin:12px 0 18px;color:#111'>{TITLE_MAP.get(selected_cat, selected_cat)}</h3>", unsafe_allow_html=True)
         render_charts(metric_df, selected_cat)
-        st.markdown("<p style='font-size:12px;color:#666'><i>数据源：中康全国零售药店</i></p>", unsafe_allow_html=True)
+
 
 
 # ====================== 主入口：顶部标题 + 双 Tab 导航 ======================
@@ -3322,7 +3907,7 @@ _latest_label_a = ym_lab(_latest_month_a)
 # 顶部主标题（使用最新月份）
 st.markdown(f"""
 <div class="main-header">
-    <span>{_latest_label_a} 线下药店市场监测报告 </span>
+    <span>{_latest_label_a} 线下药店市场监测报告（Y25起）</span>
     <span class="badge">中康全国零售药店数据</span>
 </div>
 """, unsafe_allow_html=True)
@@ -3330,16 +3915,33 @@ st.markdown(f"""
 # Tab 导航放在最顶部（主标题下方）
 tab_a, tab_b = st.tabs(["全国药店VDS市场表现", "重点品类汤臣市场表现"])
 
+# ===== 导出 PDF 按钮 =====
+col_pdf1, col_pdf2, col_pdf3 = st.columns([1, 2, 1])
+with col_pdf2:
+    components.html("""
+    <div style="text-align:center;">
+        <button onclick="window.parent.print()" style="
+            background: linear-gradient(135deg, #1B4F8E 0%, #102F57 100%);
+            color: white; border: none; padding: 9px 26px;
+            border-radius: 8px; font-size: 14px; font-weight: 700;
+            cursor: pointer; font-family: 'Microsoft YaHei', Arial, sans-serif;
+        ">📄 导出当前页为 PDF</button>
+        <p style="font-size:11px;color:#999;margin-top:5px;margin-bottom:0;">
+            点击后在打印对话框中选择「另存为 PDF」
+        </p>
+    </div>
+    """, height=75)
+# ===== 导出 PDF 按钮结束 =====
+
 # ====================== Tab A: 全国药店VDS市场表现 ======================
 with tab_a:
     # 统一时间选择器（控制整个 Tab A 页面）
     st.markdown('<div class="time-selector-wrap">', unsafe_allow_html=True)
-    st.markdown('<div class="time-selector-label"><span class="dot"></span>时间范围选择</div>', unsafe_allow_html=True)
+    st.markdown('<div class="time-selector-label"><span class="dot"></span>时间范围选择（Y25起）</div>', unsafe_allow_html=True)
     tc1, tc2 = st.columns([0.25, 0.75], gap="small")
     with tc1:
         sel_ym_a = st.selectbox("统计截止月份", options=ind_months_display, index=len(ind_months_display) - 1, label_visibility="collapsed", key="tab_a_month")
     with tc2:
-        # 滑块选项限定为 25M1 起
         sl_l_a, sl_r_a = st.select_slider("月度数据范围", options=YM_LABS_DISPLAY, value=(YM_LABS_DISPLAY[0], YM_LABS_DISPLAY[-1]), label_visibility="collapsed", key="tab_a_range")
         si_a = YM_LABS_DISPLAY.index(sl_l_a)
         ei_a = YM_LABS_DISPLAY.index(sl_r_a)
@@ -3347,10 +3949,21 @@ with tab_a:
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 使用统一时间选择渲染四个页面
+    page_start("Page 1")
     page1(sel_ym_a, SEL_M_A)
+    page_end()
+
+    page_start("Page 2")
     page2(sel_ym_a, SEL_M_A)
+    page_end()
+
+    page_start("Page 3")
     page3(sel_ym_a, SEL_M_A)
+    page_end()
+
+    page_start("Page 4")
     page4(sel_ym_a)
+    page_end()
 
 # ====================== Tab B: 重点品类汤臣市场表现 ======================
 with tab_b:
@@ -3380,13 +3993,12 @@ with tab_b:
 
     selected_cat = st.session_state.selected_cat
 
-    # 月份 + 范围选择器
+    # 月份 + 范围选择器（Y25 起）
     st.markdown('<div class="partb-filter">', unsafe_allow_html=True)
     cf1, cf2 = st.columns([0.28, 0.72], gap="small")
     with cf1:
         selected_month = st.selectbox("选择报告月份", options=all_months_display, index=len(all_months_display) - 1, label_visibility="collapsed")
     with cf2:
-        # 滑块选项限定为 25M1 起
         ym_labels_b = ALL_LABS_DISPLAY
         sl_l, sl_r = st.select_slider("月份滚动范围", options=ym_labels_b, value=(ym_labels_b[0], ym_labels_b[-1]), label_visibility="collapsed")
         si = ym_labels_b.index(sl_l)
@@ -3395,6 +4007,7 @@ with tab_b:
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ---- Section 一：品类概览 ----
+    page_start("品类概览")
     st.markdown("""
     <div class="section-header">
         <span class="num">1</span>
@@ -3402,8 +4015,10 @@ with tab_b:
     </div>
     """, unsafe_allow_html=True)
     render_first_page(selected_cat, selected_month, display_months)
+    page_end()
 
     # ---- Section 二：品牌竞争分析 ----
+    page_start("品牌竞争分析")
     st.markdown("""
     <div class="section-header">
         <span class="num">2</span>
@@ -3411,8 +4026,10 @@ with tab_b:
     </div>
     """, unsafe_allow_html=True)
     render_brand_analysis(selected_cat, selected_month, display_months)
+    page_end()
 
     # ---- Section 三：SKU/品线分析 ----
+    page_start("SKU/品线分析")
     st.markdown("""
     <div class="section-header">
         <span class="num">3</span>
@@ -3420,3 +4037,6 @@ with tab_b:
     </div>
     """, unsafe_allow_html=True)
     render_sku_analysis(selected_cat, selected_month, display_months)
+    page_end()
+
+
