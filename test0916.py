@@ -6,7 +6,6 @@
 
 # ====================== 1. Imports ======================
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -15,10 +14,6 @@ import calendar
 import json
 
 st.set_page_config(page_title="市场分析综合仪表盘", layout="wide")
-
-# 16:9 PPT式布局
-from slide_16_9 import apply_layout, page_start, page_end
-apply_layout()
 
 # 隐藏 Streamlit Cloud 右下角浮窗（头像/反馈按钮）
 st.markdown("""
@@ -560,45 +555,6 @@ st.markdown("""
     }
     /* 筛选卡 / 注释条 */
     .filter-card { background: white; border: 1px solid #DCE3EF; border-radius: 10px; padding: 10px 14px; margin: 8px 0 10px; box-shadow: 0 2px 8px rgba(27,79,142,0.06); }
-    /* “编辑结论”折叠框：去框、透明背景（与页面背景一致）、压缩高度 */
-    details[data-testid="stExpander"] {
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        border-radius: 0 !important;
-        width: 100%;
-        margin: 2px 0 0 0 !important;
-        padding: 0 !important;
-        overflow: visible !important;
-    }
-    details[data-testid="stExpander"] > summary {
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        border-radius: 0 !important;
-        min-height: 0 !important;
-        height: 26px !important;
-        padding: 0 4px !important;
-        margin: 0 !important;
-        gap: 6px !important;
-        cursor: pointer;
-    }
-    details[data-testid="stExpander"] > summary:hover { background: transparent !important; }
-    details[data-testid="stExpander"] > summary p,
-    details[data-testid="stExpander"] > summary span,
-    details[data-testid="stExpander"] > summary svg {
-        color: #F7F9FC !important;
-        fill: #F7F9FC !important;
-        font-size: 13px !important;
-        line-height: 26px !important;
-        margin: 0 !important;
-    }
-    details[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        padding: 4px 2px 2px !important;
-    }
     /* first_page 元素 */
     .cat-badge {
         display: inline-flex;
@@ -636,6 +592,50 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .frow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    /* “编辑结论”折叠框：去框、透明背景、文字隐藏（与背景融为一体）、压缩高度 */
+    details[data-testid="stExpander"],
+    div.streamlit-expander {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        width: 100%;
+        margin: 2px 0 0 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+    details[data-testid="stExpander"] > summary,
+    .streamlit-expanderHeader {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        min-height: 0 !important;
+        height: 26px !important;
+        line-height: 26px !important;
+        padding: 0 4px !important;
+        margin: 0 !important;
+        gap: 6px !important;
+        cursor: pointer;
+    }
+    details[data-testid="stExpander"] > summary:hover,
+    .streamlit-expanderHeader:hover { background: transparent !important; }
+    details[data-testid="stExpander"] > summary *,
+    .streamlit-expanderHeader * {
+        color: transparent !important;
+        fill: transparent !important;
+        stroke: transparent !important;
+        background: transparent !important;
+        font-size: 13px !important;
+        margin: 0 !important;
+    }
+    [data-testid="stExpanderDetails"],
+    .streamlit-expanderContent {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 4px 2px 2px !important;
+    }
     .metric-table {
         width: 100%;
         border-collapse: collapse;
@@ -1370,14 +1370,14 @@ def page1(sel_ym, SEL_M):
                                  barmode="stack", bargap=0.15, showlegend=False,
                                  uniformtext=dict(minsize=16, mode="show"),
                                  title=dict(text="品类销售额by月度<br><sup>(单位：亿元)</sup>", font_size=14),
-                                 xaxis=dict(tickangle=-45, tickfont=dict(size=11), dtick=1, domain=[0.0, 1.0]))
+                                 xaxis=dict(tickangle=-45, tickfont=dict(size=13), dtick=1, domain=[0.0, 1.0]))
                 st.plotly_chart(fm, width='stretch')
 
                 st.markdown(f"<b class='chart-title'>月度同比明细</b>", unsafe_allow_html=True)
                 mlst = mm["lb"].tolist()
                 n_m = len(mlst)
-                tfs = "11px"
-                hfs = "10px"
+                tfs = "13px"
+                hfs = "13px"
                 tdp = "6px 4px"
                 hdr = "".join(f"<th style='font-size:{hfs};padding:{tdp};text-align:center'>{m}</th>" for m in mlst)
                 vr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["VG"])
@@ -2402,13 +2402,13 @@ def render_first_page(selected_cat, selected_month, display_months):
         ))
         fig.update_layout(
             barmode="stack",
-            bargap=0.20,
+            bargap=0.34,
             height=right_chart_height,
             margin=dict(t=72, b=55, l=0, r=0),
             paper_bgcolor="white",
             plot_bgcolor="white",
             font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.08, 1.0], range=[-0.375, len(monthly_df) - 0.625]),
+            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=0, automargin=True, domain=[0.08, 1.0], range=[-0.45, len(monthly_df) - 0.55]),
             uniformtext=dict(minsize=13, mode="show"),
             yaxis=dict(
                 showgrid=False, showticklabels=False, zeroline=False,
@@ -3574,7 +3574,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     _LC = {
         # === 蛋白粉 ===
         # price: 白金礼盒装 above, 金装礼盒 below, E钙蛋 above
-        ("蛋白粉", "price"): {"default": "alternate", "product_month_yshift_delta": {"白金480g": {"25M3": -8}}},
+        ("蛋白粉", "price"): {"default": "all", "product_month_yshift_delta": {"白金480g": {"25M3": -8}}},
         # 金装450g/白金480g use alternate labeling
         # dist: 汤臣整体 all above (close); others endpoints, staggered to avoid overlap
         ("蛋白粉", "dist"):  {"full_above": ["金装", "汤臣整体", "旧品"], "month_xshift": {"25M1": -12}, "month_yshift": {"25M1": -12}, "product_yshift_offset": {"白金": -11}, "product_month_yshift_delta": {"E钙": {"26M6": 12}, "白金": {"26M6": 8}, "金装": {"26M6": -12}}, "default": "endpoints"},
@@ -3811,9 +3811,10 @@ def render_charts(metric_df, cat_label):
             "line3": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label),
         }
         _figs["line1"].update_layout(
-        title=dict(y=0.96),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5,
-                    font=dict(size=10, family="Microsoft YaHei")),
+        title=dict(y=0.95),
+        legend=dict(orientation="h", yanchor="bottom", y=1.07, xanchor="center", x=0.5,
+                    font=dict(size=10, family="Microsoft YaHei"),
+                    itemsizing="constant", itemwidth=30),
         margin=dict(t=140, b=48, l=10, r=54),
     )
         st.session_state[_cache_key] = _figs
@@ -3871,24 +3872,6 @@ st.markdown(f"""
 # Tab 导航放在最顶部（主标题下方）
 tab_a, tab_b = st.tabs(["全国药店VDS市场表现", "重点品类汤臣市场表现"])
 
-# ===== 导出 PDF 按钮 =====
-col_pdf1, col_pdf2, col_pdf3 = st.columns([1, 2, 1])
-with col_pdf2:
-    components.html("""
-    <div style="text-align:center;">
-        <button onclick="window.parent.print()" style="
-            background: linear-gradient(135deg, #1B4F8E 0%, #102F57 100%);
-            color: white; border: none; padding: 9px 26px;
-            border-radius: 8px; font-size: 14px; font-weight: 700;
-            cursor: pointer; font-family: 'Microsoft YaHei', Arial, sans-serif;
-        ">📄 导出当前页为 PDF</button>
-        <p style="font-size:11px;color:#999;margin-top:5px;margin-bottom:0;">
-            点击后在打印对话框中选择「另存为 PDF」
-        </p>
-    </div>
-    """, height=75)
-# ===== 导出 PDF 按钮结束 =====
-
 # ====================== Tab A: 全国药店VDS市场表现 ======================
 with tab_a:
     # 统一时间选择器（控制整个 Tab A 页面）
@@ -3912,21 +3895,10 @@ with tab_a:
     st.markdown('</div>', unsafe_allow_html=True)
 
     # 使用统一时间选择渲染四个页面
-    page_start("Page 1")
     page1(sel_ym_a, SEL_M_A)
-    page_end()
-
-    page_start("Page 2")
     page2(sel_ym_a, SEL_M_A)
-    page_end()
-
-    page_start("Page 3")
     page3(sel_ym_a, SEL_M_A)
-    page_end()
-
-    page_start("Page 4")
     page4(sel_ym_a)
-    page_end()
 
 # ====================== Tab B: 重点品类汤臣市场表现 ======================
 with tab_b:
@@ -3977,7 +3949,6 @@ with tab_b:
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ---- Section 一：品类概览 ----
-    page_start("品类概览")
     st.markdown("""
     <div class="section-header">
         <span class="num">1</span>
@@ -3985,10 +3956,8 @@ with tab_b:
     </div>
     """, unsafe_allow_html=True)
     render_first_page(selected_cat, selected_month, display_months)
-    page_end()
 
     # ---- Section 二：品牌竞争分析 ----
-    page_start("品牌竞争分析")
     st.markdown("""
     <div class="section-header">
         <span class="num">2</span>
@@ -3996,10 +3965,8 @@ with tab_b:
     </div>
     """, unsafe_allow_html=True)
     render_brand_analysis(selected_cat, selected_month, display_months)
-    page_end()
 
     # ---- Section 三：SKU/品线分析 ----
-    page_start("SKU/品线分析")
     st.markdown("""
     <div class="section-header">
         <span class="num">3</span>
@@ -4007,6 +3974,5 @@ with tab_b:
     </div>
     """, unsafe_allow_html=True)
     render_sku_analysis(selected_cat, selected_month, display_months)
-    page_end()
 
 
