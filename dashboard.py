@@ -4081,8 +4081,24 @@ with col_pdf2:
                 const H = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight,
                                    doc.body.offsetHeight, doc.documentElement.offsetHeight);
 
-                // 6) 注入超长单页 @page（纸张高度 = 内容 ×3，使超长内容落在 1 页内不被分页）
-                const PW = W, PH = (H + 24) * 3;
+                // 6) 注入超长单页 @page（纸张高度 = 内容高度 × 倍数余量，保证内容落在 1 页内不分页）
+                // 注意：浏览器(Chrome/Edge)对单页纸张高度有约 18000px 的硬上限，超过会被强制截断回多页，
+                // 导致内容中途分页。因此倍数动态计算：优先 3 倍余量；超限时用尽上限额度，但至少保留内容原高。
+                const PW = W, MAX_PH = 17500;
+                const calcPH = (h) => {
+                    let m = 3;
+                    if ((h + 24) * m > MAX_PH) m = Math.max(1, MAX_PH / (h + 24));
+                    return Math.floor((h + 24) * m);
+                };
+                const printCss = (ph) =>
+                    '@page :first { size: ' + PW + 'px ' + ph + 'px; margin: 0; }'
+                    + '@page { size: ' + PW + 'px ' + ph + 'px; margin: 0; }'
+                    + 'html, body { width: ' + PW + 'px !important; height: auto !important; overflow: visible !important; background: #ffffff !important; }'
+                    + OPEN + ' { height: auto !important; min-height: 0 !important; overflow: visible !important; position: static !important; }'
+                    + HIDE + ' { display: none !important; }'
+                    + '* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }'
+                    + '.js-plotly-plot, table, .dt, .metric-table, .brand-table, .main-header, .otc-vds-box, .stDataFrame, div[data-testid="stVerticalBlock"] > div { break-inside: avoid !important; page-break-inside: avoid !important; }';
+                let PH = calcPH(H);
                 Array.from(doc.styleSheets).forEach((ss) => {
                     let rules;
                     try { rules = ss.cssRules; } catch (e) { return; }
@@ -4102,15 +4118,18 @@ with col_pdf2:
                         el.textContent = el.textContent.replace(/@page[^{]*\{[^}]*\}/g, '');
                     }
                 });
-                injected.textContent =
-                    '@page :first { size: ' + PW + 'px ' + PH + 'px; margin: 0; }'
-                    + '@page { size: ' + PW + 'px ' + PH + 'px; margin: 0; }'
-                    + 'html, body { width: ' + PW + 'px !important; height: auto !important; overflow: visible !important; background: #ffffff !important; }'
-                    + OPEN + ' { height: auto !important; min-height: 0 !important; overflow: visible !important; position: static !important; }'
-                    + HIDE + ' { display: none !important; }'
-                    + '* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }'
-                    + '.js-plotly-plot, table, .dt, .metric-table, .brand-table, .main-header, .otc-vds-box, .stDataFrame, div[data-testid="stVerticalBlock"] > div { break-inside: avoid !important; page-break-inside: avoid !important; }';
+                injected.textContent = printCss(PH);
                 await sleep(400);
+
+                // 6.5) 打印样式注入后复测高度：若内容因样式变化长高，按新高度重算纸张，
+                // 防止测量误差导致内容尾部溢出到第 2 页
+                const H2 = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight,
+                                    doc.body.offsetHeight, doc.documentElement.offsetHeight);
+                if (H2 > H + 4) {
+                    PH = calcPH(H2);
+                    injected.textContent = printCss(PH);
+                    await sleep(300);
+                }
 
                 // 7) 调起打印；关闭打印框后恢复页面
                 win.addEventListener('afterprint', restore);
