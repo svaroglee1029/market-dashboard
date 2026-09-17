@@ -2310,19 +2310,19 @@ def render_first_page(selected_cat, selected_month, display_months):
         else:
             _otc_inner = _otc_lbl
         if _vds_small:
-            _vds_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:0;bottom:0;display:flex;align-items:center;transform:translateX(-100%) translateX(-6px);color:#BF9000;white-space:nowrap'>{_vds_lbl}</span>"
+            _vds_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:0;bottom:0;display:flex;align-items:center;transform:translateX(-100%) translateX(-6px);color:#ffffff;white-space:nowrap'>{_vds_lbl}</span>"
         else:
             _vds_inner = _vds_lbl
         # 下方同比：默认居中（与标注一致）；占比过小的一侧同比值连带移到外侧
         if _otc_small:
-            _otc_d_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;transform:translateX(8px);color:{_otc_c};white-space:nowrap'>{_otc_d}</span>"
+            _otc_d_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:50%;transform:translateX(8px) translateY(-50%);color:{_otc_c};white-space:nowrap'>{_otc_d}</span>"
         else:
             _otc_d_inner = _otc_d
-        _vds_d_inner = (f"<span style='position:absolute;left:{_otc_share:.4f}%;transform:translateX(-100%) translateX(-6px);color:{_vds_c};white-space:nowrap'>{_vds_d}</span>" if _vds_small else _vds_d)
+        _vds_d_inner = (f"<span style='position:absolute;left:{_otc_share:.4f}%;top:50%;transform:translateX(-100%) translateX(-6px) translateY(-50%);color:{_vds_c};white-space:nowrap'>{_vds_d}</span>" if _vds_small else _vds_d)
         _otc_bar = f"<div style='width:{_otc_share:.4f}%;background:#8FAADC;display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;{_seg_font}'>{_otc_inner}</div>"
         _vds_bar = f"<div style='width:{_vds_share:.4f}%;background:#BF9000;display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;{_seg_font}'>{_vds_inner}</div>"
         # 同比行行首加"占比+-"标签（不上"同比"文字标签），同比值在其色块宽度内居中
-        _otc_d_cell = f"<div style='width:{_otc_share:.4f}%;position:relative;text-align:center;color:{_otc_c};white-space:nowrap'><span style='position:absolute;left:2px;color:#00A85A'>占比+-</span>{_otc_d_inner}</div>"
+        _otc_d_cell = f"<div style='width:{_otc_share:.4f}%;position:relative;text-align:center;color:{_otc_c};white-space:nowrap'><span style='position:absolute;left:2px;top:50%;transform:translateY(-50%);color:#00A85A'>占比+-</span>{_otc_d_inner}</div>"
         _vds_d_cell = f"<div style='width:{_vds_share:.4f}%;position:relative;text-align:center;color:{_vds_c};white-space:nowrap'>{_vds_d_inner}</div>"
         otc_vds_box = (
             f"<div style='border:1px solid #BFBFBF;border-radius:6px;margin:0 0 10px 0;overflow:hidden;background:#fff'>"
