@@ -2916,17 +2916,19 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
     fig.add_annotation(x=ly_label, y=total_ly + 1.5, text=f"<b>{fmt_share(total_ly)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
     fig.add_annotation(x=ytd_label, y=total_ytd + 1.5, text=f"<b>{fmt_share(total_ytd)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
     # Top10 汇总占比同比变化：正绿箭头向上，负红箭头向下
+    # 位置：图表右侧（图例上方），与右侧图例列对齐
     _top_delta = total_ytd - total_ly
     if not pd.isna(_top_delta) and abs(_top_delta) >= 0.05:
         _up = _top_delta >= 0
         fig.add_annotation(
-            x=ytd_label, y=max(total_ly, total_ytd) + 1.5,
+            xref="paper", yref="paper",
+            x=1.055, y=0.93,
             text=f"<b>{'↑' if _up else '↓'} {_top_delta:+.1f}</b>",
-            showarrow=False, xshift=-78, yshift=22,
+            showarrow=False, xanchor="left", yanchor="middle",
             font=dict(size=18, color="#00A85A" if _up else "#E53935", family="Arial, sans-serif"),
         )
     fig.add_annotation(
-        x=0.5, y=1.02,
+        x=0.5, y=1.0,
         xref="x", yref="paper",
         text="<b>Top10品牌市场份额%</b>",
         showarrow=False,
