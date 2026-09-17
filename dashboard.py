@@ -1067,7 +1067,7 @@ def gh(val):
     if pd.isna(val): return "<span style='color:#999'>—</span>"
     p = val * 100
     t = f"{p:.1f}%" if abs(round(p)) < 1 else f"{round(p)}%"
-    c = "#E53935" if p < 0 else ("#2E7D32" if p > 10 else "#555")
+    c = "#E53935" if p < 0 else "#00B050"  # >0 绿色，<0 红色
     w = "600" if (p < 0 or p > 10) else "400"
     return f'<span style="color:{c};font-weight:{w}">{t}</span>'
 
@@ -1410,13 +1410,13 @@ def page1(sel_ym, SEL_M):
                 st.markdown(f"<b class='chart-title'>月度同比明细</b>", unsafe_allow_html=True)
                 mlst = mm["lb"].tolist()
                 n_m = len(mlst)
-                tfs = "13px"
-                hfs = "12.5px"  # 月度标签(25M1等)比数据小半个字号
-                tdp = "6px 4px"
-                hdr = "".join(f"<th style='font-size:{hfs};padding:{tdp};text-align:center'>{m}</th>" for m in mlst)
-                vr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["VG"])
-                orr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["OG"])
-                trr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["TG"])
+                tfs = "12px"
+                hfs = "11.5px"  # 月度标签(25M1等)比数据小半个字号
+                tdp = "6px 2px"
+                hdr = "".join(f"<th style='font-size:{hfs};padding:{tdp};text-align:center;white-space:nowrap'>{m}</th>" for m in mlst)
+                vr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["VG"])
+                orr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["OG"])
+                trr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["TG"])
 
                 st.markdown(f"""
                 <table class="dt" style='width:100%;table-layout:fixed'>
