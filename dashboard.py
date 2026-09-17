@@ -2294,7 +2294,8 @@ def render_first_page(selected_cat, selected_month, display_months):
         _vds_share_ly = 100 - _otc_share_ly
         _d_otc = _otc_share - _otc_share_ly
         _d_vds = _vds_share - _vds_share_ly
-        # 字号统一 14px；占比过小时标注/同比左移，避免溢出细条
+        # 注意：otc_vds_box 必须单行拼接——多行缩进的 HTML 会被 Markdown 解析成代码块原样显示
+        # 标注（OTC/VDS 标签与同比）在色块内靠左书写，避免相邻标注在边界处挤在一起
         _otc_small = _otc_share < 13
         _vds_small = _vds_share < 13
         _otc_lbl = f"OTC, {_otc_share:.0f}%"
@@ -2303,29 +2304,30 @@ def render_first_page(selected_cat, selected_month, display_months):
         _vds_d = f"{_d_vds:+.1f}%"
         _otc_c = "#00A85A" if _d_otc >= 0 else "#E53935"
         _vds_c = "#00A85A" if _d_vds >= 0 else "#E53935"
-        _otc_float = (f"<span style='position:absolute;left:{_otc_share:.4f}%;top:0;bottom:0;display:flex;align-items:center;transform:translateX(8px);font-size:14px;font-weight:700;color:#8FAADC;white-space:nowrap'>{_otc_lbl}</span>" if _otc_small else "")
-        _vds_float = (f"<span style='position:absolute;left:{_otc_share:.4f}%;top:0;bottom:0;display:flex;align-items:center;transform:translateX(-100%) translateX(-6px);font-size:14px;font-weight:700;color:#BF9000;white-space:nowrap'>{_vds_lbl}</span>" if _vds_small else "")
-        _vds_d_float = (f"<span style='position:absolute;left:{_otc_share:.4f}%;transform:translateX(-100%) translateX(-6px);text-align:right;font-size:14px;font-weight:700;color:{_vds_c};white-space:nowrap'>{_vds_d}</span>" if _vds_small else "")
-        otc_vds_box = f"""
-        <div style='border:1px solid #BFBFBF;border-radius:6px;margin:0 0 10px 0;overflow:visible;background:#fff'>
-          <div style='text-align:center;font-weight:700;font-size:16px;color:#333;padding:8px 0;border-bottom:1px solid #E4E9F0'>{selected_cat}OTC&amp;VDS分布 | 销售额占比</div>
-          <div style='display:flex;align-items:stretch'>
-            <div style='width:126px;flex:none;background:linear-gradient(90deg,#C8C8C8 0%,#F2F2F2 100%);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#404040'>{ytd_label}</div>
-            <div style='flex:1 1 auto;padding:10px 12px 8px 12px;min-width:0'>
-              <div style='position:relative;display:flex;height:44px;border-radius:2px;overflow:visible'>
-                <div style='width:{_otc_share:.4f}%;background:#8FAADC;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;font-family:Arial,&quot;Microsoft YaHei&quot;,sans-serif;white-space:nowrap'>{_otc_lbl if not _otc_small else ''}</div>
-                <div style='width:{_vds_share:.4f}%;background:#BF9000;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;font-family:Arial,&quot;Microsoft YaHei&quot;,sans-serif;white-space:nowrap'>{_vds_lbl if not _vds_small else ''}</div>
-                {_otc_float}
-                {_vds_float}
-              </div>
-              <div style='position:relative;display:flex;align-items:center;margin-top:6px;font-size:14px;font-weight:700;font-family:Arial,&quot;Microsoft YaHei&quot;,sans-serif'>
-                <div style='width:{_otc_share:.4f}%;text-align:center;color:{_otc_c};white-space:nowrap'>{_otc_d}</div>
-                <div style='width:{_vds_share:.4f}%;text-align:center;color:{_vds_c};white-space:nowrap'>{_vds_d if not _vds_small else ''}</div>
-                {_vds_d_float}
-              </div>
-            </div>
-          </div>
-        </div>"""
+        _seg_font = "font-size:14px;font-weight:700;font-family:Arial,&quot;Microsoft YaHei&quot;,sans-serif"
+        if _otc_small:
+            _otc_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:0;bottom:0;display:flex;align-items:center;transform:translateX(8px);color:#8FAADC;white-space:nowrap'>{_otc_lbl}</span>"
+        else:
+            _otc_inner = _otc_lbl
+        if _vds_small:
+            _vds_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:0;bottom:0;display:flex;align-items:center;transform:translateX(-100%) translateX(-6px);color:#BF9000;white-space:nowrap'>{_vds_lbl}</span>"
+        else:
+            _vds_inner = _vds_lbl
+        _vds_d_inner = (f"<span style='position:absolute;left:{_otc_share:.4f}%;transform:translateX(-100%) translateX(-6px);color:{_vds_c};white-space:nowrap'>{_vds_d}</span>" if _vds_small else _vds_d)
+        _otc_bar = f"<div style='width:{_otc_share:.4f}%;background:#8FAADC;display:flex;align-items:center;justify-content:flex-start;padding-left:10px;color:#fff;white-space:nowrap;{_seg_font}'>{_otc_inner}</div>"
+        _vds_bar = f"<div style='width:{_vds_share:.4f}%;background:#BF9000;display:flex;align-items:center;justify-content:flex-start;padding-left:10px;color:#fff;white-space:nowrap;{_seg_font}'>{_vds_inner}</div>"
+        _otc_d_cell = f"<div style='width:{_otc_share:.4f}%;text-align:left;padding-left:10px;color:{_otc_c};white-space:nowrap'>{_otc_d}</div>"
+        _vds_d_cell = f"<div style='width:{_vds_share:.4f}%;position:relative;text-align:left;padding-left:10px;color:{_vds_c};white-space:nowrap'>{_vds_d_inner}</div>"
+        otc_vds_box = (
+            f"<div style='border:1px solid #BFBFBF;border-radius:6px;margin:0 0 10px 0;overflow:hidden;background:#fff'>"
+            f"<div style='text-align:center;font-weight:700;font-size:16px;color:#333;padding:8px 0;border-bottom:1px solid #E4E9F0'>{selected_cat}OTC&amp;VDS分布 | 销售额占比</div>"
+            f"<div style='display:flex;align-items:stretch'>"
+            f"<div style='width:126px;flex:none;background:linear-gradient(90deg,#C8C8C8 0%,#F2F2F2 100%);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#404040'>{ytd_label}</div>"
+            f"<div style='flex:1 1 auto;padding:10px 12px 8px 12px;min-width:0'>"
+            f"<div style='position:relative;display:flex;height:44px;border-radius:2px;overflow:visible'>{_otc_bar}{_vds_bar}</div>"
+            f"<div style='position:relative;display:flex;align-items:center;margin-top:6px;{_seg_font}'>{_otc_d_cell}{_vds_d_cell}</div>"
+            f"</div></div></div>"
+        )
 
     is_kids_ca = (selected_cat == "儿童钙")
 
@@ -2335,10 +2337,14 @@ def render_first_page(selected_cat, selected_month, display_months):
         right_chart_height = 450
     else:
         right_chart_height = 470
-    # 左列（OTC/VDS盒子 + 指标表）与右列（图表）整体高度对齐：
-    # 指标表高度 = 右图高度 - OTC/VDS盒子估算高度，从而左右整体等高
+    # 左列（OTC/VDS盒子 + 指标表）与右列（图表 + 间距 + 月度同比明细表）整体高度对齐
     _otc_box_h = 140 if has_otc else 0
-    left_content_height = right_chart_height - _otc_box_h
+    _growth_rows = 4 if has_otc else 2      # 品类同比 + OTC/VDS(如有) + 品牌同比
+    _growth_est = (_growth_rows + 1) * 26   # 含表头，每行约26px
+    _streamlit_gap = 18                     # 图表与下方明细表间距
+    # 每品类像素级微调：实测后按需增减对应数值（正=加高，负=降低）
+    _LEFT_H_TWEAK = {"蛋白粉": 0, "成人钙": 0, "儿童钙": 0, "成人多维": 0, "儿童多维": 0, "鱼油": 0, "氨糖": 0, "益生菌": 0}
+    left_content_height = right_chart_height + _streamlit_gap + _growth_est - _otc_box_h + _LEFT_H_TWEAK.get(selected_cat, 0)
 
     cL, cR = st.columns([0.45, 0.55], gap="medium")
     with cL:
@@ -3637,7 +3643,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
         ymax = y_max if y_max is not None else 100
         fig.add_annotation(
             x=last_label, y=ymax * 1.12, text=f"<b>{month_num}月环比<br>(pts)</b>", showarrow=False,
-            xshift=36, yshift=0, font=dict(size=14, color="#333"),
+            xshift=26, yshift=0, font=dict(size=12, color="#333"),
         )
         y_cursor = 0.0
         for _hb_idx, name in enumerate(names):
@@ -3658,14 +3664,16 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                         _hb_yshift = _stagger[_hb_idx % len(_stagger)]
                     _hb_dec = 2 if abs(diff) < 0.05 else 1
                     fig.add_annotation(
-                        x=last_label, y=y_center, text=f"{val:.0f}% {diff:+.{_hb_dec}f}", showarrow=False,
-                        xshift=36, yshift=_hb_yshift,
+                        x=last_label, y=y_center, text=f"{diff:+.{_hb_dec}f}", showarrow=False,
+                        xshift=26, yshift=_hb_yshift,
                         font=dict(size=13, color="#00A85A" if diff >= 0 else "#E53935", family="Microsoft YaHei", weight="bold"),
                     )
                 y_cursor += val
             else:
                 y_cursor += float(last_v.iloc[0]) if last_v.notna().any() else 0
     fig = _chart_base(fig, title, height, legend_y, show_yaxis=False, legend_below=True)
+    # 柱图绘图区向两边拉长：左右边距与下方线图一致（l=24/r=24），柱子整体更宽
+    fig.update_layout(margin=dict(t=110, b=48, l=24, r=24))
     fig.update_layout(showlegend=True)
     fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
     if metric == "share":
@@ -3970,9 +3978,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Tab 导航放在最顶部（主标题下方）
-tab_a, tab_b = st.tabs(["全国药店VDS市场表现", "重点品类汤臣市场表现"])
-
 # ===== 导出 PDF 按钮（超长单页、不分页） =====
 col_pdf1, col_pdf2, col_pdf3 = st.columns([1, 2, 1])
 with col_pdf2:
@@ -4120,6 +4125,9 @@ with col_pdf2:
     </script>
     """, height=95)
 # ===== 导出 PDF 按钮结束 =====
+
+# Tab 导航放在主标题下方（必须在导出按钮代码之后创建，按钮才会显示在 Tab 内容上方而不是页面最底部）
+tab_a, tab_b = st.tabs(["全国药店VDS市场表现", "重点品类汤臣市场表现"])
 
 # ====================== Tab A: 全国药店VDS市场表现 ======================
 with tab_a:
