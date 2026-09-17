@@ -4089,15 +4089,12 @@ with col_pdf2:
                 const H = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight,
                                    doc.body.offsetHeight, doc.documentElement.offsetHeight);
 
-                // 6) 注入超长单页 @page（纸张高度 = 内容高度 × 倍数余量，保证内容落在 1 页内不分页）
-                // 注意：浏览器(Chrome/Edge)对单页纸张高度有约 18000px 的硬上限，超过会被强制截断回多页，
-                // 导致内容中途分页。因此倍数动态计算：优先 3 倍余量；超限时用尽上限额度，但至少保留内容原高。
-                const PW = W, MAX_PH = 17500;
-                const calcPH = (h) => {
-                    let m = 3;
-                    if ((h + 24) * m > MAX_PH) m = Math.max(1, MAX_PH / (h + 24));
-                    return Math.floor((h + 24) * m);
-                };
+                // 6) 注入超长单页 @page：纸张高度 = 内容真实高度 + 少量余量（刚好 1 页，不放大）
+                // 关键：浏览器(Chrome/Edge)对单页纸张高度有硬上限（约 16384px，部分版本 ~18000px）。
+                // 纸张高度一旦超过上限会被浏览器钳制并强制分页。因此纸张只取「内容高 + 余量」(≈1 倍)，
+                // 绝不 ×3 —— ×3 会把纸张顶过上限，正是“中间分页”的根因。PH 再上限到 MAX_PH 兜底。
+                const PW = W, MAX_PH = 16384, SLACK = 24;
+                const calcPH = (h) => Math.min(MAX_PH, Math.floor(h + SLACK));
                 const printCss = (ph) =>
                     '@page :first { size: ' + PW + 'px ' + ph + 'px; margin: 0; }'
                     + '@page { size: ' + PW + 'px ' + ph + 'px; margin: 0; }'
