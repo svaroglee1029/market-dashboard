@@ -4076,52 +4076,7 @@ with col_pdf2:
                 const H = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight,
                                    doc.body.offsetHeight, doc.documentElement.offsetHeight);
 
-                // 6) 整页截图生成「真正」的超长单页 PDF（html2canvas + jsPDF）
-                //    关键点：浏览器打印 @page 单边纸张有 ~18000px 硬上限，内容再长也会被分页；
-                //    而 PDF 页面高度无此限制，整页截图后塞进一页即可做到“无论多长都单页”。
-                function loadScript(src) {
-                    return new Promise((res, rej) => {
-                        const s = doc.createElement('script');
-                        s.src = src; s.async = true;
-                        s.onload = res;
-                        s.onerror = () => rej(new Error('库加载失败: ' + src));
-                        doc.head.appendChild(s);
-                    });
-                }
-
-                tip.textContent = '正在整页截图生成超长单页PDF…';
-                try {
-                    await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
-                    await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-                    const target = doc.querySelector('[data-testid="stAppViewContainer"]')
-                                || doc.querySelector('.main') || doc.body;
-                    // 临时隐藏侧栏/工具条，避免被截入
-                    const hideForShot = doc.querySelectorAll('[data-testid="stSidebar"], [data-testid="stToolbar"]');
-                    hideForShot.forEach((e) => { e.setAttribute('data-lphp', '1'); e.style.display = 'none'; });
-                    const scale = H > 8000 ? 1 : 2;  // 超高页降采样，避免 canvas 过大
-                    const canvas = await win.html2canvas(target, {
-                        scale: scale, useCORS: true, backgroundColor: '#ffffff',
-                        windowWidth: W, logging: false, allowTaint: false
-                    });
-                    hideForShot.forEach((e) => { e.style.display = ''; });
-                    const img = canvas.toDataURL('image/png');
-                    const pdf = new win.jspdf.jsPDF({
-                        unit: 'px', compress: true,
-                        format: [canvas.width, canvas.height],
-                        orientation: canvas.width >= canvas.height ? 'l' : 'p'
-                    });
-                    pdf.addImage(img, 'PNG', 0, 0, canvas.width, canvas.height);
-                    const nm = (doc.title || '市场表现').replace(/[\\/:*?"<>|]/g, '_');
-                    pdf.save(nm + '_超长单页.pdf');
-                    tip.textContent = '已导出超长单页PDF（整页截图，单页无分页）';
-                    setTimeout(restore, 800);
-                    return;
-                } catch (e2) {
-                    // 截图失败则回退到浏览器打印方案（纸张高度 = 内容 ×3）
-                    tip.textContent = '整页截图失败，改用打印方案：' + e2.message;
-                }
-
-                // 6b) 回退：注入超长单页 @page（高度 = 内容 ×3）
+                // 6) 注入超长单页 @page（纸张高度 = 内容 ×3，使超长内容落在 1 页内不被分页）
                 const PW = W, PH = (H + 24) * 3;
                 Array.from(doc.styleSheets).forEach((ss) => {
                     let rules;
