@@ -1656,9 +1656,12 @@ def page3(sel_ym, SEL_MONTHS):
     all_records = []
     for m in ind_months:
         vds_total = ind_sales(m, {"品类": "VDS"})
+        # 汤臣倍健集团（industry 表 CHC 品类；品牌=汤臣倍健 行数值 = 集团权益=汤臣倍健 的集团总额）
         tang_group_total = ind_sales(m, {"品类": "CHC(营养补充剂)", "品牌": "汤臣倍健"})
-        tang_key = sku_sales(m, {"集团权益": "汤臣倍健"})
-        tang_other = tang_group_total - tang_key
+        # 汤臣其他品牌：sku/brand 表中 集团权益=汤臣倍健 且 品牌≠汤臣倍健（健力多、Life-Space、天然博士等）
+        tang_other = sku_sales(m, {"集团权益": "汤臣倍健"}) - sku_sales(m, {"集团权益": "汤臣倍健", "品牌": "汤臣倍健"})
+        # 汤臣主品牌：industry(CHC 品类, 集团权益=汤臣倍健) - 其他品牌（即汤臣倍健品牌自身）
+        tang_main = tang_group_total - tang_other
         share = (tang_group_total / vds_total * 100) if vds_total > 0 else np.nan
 
         all_records.append({
@@ -1666,8 +1669,8 @@ def page3(sel_ym, SEL_MONTHS):
             "label": ym_lab(m),
             "VDS": vds_total,
             "汤臣倍健集团": tang_group_total,
-            "汤臣重点品类": tang_key,
-            "汤臣其它品类": tang_other,
+            "汤臣主品牌": tang_main,
+            "汤臣其他品牌": tang_other,
             "市场份额": share,
         })
 
@@ -1678,10 +1681,10 @@ def page3(sel_ym, SEL_MONTHS):
 
     fig.add_trace(go.Bar(
         x=df_data["label"],
-        y=df_data["汤臣重点品类"],
-        name="汤臣重点品类销售额-百万元",
+        y=df_data["汤臣主品牌"],
+        name="汤臣主品牌销售额-百万元",
         marker_color=C_KEY,
-        text=[f"{v:.0f}" if v > 0 else "" for v in df_data["汤臣重点品类"]],
+        text=[f"{v:.0f}" if v > 0 else "" for v in df_data["汤臣主品牌"]],
         textposition="inside",
         insidetextanchor="middle",
         textfont=dict(size=15, color="white", family="Arial, sans-serif"),
@@ -1689,10 +1692,10 @@ def page3(sel_ym, SEL_MONTHS):
 
     fig.add_trace(go.Bar(
         x=df_data["label"],
-        y=df_data["汤臣其它品类"],
-        name="汤臣其它品类销售额-百万元",
+        y=df_data["汤臣其他品牌"],
+        name="汤臣其他品牌销售额-百万元",
         marker_color=C_OTHER,
-        text=[f"{v:.0f}" if v > 0 else "" for v in df_data["汤臣其它品类"]],
+        text=[f"{v:.0f}" if v > 0 else "" for v in df_data["汤臣其他品牌"]],
         textposition="inside",
         insidetextanchor="middle",
         textfont=dict(size=15, color="white", family="Arial, sans-serif"),
@@ -1816,8 +1819,8 @@ def page3(sel_ym, SEL_MONTHS):
     st.plotly_chart(fig, use_container_width=True)
 
     # Build merged table (label column + data columns as one continuous table)
-    row_labels = ["VDS品类", "汤臣倍健集团", "汤臣重点品类"]
-    row_keys = ["VDS", "汤臣倍健集团", "汤臣重点品类"]
+    row_labels = ["VDS品类", "汤臣倍健集团", "汤臣主品牌"]
+    row_keys = ["VDS", "汤臣倍健集团", "汤臣主品牌"]
     table_rows = []
     for row_name, key in zip(row_labels, row_keys):
         cells = [f"<td style='font-weight:600;text-align:left;padding-left:8px'>{row_name}</td>"]
@@ -1844,7 +1847,7 @@ def page3(sel_ym, SEL_MONTHS):
 
     st.divider()
     st.caption("数据来源：中康全国零售药店")
-    st.caption("注：重点品类包括蛋白粉、钙、多维、鱼油、氨糖、益生菌，包含OTC。")
+    st.caption("注：主品牌=汤臣倍健品牌自身（industry 表 CHC 品类集团总额 - 集团旗下其他品牌）；其他品牌=集团权益为汤臣倍健且品牌≠汤臣倍健（健力多、Life-Space、天然博士等），包含OTC。")
 
 # ====================== Part A PAGE 4: 市场份额分析表 ======================
 def page4(selected_month):
