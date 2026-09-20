@@ -33,8 +33,9 @@ QTY_COL = "销售量-Pack('00))"
 DIST_COL = "加权铺货率"
 # WD 动销铺货率：优先取“动销铺货率”列，旧数据只有“加权铺货率”时兜底
 WD_COL_CANDIDATES = ["动销铺货率", "加权铺货率"]
-# ND 数值铺货率：取“铺货率”列（缺失时 ND 图无数据）
+# ND 数值铺货率：优先取“铺货率”列；该列缺失时回落到“加权铺货率”，保证 ND 虚线有数据
 ND_COL = "铺货率"
+ND_FALLBACK = "加权铺货率"
 # 运行时按实际数据列解析（数据加载后赋值），缺列回退到加权铺货率
 WD_COL = DIST_COL
 
@@ -168,7 +169,8 @@ df_ind = _downcast_df(load_industry())
 
 # 按实际数据列解析铺货率口径：WD 优先“动销铺货率”，缺列回退“加权铺货率”；ND 取“铺货率”
 WD_COL = next((c for c in WD_COL_CANDIDATES if c in sku_df.columns or c in brand_df.columns), DIST_COL)
-ND_AVAILABLE = (ND_COL in sku_df.columns) or (ND_COL in brand_df.columns)
+# ND 数值铺货率可用：存在“铺货率”列，或缺失时存在“加权铺货率”可作回落
+ND_AVAILABLE = any(c in df_.columns for df_ in (sku_df, brand_df, dist_df) for c in (ND_COL, ND_FALLBACK))
 
 import gc
 gc.collect()
@@ -1065,7 +1067,7 @@ def gh(val):
     if pd.isna(val): return "<span style='color:#999'>—</span>"
     p = val * 100
     t = f"{p:.1f}%" if abs(round(p)) < 1 else f"{round(p)}%"
-    c = "#E53935" if p < 0 else ("#2E7D32" if p > 10 else "#555")
+    c = "#E53935" if p < 0 else "#00B050"  # >0 绿色，<0 红色
     w = "600" if (p < 0 or p > 10) else "400"
     return f'<span style="color:{c};font-weight:{w}">{t}</span>'
 
@@ -1408,13 +1410,13 @@ def page1(sel_ym, SEL_M):
                 st.markdown(f"<b class='chart-title'>月度同比明细</b>", unsafe_allow_html=True)
                 mlst = mm["lb"].tolist()
                 n_m = len(mlst)
-                tfs = "13px"
-                hfs = "13px"
-                tdp = "6px 4px"
-                hdr = "".join(f"<th style='font-size:{hfs};padding:{tdp};text-align:center'>{m}</th>" for m in mlst)
-                vr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["VG"])
-                orr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["OG"])
-                trr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center'>{gh(v)}</td>" for v in mm["TG"])
+                tfs = "12px"
+                hfs = "11.5px"  # 月度标签(25M1等)比数据小半个字号
+                tdp = "6px 2px"
+                hdr = "".join(f"<th style='font-size:{hfs};padding:{tdp};text-align:center;white-space:nowrap'>{m}</th>" for m in mlst)
+                vr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["VG"])
+                orr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["OG"])
+                trr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["TG"])
 
                 st.markdown(f"""
                 <table class="dt" style='width:100%;table-layout:fixed'>
@@ -1654,9 +1656,12 @@ def page3(sel_ym, SEL_MONTHS):
     all_records = []
     for m in ind_months:
         vds_total = ind_sales(m, {"品类": "VDS"})
+        # 汤臣倍健集团（industry 表 CHC 品类；品牌=汤臣倍健 行数值 = 集团权益=汤臣倍健 的集团总额）
         tang_group_total = ind_sales(m, {"品类": "CHC(营养补充剂)", "品牌": "汤臣倍健"})
-        tang_key = sku_sales(m, {"集团权益": "汤臣倍健"})
-        tang_other = tang_group_total - tang_key
+        # 汤臣其他品牌：sku/brand 表中 集团权益=汤臣倍健 且 品牌≠汤臣倍健（健力多、Life-Space、天然博士等）
+        tang_other = sku_sales(m, {"集团权益": "汤臣倍健"}) - sku_sales(m, {"集团权益": "汤臣倍健", "品牌": "汤臣倍健"})
+        # 汤臣主品牌：industry(CHC 品类, 集团权益=汤臣倍健) - 其他品牌（即汤臣倍健品牌自身）
+        tang_main = tang_group_total - tang_other
         share = (tang_group_total / vds_total * 100) if vds_total > 0 else np.nan
 
         all_records.append({
@@ -1664,8 +1669,8 @@ def page3(sel_ym, SEL_MONTHS):
             "label": ym_lab(m),
             "VDS": vds_total,
             "汤臣倍健集团": tang_group_total,
-            "汤臣重点品类": tang_key,
-            "汤臣其它品类": tang_other,
+            "汤臣主品牌": tang_main,
+            "汤臣其他品牌": tang_other,
             "市场份额": share,
         })
 
@@ -1676,10 +1681,10 @@ def page3(sel_ym, SEL_MONTHS):
 
     fig.add_trace(go.Bar(
         x=df_data["label"],
-        y=df_data["汤臣重点品类"],
-        name="汤臣重点品类销售额-百万元",
+        y=df_data["汤臣主品牌"],
+        name="汤臣主品牌销售额-百万元",
         marker_color=C_KEY,
-        text=[f"{v:.0f}" if v > 0 else "" for v in df_data["汤臣重点品类"]],
+        text=[f"{v:.0f}" if v > 0 else "" for v in df_data["汤臣主品牌"]],
         textposition="inside",
         insidetextanchor="middle",
         textfont=dict(size=15, color="white", family="Arial, sans-serif"),
@@ -1687,10 +1692,10 @@ def page3(sel_ym, SEL_MONTHS):
 
     fig.add_trace(go.Bar(
         x=df_data["label"],
-        y=df_data["汤臣其它品类"],
-        name="汤臣其它品类销售额-百万元",
+        y=df_data["汤臣其他品牌"],
+        name="汤臣其他品牌销售额-百万元",
         marker_color=C_OTHER,
-        text=[f"{v:.0f}" if v > 0 else "" for v in df_data["汤臣其它品类"]],
+        text=[f"{v:.0f}" if v > 0 else "" for v in df_data["汤臣其他品牌"]],
         textposition="inside",
         insidetextanchor="middle",
         textfont=dict(size=15, color="white", family="Arial, sans-serif"),
@@ -1814,8 +1819,8 @@ def page3(sel_ym, SEL_MONTHS):
     st.plotly_chart(fig, use_container_width=True)
 
     # Build merged table (label column + data columns as one continuous table)
-    row_labels = ["VDS品类", "汤臣倍健集团", "汤臣重点品类"]
-    row_keys = ["VDS", "汤臣倍健集团", "汤臣重点品类"]
+    row_labels = ["VDS品类", "汤臣倍健集团", "汤臣主品牌"]
+    row_keys = ["VDS", "汤臣倍健集团", "汤臣主品牌"]
     table_rows = []
     for row_name, key in zip(row_labels, row_keys):
         cells = [f"<td style='font-weight:600;text-align:left;padding-left:8px'>{row_name}</td>"]
@@ -1842,7 +1847,7 @@ def page3(sel_ym, SEL_MONTHS):
 
     st.divider()
     st.caption("数据来源：中康全国零售药店")
-    st.caption("注：重点品类包括蛋白粉、钙、多维、鱼油、氨糖、益生菌，包含OTC。")
+    st.caption("注：主品牌=汤臣倍健品牌自身（industry 表 CHC 品类集团总额 - 集团旗下其他品牌）；其他品牌=集团权益为汤臣倍健且品牌≠汤臣倍健（健力多、Life-Space、天然博士等），包含OTC。")
 
 # ====================== Part A PAGE 4: 市场份额分析表 ======================
 def page4(selected_month):
@@ -2292,25 +2297,46 @@ def render_first_page(selected_cat, selected_month, display_months):
         _vds_share_ly = 100 - _otc_share_ly
         _d_otc = _otc_share - _otc_share_ly
         _d_vds = _vds_share - _vds_share_ly
-        _otc_fs = 16 if _otc_share >= 12 else 12
-        _vds_fs = 16 if _vds_share >= 12 else 12
-        otc_vds_box = f"""
-        <div style='border:1px solid #BFBFBF;border-radius:6px;margin:0 0 12px 0;overflow:hidden;background:#fff'>
-          <div style='text-align:center;font-weight:700;font-size:16px;color:#333;padding:9px 0;border-bottom:1px solid #E4E9F0'>{selected_cat}OTC&amp;VDS分布 | 销售额占比</div>
-          <div style='display:flex;align-items:stretch'>
-            <div style='width:126px;flex:none;background:linear-gradient(90deg,#C8C8C8 0%,#F2F2F2 100%);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#404040'>{ytd_label}</div>
-            <div style='flex:1 1 auto;padding:12px 12px 8px 12px;min-width:0'>
-              <div style='display:flex;height:48px;border-radius:2px;overflow:hidden'>
-                <div style='width:{_otc_share:.4f}%;background:#8FAADC;display:flex;align-items:center;justify-content:center;font-size:{_otc_fs}px;font-weight:700;color:#fff;font-family:Arial,&quot;Microsoft YaHei&quot;,sans-serif;white-space:nowrap'>OTC, {_otc_share:.0f}%</div>
-                <div style='width:{_vds_share:.4f}%;background:#BF9000;display:flex;align-items:center;justify-content:center;font-size:{_vds_fs}px;font-weight:700;color:#fff;font-family:Arial,&quot;Microsoft YaHei&quot;,sans-serif;white-space:nowrap'>VDS, {_vds_share:.0f}%</div>
-              </div>
-              <div style='display:flex;align-items:center;margin-top:5px;font-size:14px;font-weight:700;font-family:Arial,&quot;Microsoft YaHei&quot;,sans-serif'>
-                <div style='width:{_otc_share:.4f}%;text-align:center;color:{"#00A85A" if _d_otc >= 0 else "#E53935"};white-space:nowrap'>{_d_otc:+.1f}%</div>
-                <div style='width:{_vds_share:.4f}%;text-align:center;color:{"#00A85A" if _d_vds >= 0 else "#E53935"};white-space:nowrap'>{_d_vds:+.1f}%</div>
-              </div>
-            </div>
-          </div>
-        </div>"""
+        # 注意：otc_vds_box 必须单行拼接——多行缩进的 HTML 会被 Markdown 解析成代码块原样显示
+        # 标注默认在色块内居中；占比过小（<13%）的一侧标签连带下方同比值一起移到色块外侧，避免文字溢出
+        _otc_small = _otc_share < 13
+        _vds_small = _vds_share < 13
+        _otc_lbl = f"OTC, {_otc_share:.0f}%"
+        _vds_lbl = f"VDS, {_vds_share:.0f}%"
+        _otc_d = f"{_d_otc:+.1f}%"
+        _vds_d = f"{_d_vds:+.1f}%"
+        _otc_c = "#00A85A" if _d_otc >= 0 else "#E53935"
+        _vds_c = "#00A85A" if _d_vds >= 0 else "#E53935"
+        _seg_font = "font-size:14px;font-weight:700;font-family:Arial,&quot;Microsoft YaHei&quot;,sans-serif"
+        if _otc_small:
+            _otc_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:0;bottom:0;display:flex;align-items:center;transform:translateX(8px);color:#8FAADC;white-space:nowrap'>{_otc_lbl}</span>"
+        else:
+            _otc_inner = _otc_lbl
+        if _vds_small:
+            _vds_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:0;bottom:0;display:flex;align-items:center;transform:translateX(-100%) translateX(-6px);color:#ffffff;white-space:nowrap'>{_vds_lbl}</span>"
+        else:
+            _vds_inner = _vds_lbl
+        # 下方同比：默认居中（与标注一致）；占比过小的一侧同比值连带移到外侧
+        if _otc_small:
+            _otc_d_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:50%;transform:translateX(8px) translateY(-50%);color:{_otc_c};white-space:nowrap'>{_otc_d}</span>"
+        else:
+            _otc_d_inner = _otc_d
+        _vds_d_inner = (f"<span style='position:absolute;left:{_otc_share:.4f}%;top:50%;transform:translateX(-100%) translateX(-6px) translateY(-50%);color:{_vds_c};white-space:nowrap'>{_vds_d}</span>" if _vds_small else _vds_d)
+        _otc_bar = f"<div style='width:{_otc_share:.4f}%;background:#8FAADC;display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;{_seg_font}'>{_otc_inner}</div>"
+        _vds_bar = f"<div style='width:{_vds_share:.4f}%;background:#BF9000;display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;{_seg_font}'>{_vds_inner}</div>"
+        # 同比行行首加"占比+-"标签（不上"同比"文字标签），同比值在其色块宽度内居中
+        _otc_d_cell = f"<div style='width:{_otc_share:.4f}%;position:relative;text-align:center;color:{_otc_c};white-space:nowrap'><span style='position:absolute;left:2px;top:50%;transform:translateY(-50%);color:#00A85A'>占比+-</span>{_otc_d_inner}</div>"
+        _vds_d_cell = f"<div style='width:{_vds_share:.4f}%;position:relative;text-align:center;color:{_vds_c};white-space:nowrap'>{_vds_d_inner}</div>"
+        otc_vds_box = (
+            f"<div style='border:1px solid #BFBFBF;border-radius:6px;margin:0 0 10px 0;overflow:hidden;background:#fff'>"
+            f"<div style='text-align:center;font-weight:700;font-size:16px;color:#333;padding:8px 0;border-bottom:1px solid #E4E9F0'>{selected_cat}OTC&amp;VDS分布 | 销售额占比</div>"
+            f"<div style='display:flex;align-items:stretch'>"
+            f"<div style='width:126px;flex:none;background:linear-gradient(90deg,#C8C8C8 0%,#F2F2F2 100%);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#404040'>{ytd_label}</div>"
+            f"<div style='flex:1 1 auto;padding:10px 12px 8px 12px;min-width:0'>"
+            f"<div style='position:relative;display:flex;height:44px;border-radius:2px;overflow:visible'>{_otc_bar}{_vds_bar}</div>"
+            f"<div style='position:relative;display:flex;align-items:center;margin-top:6px;{_seg_font}'>{_otc_d_cell}{_vds_d_cell}</div>"
+            f"</div></div></div>"
+        )
 
     is_kids_ca = (selected_cat == "儿童钙")
 
@@ -2320,13 +2346,14 @@ def render_first_page(selected_cat, selected_month, display_months):
         right_chart_height = 450
     else:
         right_chart_height = 470
-    # Calculate left content height to match right side (chart + gap + growth table)
-    n_growth_data_rows = (4 if has_otc else 2)
-    n_growth_total_rows = n_growth_data_rows + 1  # +1 for header
-    growth_row_h = 26  # estimated px per growth table row (font 12px + padding 10px + border 2px)
-    growth_table_est = n_growth_total_rows * growth_row_h
-    streamlit_gap = 18  # vertical gap between plotly chart and markdown table
-    left_content_height = right_chart_height + streamlit_gap + growth_table_est
+    # 左列（OTC/VDS盒子 + 指标表）与右列（图表 + 间距 + 月度同比明细表）整体高度对齐
+    _otc_box_h = 140 if has_otc else 0
+    _growth_rows = 4 if has_otc else 2      # 品类同比 + OTC/VDS(如有) + 品牌同比
+    _growth_est = (_growth_rows + 1) * 26   # 含表头，每行约26px
+    _streamlit_gap = 18                     # 图表与下方明细表间距
+    # 每品类像素级微调：实测后按需增减对应数值（正=加高，负=降低）
+    _LEFT_H_TWEAK = {"蛋白粉": 0, "成人钙": 0, "儿童钙": 0, "成人多维": 0, "儿童多维": 0, "鱼油": 0, "氨糖": 0, "益生菌": 0}
+    left_content_height = right_chart_height + _streamlit_gap + _growth_est - _otc_box_h + _LEFT_H_TWEAK.get(selected_cat, 0)
 
     cL, cR = st.columns([0.45, 0.55], gap="medium")
     with cL:
@@ -2892,17 +2919,19 @@ def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=
     fig.add_annotation(x=ly_label, y=total_ly + 1.5, text=f"<b>{fmt_share(total_ly)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
     fig.add_annotation(x=ytd_label, y=total_ytd + 1.5, text=f"<b>{fmt_share(total_ytd)}</b>", showarrow=False, font=dict(size=20, color="#111", family="Arial, sans-serif"))
     # Top10 汇总占比同比变化：正绿箭头向上，负红箭头向下
+    # 位置：图表右侧（图例上方），与右侧图例列对齐
     _top_delta = total_ytd - total_ly
     if not pd.isna(_top_delta) and abs(_top_delta) >= 0.05:
         _up = _top_delta >= 0
         fig.add_annotation(
-            x=ytd_label, y=max(total_ly, total_ytd) + 1.5,
+            xref="paper", yref="paper",
+            x=1.055, y=0.93,
             text=f"<b>{'↑' if _up else '↓'} {_top_delta:+.1f}</b>",
-            showarrow=False, xshift=-78, yshift=22,
+            showarrow=False, xanchor="left", yanchor="middle",
             font=dict(size=18, color="#00A85A" if _up else "#E53935", family="Arial, sans-serif"),
         )
     fig.add_annotation(
-        x=0.5, y=1.02,
+        x=0.5, y=1.0,
         xref="x", yref="paper",
         text="<b>Top10品牌市场份额%</b>",
         showarrow=False,
@@ -3485,8 +3514,13 @@ def build_metrics_cached(cat, rows_json, months_json, _ver=_CACHE_VER):
             ddf = fast_filter(dnd, [m], dfilters)
 
             def _agg_rate(col):
-                if ddf.empty or col not in ddf.columns:
+                # ND 数值铺货率：优先“铺货率”列，缺失时回落到“加权铺货率”
+                _c = col
+                if _c not in ddf.columns and col == ND_COL and ND_FALLBACK in ddf.columns:
+                    _c = ND_FALLBACK
+                if ddf.empty or _c not in ddf.columns:
                     return np.nan
+                col = _c
                 valid = ddf[col].notna()
                 if not valid.any():
                     return np.nan
@@ -3598,7 +3632,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
             _t = _stack_sum
         _totals_display.append(_t)
     _max_pos = max(_totals_position) if _totals_position else 0
-    _decimals = text_decimals if metric == "share" else 0
+    _decimals = 0 if metric == "share" else text_decimals
     for _i, _lbl in enumerate(labels):
         _t_display = _totals_display[_i]
         _t_pos = _totals_position[_i]
@@ -3620,7 +3654,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
         ymax = y_max if y_max is not None else 100
         fig.add_annotation(
             x=last_label, y=ymax * 1.12, text=f"<b>{month_num}月环比<br>(pts)</b>", showarrow=False,
-            xshift=36, yshift=0, font=dict(size=14, color="#333"),
+            xshift=26, yshift=0, font=dict(size=12, color="#333"),
         )
         y_cursor = 0.0
         for _hb_idx, name in enumerate(names):
@@ -3642,13 +3676,15 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                     _hb_dec = 2 if abs(diff) < 0.05 else 1
                     fig.add_annotation(
                         x=last_label, y=y_center, text=f"{diff:+.{_hb_dec}f}", showarrow=False,
-                        xshift=36, yshift=_hb_yshift,
+                        xshift=26, yshift=_hb_yshift,
                         font=dict(size=13, color="#00A85A" if diff >= 0 else "#E53935", family="Microsoft YaHei", weight="bold"),
                     )
                 y_cursor += val
             else:
                 y_cursor += float(last_v.iloc[0]) if last_v.notna().any() else 0
     fig = _chart_base(fig, title, height, legend_y, show_yaxis=False, legend_below=True)
+    # 柱图绘图区向两边拉长：左右边距与下方线图一致（l=24/r=24），柱子整体更宽
+    fig.update_layout(margin=dict(t=110, b=48, l=24, r=24))
     fig.update_layout(showlegend=True)
     fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
     if metric == "share":
@@ -3754,36 +3790,13 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             continue
 
         # --- Determine which months to annotate (Task 2-8) ---
+        # --- 标注规则（page3 折线图统一）：隔1个月标注 + 首尾月份必标 ---
         annotate_indices = set()
-        if name in full_above or name in full_below:
-            annotate_indices = set(valid)
-        elif name in alternate_above or name in alternate_below:
-            for j in range(0, len(valid), 2):
-                annotate_indices.add(valid[j])
-            annotate_indices.add(valid[-1])
-        elif name in highpoint_above or name in highpoint_below:
-            annotate_indices = {valid[0], valid[-1]}
-            max_idx = max(valid, key=lambda i: vals.iloc[i])
-            annotate_indices.add(max_idx)
-        else:
-            default_mode = product_mode.get(name, default_mode)
-            if default_mode == "endpoints":
-                annotate_indices = {valid[0], valid[-1]}
-            elif default_mode == "all":
-                annotate_indices = set(valid)
-            elif default_mode == "alternate":
-                for j in range(0, len(valid), 2):
-                    annotate_indices.add(valid[j])
-                annotate_indices.add(valid[-1])
-            elif default_mode == "skip_start":
-                annotate_indices = set(valid[1:])
-            elif default_mode == "highlow":
-                # Show start, end, and 3-5 high/low points
-                annotate_indices = {valid[0], valid[-1]}
-                _sorted_idx = sorted(valid, key=lambda i: vals.iloc[i], reverse=True)
-                _n_extra = min(5, len(_sorted_idx) - 2)
-                for i in _sorted_idx[:_n_extra]:
-                    annotate_indices.add(i)
+        for j in range(0, len(valid), 2):
+            annotate_indices.add(valid[j])
+        if valid:
+            annotate_indices.add(valid[-1])  # 尾月必标
+            annotate_indices.add(valid[0])   # 首月必标
 
         # --- Apply start_from filter: skip labels before specified month ---
         if name in start_from:
@@ -3976,9 +3989,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Tab 导航放在最顶部（主标题下方）
-tab_a, tab_b = st.tabs(["全国药店VDS市场表现", "重点品类汤臣市场表现"])
-
 # ===== 导出 PDF 按钮（超长单页、不分页） =====
 col_pdf1, col_pdf2, col_pdf3 = st.columns([1, 2, 1])
 with col_pdf2:
@@ -4081,9 +4091,22 @@ with col_pdf2:
                 const W = doc.documentElement.clientWidth || win.innerWidth;
                 const H = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight,
                                    doc.body.offsetHeight, doc.documentElement.offsetHeight);
-                const PW = W, PH = H + 24;
 
-                // 6) 清除应用自带的 @page（如 A4 横向），改写为超长单页纸张
+                // 6) 注入超长单页 @page：纸张高度 = 内容真实高度 + 少量余量（刚好 1 页，不放大）
+                // 关键：浏览器(Chrome/Edge)对单页纸张高度有硬上限（约 16384px，部分版本 ~18000px）。
+                // 纸张高度一旦超过上限会被浏览器钳制并强制分页。因此纸张只取「内容高 + 余量」(≈1 倍)，
+                // 绝不 ×3 —— ×3 会把纸张顶过上限，正是“中间分页”的根因。PH 再上限到 MAX_PH 兜底。
+                const PW = W, MAX_PH = 16384, SLACK = 24;
+                const calcPH = (h) => Math.min(MAX_PH, Math.floor(h + SLACK));
+                const printCss = (ph) =>
+                    '@page :first { size: ' + PW + 'px ' + ph + 'px; margin: 0; }'
+                    + '@page { size: ' + PW + 'px ' + ph + 'px; margin: 0; }'
+                    + 'html, body { width: ' + PW + 'px !important; height: auto !important; overflow: visible !important; background: #ffffff !important; }'
+                    + OPEN + ' { height: auto !important; min-height: 0 !important; overflow: visible !important; position: static !important; }'
+                    + HIDE + ' { display: none !important; }'
+                    + '* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }'
+                    + '.js-plotly-plot, table, .dt, .metric-table, .brand-table, .main-header, .otc-vds-box, .stDataFrame, div[data-testid="stVerticalBlock"] > div { break-inside: avoid !important; page-break-inside: avoid !important; }';
+                let PH = calcPH(H);
                 Array.from(doc.styleSheets).forEach((ss) => {
                     let rules;
                     try { rules = ss.cssRules; } catch (e) { return; }
@@ -4103,14 +4126,18 @@ with col_pdf2:
                         el.textContent = el.textContent.replace(/@page[^{]*\{[^}]*\}/g, '');
                     }
                 });
-                injected.textContent =
-                    '@page :first { size: ' + PW + 'px ' + PH + 'px; margin: 0; }'
-                    + '@page { size: ' + PW + 'px ' + PH + 'px; margin: 0; }'
-                    + 'html, body { width: ' + PW + 'px !important; height: auto !important; overflow: visible !important; background: #ffffff !important; }'
-                    + OPEN + ' { height: auto !important; min-height: 0 !important; overflow: visible !important; position: static !important; }'
-                    + HIDE + ' { display: none !important; }'
-                    + '* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }';
+                injected.textContent = printCss(PH);
                 await sleep(400);
+
+                // 6.5) 打印样式注入后复测高度：若内容因样式变化长高，按新高度重算纸张，
+                // 防止测量误差导致内容尾部溢出到第 2 页
+                const H2 = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight,
+                                    doc.body.offsetHeight, doc.documentElement.offsetHeight);
+                if (H2 > H + 4) {
+                    PH = calcPH(H2);
+                    injected.textContent = printCss(PH);
+                    await sleep(300);
+                }
 
                 // 7) 调起打印；关闭打印框后恢复页面
                 win.addEventListener('afterprint', restore);
@@ -4125,6 +4152,9 @@ with col_pdf2:
     </script>
     """, height=95)
 # ===== 导出 PDF 按钮结束 =====
+
+# Tab 导航放在主标题下方（必须在导出按钮代码之后创建，按钮才会显示在 Tab 内容上方而不是页面最底部）
+tab_a, tab_b = st.tabs(["全国药店VDS市场表现", "重点品类汤臣市场表现"])
 
 # ====================== Tab A: 全国药店VDS市场表现 ======================
 with tab_a:
