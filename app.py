@@ -880,20 +880,6 @@ st.markdown("""
         flex-shrink: 0;
     }
 
-    /* 导出完整报告：每个品类的小标题 + 分隔（仅打印/导出时才有意义） */
-    .cat-export-title {
-        font-size: 19px;
-        font-weight: 800;
-        color: #102F57;
-        margin: 22px 0 10px;
-        padding-left: 10px;
-        border-left: 5px solid #F5A623;
-        font-family: 'Microsoft YaHei', Arial, sans-serif;
-    }
-    .cat-export-break {
-        height: 10px;
-    }
-
     /* Part B 筛选器美化 */
     .partb-filter {
         background: white;
@@ -4167,215 +4153,6 @@ with col_pdf2:
     """, height=95)
 # ===== 导出 PDF 按钮结束 =====
 
-# ===== 导出完整网页 PDF 按钮（含全部 Tab） =====
-# 勾选后 Tab B 会一次性渲染全部 8 个品类（用于“导出整个网页”时拿到完整内容）；取消则仅当前选中品类，保持页面轻量
-exp_all_cat = st.checkbox(
-    "导出完整报告时，Tab B 包含全部 8 个品类（取消则仅当前选中品类，页面更轻量）",
-    value=True, key="exp_all_cat",
-)
-
-col_all1, col_all2, col_all3 = st.columns([1, 2, 1])
-with col_all2:
-    components.html(r"""
-    <div style="text-align:center;">
-        <button id="__allpdf_btn" type="button" style="
-            background: linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%);
-            color: white; border: none; padding: 9px 22px;
-            border-radius: 8px; font-size: 14px; font-weight: 700;
-            cursor: pointer; font-family: 'Microsoft YaHei', Arial, sans-serif;
-        ">📑 导出整个网页为 PDF（全部 Tab）</button>
-        <p id="__allpdf_tip" style="font-size:11px;color:#999;margin-top:6px;margin-bottom:0;line-height:1.5;">
-            会把 Tab A 与 Tab B 两个标签页同时收进一份 PDF；打印框中目标选「另存为 PDF」，勾选「背景图形」。<br>
-            若已勾选上方“包含全部品类”，Tab B 会包含全部 8 个品类的完整内容。
-        </p>
-    </div>
-    <script>
-    (function () {
-        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-        const HIDE = '[data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stStatusWidget"],'
-            + ' footer, #stBottom, .stDeployButton, [data-testid="stSidebarCollapsedControl"],'
-            + ' [data-testid="stSidebar"], iframe[title="st.iframe"], [role="tablist"]';
-        const OPEN = '[data-testid="stAppViewContainer"], [data-testid="stMain"], .stApp,'
-            + ' main, section, [data-testid="stMainBlockContainer"], [data-testid="stVerticalBlock"]';
-
-        function scrollToLoad(win, doc) {
-            return new Promise((resolve) => {
-                let prev = -1, stable = 0;
-                const t = setInterval(() => {
-                    win.scrollTo(0, doc.body.scrollHeight);
-                    const h = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight);
-                    if (h === prev) { if (++stable >= 4) { clearInterval(t); resolve(); } }
-                    else { stable = 0; prev = h; }
-                }, 500);
-            });
-        }
-        function resizePlots(win, doc) {
-            try {
-                doc.querySelectorAll('.js-plotly-plot').forEach((el) => {
-                    if (win.Plotly) { try { win.Plotly.Plots.resize(el); } catch (e) {} }
-                });
-                win.dispatchEvent(new win.Event('resize'));
-            } catch (e) {}
-        }
-        // 展开所有 Tab 面板（Streamlit 默认只把激活的 Tab 留在可视 DOM，其余加 hidden）
-        function revealAllTabs(doc) {
-            const backups = [];
-            const panels = doc.querySelectorAll('[role="tabpanel"]');
-            panels.forEach((p, i) => {
-                backups.push([p, p.hidden, p.getAttribute('style')]);
-                p.hidden = false;
-                p.style.display = 'block !important';
-                p.style.visibility = 'visible';
-                p.style.position = 'static';
-                p.style.width = '100%';
-                if (i > 0) p.style.pageBreakBefore = 'always';
-            });
-            const tl = doc.querySelector('[role="tablist"]');
-            if (tl) { backups.push([tl, null, tl.getAttribute('style')]); tl.style.display = 'none'; }
-            return backups;
-        }
-        function restoreTabs(backups) {
-            if (!backups) return;
-            backups.forEach(([el, wasHidden, sty]) => {
-                if (wasHidden !== null) el.hidden = wasHidden;
-                el.setAttribute('style', sty || '');
-            });
-        }
-
-        const btn = document.getElementById('__allpdf_btn');
-        const tip = document.getElementById('__allpdf_tip');
-        btn.addEventListener('click', async function () {
-            const win = window.parent;
-            const doc = win.document;
-            const oldHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.style.opacity = '0.65';
-            btn.innerHTML = '正在生成，请稍候…';
-
-            const fixedHidden = [];
-            const styleBackups = [];
-            const ruleBackups = [];
-            let injected = null;
-            let finished = false;
-            let tabBackups = null;
-
-            function restore() {
-                if (finished) return;
-                finished = true;
-                try {
-                    if (injected && injected.parentNode) injected.parentNode.removeChild(injected);
-                    fixedHidden.forEach(([el, d]) => { el.style.display = d; el.removeAttribute('data-longpdf-hidden'); });
-                    styleBackups.forEach(([el, css]) => { el.textContent = css; el.removeAttribute('data-longpdf-backup'); });
-                    ruleBackups.forEach(([ss, idx, css]) => { try { ss.insertRule(css, idx); } catch (e) {} });
-                    restoreTabs(tabBackups);
-                    win.scrollTo(0, 0);
-                } catch (e) {}
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                btn.innerHTML = oldHtml;
-            }
-
-            try {
-                // 0) 展开所有 Tab 面板
-                tabBackups = revealAllTabs(doc);
-
-                // 1) 滚动到底，触发懒加载图表
-                await scrollToLoad(win, doc);
-                win.scrollTo(0, 0);
-                await sleep(1000);
-
-                // 2) 注入展开样式（屏幕态先用于测量真实高度）
-                injected = doc.createElement('style');
-                injected.id = '__allpdf_style__';
-                injected.textContent =
-                    'html, body { height: auto !important; overflow: visible !important; }'
-                    + OPEN + ' { height: auto !important; min-height: 0 !important; overflow: visible !important; }'
-                    + HIDE + ' { display: none !important; }';
-                doc.head.appendChild(injected);
-
-                // 3) 隐藏 fixed/sticky 悬浮元素
-                doc.querySelectorAll('body *').forEach((el) => {
-                    const s = win.getComputedStyle(el);
-                    if (s.position === 'fixed' || s.position === 'sticky') {
-                        fixedHidden.push([el, el.style.display]);
-                        el.setAttribute('data-longpdf-hidden', '1');
-                        el.style.display = 'none';
-                    }
-                });
-
-                // 4) Plotly 图表按当前容器宽度重绘
-                resizePlots(win, doc);
-                await sleep(1200);
-
-                // 4.5) 刚展开的 Tab B 可能还没完全渲染，再滚动 + 重绘一次
-                await scrollToLoad(win, doc);
-                win.scrollTo(0, 0);
-                resizePlots(win, doc);
-                await sleep(1000);
-
-                // 5) 测量完整内容宽高
-                const W = doc.documentElement.clientWidth || win.innerWidth;
-                const H = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight,
-                                   doc.body.offsetHeight, doc.documentElement.offsetHeight);
-
-                // 6) 注入 @page：纸张宽 = 内容宽；高 = 内容高 + 余量（贴近 1 倍单页优先；
-                //    超过浏览器单页硬上限 16384px 时允许自然分页，图表不撕开）
-                const PW = W, MAX_PH = 16384, SLACK = 24;
-                const calcPH = (h) => Math.min(MAX_PH, Math.floor(h + SLACK));
-                const printCss = (ph) =>
-                    '@page :first { size: ' + PW + 'px ' + ph + 'px; margin: 0; }'
-                    + '@page { size: ' + PW + 'px ' + ph + 'px; margin: 0; }'
-                    + 'html, body { width: ' + PW + 'px !important; height: auto !important; overflow: visible !important; background: #ffffff !important; }'
-                    + OPEN + ' { height: auto !important; min-height: 0 !important; overflow: visible !important; position: static !important; }'
-                    + HIDE + ' { display: none !important; }'
-                    + '* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }'
-                    + '.js-plotly-plot, table, .dt, .metric-table, .brand-table, .main-header, .otc-vds-box, .stDataFrame, div[data-testid="stVerticalBlock"] > div { break-inside: avoid !important; page-break-inside: avoid !important; }';
-                let PH = calcPH(H);
-                Array.from(doc.styleSheets).forEach((ss) => {
-                    let rules;
-                    try { rules = ss.cssRules; } catch (e) { return; }
-                    for (let i = rules.length - 1; i >= 0; i--) {
-                        try {
-                            if (rules[i].type === CSSRule.PAGE_RULE) {
-                                ruleBackups.push([ss, i, rules[i].cssText]);
-                                ss.deleteRule(i);
-                            }
-                        } catch (e) {}
-                    }
-                });
-                doc.querySelectorAll('style').forEach((el) => {
-                    if (el !== injected && /@page\b/.test(el.textContent)) {
-                        styleBackups.push([el, el.textContent]);
-                        el.setAttribute('data-longpdf-backup', '1');
-                        el.textContent = el.textContent.replace(/@page[^{]*\{[^}]*\}/g, '');
-                    }
-                });
-                injected.textContent = printCss(PH);
-                await sleep(400);
-
-                // 6.5) 复测高度，防样式变化导致尾部溢出
-                const H2 = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight,
-                                    doc.body.offsetHeight, doc.documentElement.offsetHeight);
-                if (H2 > H + 4) {
-                    PH = calcPH(H2);
-                    injected.textContent = printCss(PH);
-                    await sleep(300);
-                }
-
-                // 7) 调起打印；关闭打印框后恢复页面
-                win.addEventListener('afterprint', restore);
-                win.print();
-                setTimeout(restore, 60000);
-            } catch (e) {
-                tip.textContent = '生成失败：' + e + '；可改用浏览器菜单「打印 → 另存为 PDF」';
-                restore();
-            }
-        });
-    })();
-    </script>
-    """, height=120)
-# ===== 导出完整网页 PDF 按钮结束 =====
-
 # Tab 导航放在主标题下方（必须在导出按钮代码之后创建，按钮才会显示在 Tab 内容上方而不是页面最底部）
 tab_a, tab_b = st.tabs(["全国药店VDS市场表现", "重点品类汤臣市场表现"])
 
@@ -4455,33 +4232,31 @@ with tab_b:
 
     selected_cat = st.session_state.selected_cat
 
-    # 导出完整报告模式：Tab B 一次性渲染全部品类（每个品类含 品类概览/品牌竞争/SKU分析 三段）
-    _SECTION1 = '<div class="section-header"><span class="num">1</span><span>品类概览</span></div>'
-    _SECTION2 = '<div class="section-header"><span class="num">2</span><span>品牌竞争分析</span></div>'
-    _SECTION3 = '<div class="section-header"><span class="num">3</span><span>SKU/品线分析</span></div>'
+    # ---- Section 一：品类概览 ----
+    st.markdown("""
+    <div class="section-header">
+        <span class="num">1</span>
+        <span>品类概览</span>
+    </div>
+    """, unsafe_allow_html=True)
+    render_first_page(selected_cat, selected_month, display_months)
 
-    if st.session_state.get("exp_all_cat", True):
-        for _ci, _cat in enumerate(FP_CATEGORY_CONFIG.keys()):
-            if _ci > 0:
-                st.markdown('<div class="cat-export-break"></div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="cat-export-title">▍品类：{_cat}</div>', unsafe_allow_html=True)
-            st.markdown(_SECTION1, unsafe_allow_html=True)
-            render_first_page(_cat, selected_month, display_months)
-            st.markdown(_SECTION2, unsafe_allow_html=True)
-            render_brand_analysis(_cat, selected_month, display_months)
-            st.markdown(_SECTION3, unsafe_allow_html=True)
-            render_sku_analysis(_cat, selected_month, display_months)
-    else:
-        # ---- Section 一：品类概览 ----
-        st.markdown(_SECTION1, unsafe_allow_html=True)
-        render_first_page(selected_cat, selected_month, display_months)
+    # ---- Section 二：品牌竞争分析 ----
+    st.markdown("""
+    <div class="section-header">
+        <span class="num">2</span>
+        <span>品牌竞争分析</span>
+    </div>
+    """, unsafe_allow_html=True)
+    render_brand_analysis(selected_cat, selected_month, display_months)
 
-        # ---- Section 二：品牌竞争分析 ----
-        st.markdown(_SECTION2, unsafe_allow_html=True)
-        render_brand_analysis(selected_cat, selected_month, display_months)
-
-        # ---- Section 三：SKU/品线分析 ----
-        st.markdown(_SECTION3, unsafe_allow_html=True)
-        render_sku_analysis(selected_cat, selected_month, display_months)
+    # ---- Section 三：SKU/品线分析 ----
+    st.markdown("""
+    <div class="section-header">
+        <span class="num">3</span>
+        <span>SKU/品线分析</span>
+    </div>
+    """, unsafe_allow_html=True)
+    render_sku_analysis(selected_cat, selected_month, display_months)
 
 
