@@ -304,7 +304,7 @@ def render_conclusion(page_key, month):
         formatted_html = _parse_conclusion_markup(display_text)
         st.markdown(
             f'<div style="background:linear-gradient(135deg,#FFFBF0,#FFF8E1);border:2px solid #FFB300;'
-            'border-radius:8px;padding:8px 14px;font-size:15px;line-height:1.35;color:#002060;font-family:Arial,Microsoft YaHei,微软雅黑,sans-serif;margin-bottom:-14px;">'
+            'border-radius:8px;padding:8px 14px;font-size:15px;line-height:1.35;color:#002060;font-family:Arial,Microsoft YaHei,微软雅黑,sans-serif;margin:16px 0 14px 0;">'
             f'{formatted_html}</div>',
             unsafe_allow_html=True
         )
@@ -1280,7 +1280,7 @@ def page1(sel_ym, SEL_M):
             # 图例盒（静态展示，不可勾选），垂直居中放置在图表左侧
             st.markdown(
                 f"""<div style="display:flex;align-items:center;justify-content:center;height:305px;">
-                <div style="border:1.5px solid #C9D2DE;border-radius:8px;background:#fff;padding:14px 16px;display:flex;flex-direction:column;gap:12px;">
+                <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;">
                     <div style="display:flex;align-items:center;gap:8px;"><span style="width:13px;height:13px;background:{C_VDS};display:inline-block;"></span><span style="font-size:13px;color:{C_TXT};font-weight:500;">VDS</span></div>
                     <div style="display:flex;align-items:center;gap:8px;"><span style="width:13px;height:13px;background:{C_OTC};display:inline-block;"></span><span style="font-size:13px;color:{C_TXT};font-weight:500;">OTC</span></div>
                 </div></div>""",
