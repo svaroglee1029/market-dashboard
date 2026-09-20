@@ -304,7 +304,7 @@ def render_conclusion(page_key, month):
         formatted_html = _parse_conclusion_markup(display_text)
         st.markdown(
             f'<div style="background:linear-gradient(135deg,#FFFBF0,#FFF8E1);border:2px solid #FFB300;'
-            'border-radius:8px;padding:16px 20px;font-size:19px;line-height:1.6;color:#002060;font-family:Arial,Microsoft YaHei,微软雅黑,sans-serif;">'
+            'border-radius:8px;padding:8px 14px;font-size:15px;line-height:1.35;color:#002060;font-family:Arial,Microsoft YaHei,微软雅黑,sans-serif;margin-bottom:-14px;">'
             f'{formatted_html}</div>',
             unsafe_allow_html=True
         )
@@ -1108,10 +1108,10 @@ def fmt_share_change(v):
         return "-", C_TXT
     if v == 0:
         return "0.0", C_TXT
-    if abs(v) < 0.1:
-        s = f"{v:+.2f}"
+    if abs(v) < 0.05:
+        s = f"{v:.2f}"
     else:
-        s = f"{v:+.1f}"
+        s = f"{v:.1f}"
     color = "#00B050" if v > 0 else "#FF0000"
     return s, color
 
@@ -1230,16 +1230,9 @@ def page1(sel_ym, SEL_M):
     sel_m = int(sel_ym[4:])
     ymid = sel_y * 12 + sel_m
 
-    # 图例复选框
-    lg1, lg2, _ = st.columns([2, 2, 8], gap="large")
-    with lg1:
-        _cb, _lab = st.columns([1, 3], gap="small")
-        show_vds = _cb.checkbox("vds", value=True, label_visibility="collapsed", key="p1_vds")
-        _lab.markdown(f'<div style="display:flex;align-items:center;gap:8px;height:32px;"><span style="width:14px;height:14px;border-radius:3px;background:{C_VDS};flex-shrink:0;"></span><span style="font-size:13px;color:{C_TXT};font-weight:500;">VDS</span></div>', unsafe_allow_html=True)
-    with lg2:
-        _cb, _lab = st.columns([1, 3], gap="small")
-        show_otc = _cb.checkbox("otc", value=True, label_visibility="collapsed", key="p1_otc")
-        _lab.markdown(f'<div style="display:flex;align-items:center;gap:8px;height:32px;"><span style="width:14px;height:14px;border-radius:3px;background:{C_OTC};flex-shrink:0;"></span><span style="font-size:13px;color:{C_TXT};font-weight:500;">OTC</span></div>', unsafe_allow_html=True)
+    # VDS/OTC 筛选器已按需求移除，图例固定全部显示
+    show_vds = True
+    show_otc = True
 
     # YTD 计算
     ys = sel_y * 12 + 1
@@ -1282,7 +1275,17 @@ def page1(sel_ym, SEL_M):
     cL, cR = st.columns([0.47, 0.53], gap="medium")
 
     with cL:
-        cc1, cc2, cc3 = st.columns(3, gap="small")
+        lgc, cc1, cc2, cc3 = st.columns([0.14, 1, 1, 1], gap="small")
+        with lgc:
+            # 图例盒（静态展示，不可勾选），垂直居中放置在图表左侧
+            st.markdown(
+                f"""<div style="display:flex;align-items:center;justify-content:center;height:305px;">
+                <div style="border:1.5px solid #C9D2DE;border-radius:8px;background:#fff;padding:14px 16px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:8px;"><span style="width:13px;height:13px;background:{C_VDS};display:inline-block;"></span><span style="font-size:13px;color:{C_TXT};font-weight:500;">VDS</span></div>
+                    <div style="display:flex;align-items:center;gap:8px;"><span style="width:13px;height:13px;background:{C_OTC};display:inline-block;"></span><span style="font-size:13px;color:{C_TXT};font-weight:500;">OTC</span></div>
+                </div></div>""",
+                unsafe_allow_html=True
+            )
         with cc1:
             f1 = go.Figure()
             if show_otc:
@@ -1813,7 +1816,7 @@ def page3(sel_ym, SEL_MONTHS):
             yanchor="bottom",
             y=0.98,
             xanchor="center",
-            x=0.63,
+            x=0.5,
             font=dict(size=11),
             bgcolor="rgba(255,255,255,0.9)",
             bordercolor="rgba(0,0,0,0)",
@@ -1861,7 +1864,7 @@ def page3(sel_ym, SEL_MONTHS):
 
     st.divider()
     st.caption("数据来源：中康全国零售药店")
-    st.caption("注：主品牌=汤臣倍健品牌自身（industry 表 CHC 品类集团总额 - 集团旗下其他品牌）；其他品牌=集团权益为汤臣倍健且品牌≠汤臣倍健（健力多、Life-Space、天然博士等），包含OTC。")
+    st.caption("注：汤臣主品牌包含汤臣倍健+健安适+健视佳+维满B+维满C，不含健力多及益倍适。")
 
 # ====================== Part A PAGE 4: 市场份额分析表 ======================
 def page4(selected_month):
@@ -4003,6 +4006,116 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+
+# Tab 导航
+tab_a, tab_b = st.tabs(["全国药店VDS市场表现", "重点品类汤臣市场表现"])
+
+# ====================== Tab A: 全国药店VDS市场表现 ======================
+with tab_a:
+    # 统一时间选择器（控制整个 Tab A 页面）
+    st.markdown('<div class="time-selector-wrap">', unsafe_allow_html=True)
+    st.markdown('<div class="time-selector-label"><span class="dot"></span>时间范围选择</div>', unsafe_allow_html=True)
+    tc1, tc2 = st.columns([0.25, 0.75], gap="small")
+    with tc1:
+        sel_ym_a = st.selectbox("统计截止月份", options=ind_months, index=len(ind_months) - 1, label_visibility="collapsed", key="tab_a_month")
+    with tc2:
+        # 默认从25M1开始到最新月份
+        _target_left_a = "202501"
+        di_a = 0
+        for _i, _m in enumerate(ind_months):
+            if _m >= _target_left_a:
+                di_a = _i
+                break
+        sl_l_a, sl_r_a = st.select_slider("月度数据范围", options=YM_LABS, value=(YM_LABS[di_a], YM_LABS[-1]), label_visibility="collapsed", key="tab_a_range")
+        si_a = YM_LABS.index(sl_l_a)
+        ei_a = YM_LABS.index(sl_r_a)
+        SEL_M_A = ind_months[si_a:ei_a + 1]
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 使用统一时间选择渲染四个页面
+    page1(sel_ym_a, SEL_M_A)
+    page2(sel_ym_a, SEL_M_A)
+    page3(sel_ym_a, SEL_M_A)
+    page4(sel_ym_a)
+
+# ====================== Tab B: 重点品类汤臣市场表现 ======================
+with tab_b:
+    # Part B 主标题
+    st.markdown("""
+    <div class="partb-header">
+        <span>重点品类汤臣市场表现</span>
+        <span class="sub">品类概览 + 品牌竞争 + SKU/品线分析</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 月份 + 范围选择器（置于品类选择器上方）
+    st.markdown('<div class="partb-filter">', unsafe_allow_html=True)
+    cf1, cf2 = st.columns([0.28, 0.72], gap="small")
+    with cf1:
+        selected_month = st.selectbox("选择报告月份", options=all_months, index=len(all_months) - 1, label_visibility="collapsed")
+    with cf2:
+        # 默认从25M1开始到最新月份
+        _target_left = "202501"
+        default_left = 0
+        for _i, _m in enumerate(all_months):
+            if _m >= _target_left:
+                default_left = _i
+                break
+        ym_labels_b = [ym_lab(m) for m in all_months]
+        sl_l, sl_r = st.select_slider("月份滚动范围", options=ym_labels_b, value=(ym_labels_b[default_left], ym_labels_b[-1]), label_visibility="collapsed")
+        si = ym_labels_b.index(sl_l)
+        ei = ym_labels_b.index(sl_r)
+        display_months = all_months[si:ei + 1]
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 品类选择器
+    if "selected_cat" not in st.session_state:
+        st.session_state.selected_cat = list(FP_CATEGORY_CONFIG.keys())[0]
+
+    st.markdown('<div class="cat-selector-wrap">', unsafe_allow_html=True)
+    st.markdown('<div class="cat-selector-label">选择品类</div>', unsafe_allow_html=True)
+    cat_names = list(FP_CATEGORY_CONFIG.keys())
+    btn_cols = st.columns(len(cat_names))
+    for i, cat in enumerate(cat_names):
+        with btn_cols[i]:
+            is_sel = (st.session_state.selected_cat == cat)
+            if st.button(cat, key=f"cat_btn_{i}", type="primary" if is_sel else "secondary", width='stretch'):
+                st.session_state.selected_cat = cat
+                st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    selected_cat = st.session_state.selected_cat
+
+    # 导出完整报告模式：Tab B 一次性渲染全部品类（每个品类含 品类概览/品牌竞争/SKU分析 三段）
+    _SECTION1 = '<div class="section-header"><span class="num">1</span><span>品类概览</span></div>'
+    _SECTION2 = '<div class="section-header"><span class="num">2</span><span>品牌竞争分析</span></div>'
+    _SECTION3 = '<div class="section-header"><span class="num">3</span><span>SKU/品线分析</span></div>'
+
+    if st.session_state.get("exp_all_cat", True):
+        for _ci, _cat in enumerate(FP_CATEGORY_CONFIG.keys()):
+            if _ci > 0:
+                st.markdown('<div class="cat-export-break"></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="cat-export-title">▍品类：{_cat}</div>', unsafe_allow_html=True)
+            st.markdown(_SECTION1, unsafe_allow_html=True)
+            render_first_page(_cat, selected_month, display_months)
+            st.markdown(_SECTION2, unsafe_allow_html=True)
+            render_brand_analysis(_cat, selected_month, display_months)
+            st.markdown(_SECTION3, unsafe_allow_html=True)
+            render_sku_analysis(_cat, selected_month, display_months)
+    else:
+        # ---- Section 一：品类概览 ----
+        st.markdown(_SECTION1, unsafe_allow_html=True)
+        render_first_page(selected_cat, selected_month, display_months)
+
+        # ---- Section 二：品牌竞争分析 ----
+        st.markdown(_SECTION2, unsafe_allow_html=True)
+        render_brand_analysis(selected_cat, selected_month, display_months)
+
+        # ---- Section 三：SKU/品线分析 ----
+        st.markdown(_SECTION3, unsafe_allow_html=True)
+        render_sku_analysis(selected_cat, selected_month, display_months)
+
+# ===== 导出按钮移至页面最底部 =====
 # ===== 导出 PDF 按钮（超长单页、不分页） =====
 col_pdf1, col_pdf2, col_pdf3 = st.columns([1, 2, 1])
 with col_pdf2:
@@ -4375,113 +4488,3 @@ with col_all2:
     </script>
     """, height=120)
 # ===== 导出完整网页 PDF 按钮结束 =====
-
-# Tab 导航放在主标题下方（必须在导出按钮代码之后创建，按钮才会显示在 Tab 内容上方而不是页面最底部）
-tab_a, tab_b = st.tabs(["全国药店VDS市场表现", "重点品类汤臣市场表现"])
-
-# ====================== Tab A: 全国药店VDS市场表现 ======================
-with tab_a:
-    # 统一时间选择器（控制整个 Tab A 页面）
-    st.markdown('<div class="time-selector-wrap">', unsafe_allow_html=True)
-    st.markdown('<div class="time-selector-label"><span class="dot"></span>时间范围选择</div>', unsafe_allow_html=True)
-    tc1, tc2 = st.columns([0.25, 0.75], gap="small")
-    with tc1:
-        sel_ym_a = st.selectbox("统计截止月份", options=ind_months, index=len(ind_months) - 1, label_visibility="collapsed", key="tab_a_month")
-    with tc2:
-        # 默认从25M1开始到最新月份
-        _target_left_a = "202501"
-        di_a = 0
-        for _i, _m in enumerate(ind_months):
-            if _m >= _target_left_a:
-                di_a = _i
-                break
-        sl_l_a, sl_r_a = st.select_slider("月度数据范围", options=YM_LABS, value=(YM_LABS[di_a], YM_LABS[-1]), label_visibility="collapsed", key="tab_a_range")
-        si_a = YM_LABS.index(sl_l_a)
-        ei_a = YM_LABS.index(sl_r_a)
-        SEL_M_A = ind_months[si_a:ei_a + 1]
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # 使用统一时间选择渲染四个页面
-    page1(sel_ym_a, SEL_M_A)
-    page2(sel_ym_a, SEL_M_A)
-    page3(sel_ym_a, SEL_M_A)
-    page4(sel_ym_a)
-
-# ====================== Tab B: 重点品类汤臣市场表现 ======================
-with tab_b:
-    # Part B 主标题
-    st.markdown("""
-    <div class="partb-header">
-        <span>重点品类汤臣市场表现</span>
-        <span class="sub">品类概览 + 品牌竞争 + SKU/品线分析</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # 月份 + 范围选择器（置于品类选择器上方）
-    st.markdown('<div class="partb-filter">', unsafe_allow_html=True)
-    cf1, cf2 = st.columns([0.28, 0.72], gap="small")
-    with cf1:
-        selected_month = st.selectbox("选择报告月份", options=all_months, index=len(all_months) - 1, label_visibility="collapsed")
-    with cf2:
-        # 默认从25M1开始到最新月份
-        _target_left = "202501"
-        default_left = 0
-        for _i, _m in enumerate(all_months):
-            if _m >= _target_left:
-                default_left = _i
-                break
-        ym_labels_b = [ym_lab(m) for m in all_months]
-        sl_l, sl_r = st.select_slider("月份滚动范围", options=ym_labels_b, value=(ym_labels_b[default_left], ym_labels_b[-1]), label_visibility="collapsed")
-        si = ym_labels_b.index(sl_l)
-        ei = ym_labels_b.index(sl_r)
-        display_months = all_months[si:ei + 1]
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # 品类选择器
-    if "selected_cat" not in st.session_state:
-        st.session_state.selected_cat = list(FP_CATEGORY_CONFIG.keys())[0]
-
-    st.markdown('<div class="cat-selector-wrap">', unsafe_allow_html=True)
-    st.markdown('<div class="cat-selector-label">选择品类</div>', unsafe_allow_html=True)
-    cat_names = list(FP_CATEGORY_CONFIG.keys())
-    btn_cols = st.columns(len(cat_names))
-    for i, cat in enumerate(cat_names):
-        with btn_cols[i]:
-            is_sel = (st.session_state.selected_cat == cat)
-            if st.button(cat, key=f"cat_btn_{i}", type="primary" if is_sel else "secondary", width='stretch'):
-                st.session_state.selected_cat = cat
-                st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    selected_cat = st.session_state.selected_cat
-
-    # 导出完整报告模式：Tab B 一次性渲染全部品类（每个品类含 品类概览/品牌竞争/SKU分析 三段）
-    _SECTION1 = '<div class="section-header"><span class="num">1</span><span>品类概览</span></div>'
-    _SECTION2 = '<div class="section-header"><span class="num">2</span><span>品牌竞争分析</span></div>'
-    _SECTION3 = '<div class="section-header"><span class="num">3</span><span>SKU/品线分析</span></div>'
-
-    if st.session_state.get("exp_all_cat", True):
-        for _ci, _cat in enumerate(FP_CATEGORY_CONFIG.keys()):
-            if _ci > 0:
-                st.markdown('<div class="cat-export-break"></div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="cat-export-title">▍品类：{_cat}</div>', unsafe_allow_html=True)
-            st.markdown(_SECTION1, unsafe_allow_html=True)
-            render_first_page(_cat, selected_month, display_months)
-            st.markdown(_SECTION2, unsafe_allow_html=True)
-            render_brand_analysis(_cat, selected_month, display_months)
-            st.markdown(_SECTION3, unsafe_allow_html=True)
-            render_sku_analysis(_cat, selected_month, display_months)
-    else:
-        # ---- Section 一：品类概览 ----
-        st.markdown(_SECTION1, unsafe_allow_html=True)
-        render_first_page(selected_cat, selected_month, display_months)
-
-        # ---- Section 二：品牌竞争分析 ----
-        st.markdown(_SECTION2, unsafe_allow_html=True)
-        render_brand_analysis(selected_cat, selected_month, display_months)
-
-        # ---- Section 三：SKU/品线分析 ----
-        st.markdown(_SECTION3, unsafe_allow_html=True)
-        render_sku_analysis(selected_cat, selected_month, display_months)
-
-
