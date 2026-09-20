@@ -304,7 +304,7 @@ def render_conclusion(page_key, month):
         formatted_html = _parse_conclusion_markup(display_text)
         st.markdown(
             f'<div style="background:linear-gradient(135deg,#FFFBF0,#FFF8E1);border:2px solid #FFB300;'
-            'border-radius:8px;padding:8px 14px;font-size:15px;line-height:1.35;color:#002060;font-family:Arial,Microsoft YaHei,微软雅黑,sans-serif;margin:16px 0 14px 0;">'
+            'border-radius:8px;padding:8px 14px;font-size:17px;line-height:1.4;color:#002060;font-family:Arial,Microsoft YaHei,微软雅黑,sans-serif;margin:16px 0 14px 0;">'
             f'{formatted_html}</div>',
             unsafe_allow_html=True
         )
@@ -1044,6 +1044,11 @@ st.markdown("""
     div[data-baseweb="select"] > div:hover {
         border-color: #F5A623 !important;
     }
+
+    /* 图例中虚线（ND数值铺货率）取样线变细，避免过粗 */
+    .legendlines path[style*="dash"] {
+        stroke-width: 1px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1424,7 +1429,7 @@ def page1(sel_ym, SEL_M):
                                  xaxis=dict(tickangle=-45, tickfont=dict(size=13), dtick=1, domain=[0.0, 1.0]))
                 st.plotly_chart(fm, width='stretch')
 
-                st.markdown(f"<b class='chart-title'>月度同比明细</b>", unsafe_allow_html=True)
+                st.markdown(f"<div class='chart-title' style='margin-top:11px;display:block'>月度同比明细</div>", unsafe_allow_html=True)
                 mlst = mm["lb"].tolist()
                 n_m = len(mlst)
                 tfs = "12px"
@@ -3779,6 +3784,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     product_month_yshift_delta = cfg.get("product_month_yshift_delta", {})  # {"100粒": {"25M1": -19}} per-product per-month yshift delta
     product_mode = cfg.get("product_mode", {})  # {"200粒": "endpoints"} per-product mode override
 
+    label_specs = []  # 收集所有数据标签，最后统一做防重叠分离
+
     for idx, name in enumerate(names):
         sub = df[df["name"] == name].set_index("label").reindex(labels)
         vals = pd.to_numeric(sub[metric], errors="coerce")
@@ -3792,7 +3799,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         if dashed:
             fig.add_scatter(
                 x=labels, y=vals, mode="lines", name=name,
-                line=dict(width=2.0, shape="spline", smoothing=1.3, color=c, dash="dash"),
+                line=dict(width=2.0, shape="spline", smoothing=1.3, color=c, dash="6px,4px"),
                 hovertemplate=f"{name}<br>%{{x}}：%{{y:.{decimals}f}}<extra></extra>",
             )
         else:
@@ -3883,36 +3890,89 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             _pxshift = product_month_xshift.get(name, {})
             if _lbl in _pxshift:
                 _xshift += _pxshift[_lbl]
-            fig.add_annotation(
-                x=labels[i], y=vals.iloc[i], text=f"{vals.iloc[i]:.{decimals}f}",
-                showarrow=False, xshift=_xshift, yshift=yshift,
+            label_specs.append(dict(
+                mi=i, yval=float(vals.iloc[i]), xshift=_xshift, yshift=yshift,
+                above=(not _below), text=f"{vals.iloc[i]:.{decimals}f}",
                 font=dict(size=12, color=c, family="Arial, sans-serif"),
-            )
+            ))
     fig = _chart_base(fig, title, height, 1.08, legend_below=True)
     fig.update_layout(margin=dict(t=110, b=48, l=margin_l, r=margin_r))
     fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
-    # Auto-range y-axis for power charts to fit all data + labels
-    if metric == "power":
-        if cat_label == "益生菌":
-            fig.update_layout(yaxis=dict(range=[10, 60]))
-        elif cat_label == "蛋白粉":
-            _all_vals = []
-            for name in names:
-                _sub = df[df["name"] == name]
-                _vals = pd.to_numeric(_sub[metric], errors="coerce").dropna()
-                _all_vals.extend(_vals.tolist())
-            if _all_vals:
-                _y_max = max(_all_vals) * 1.15
-                fig.update_layout(yaxis=dict(range=[20, _y_max]))
+
+    # ===== 数据标签防重叠：像素空间迭代分离（避免标签互相重叠、也远离折线） =====
+    if label_specs:
+        _allv = pd.to_numeric(df[metric], errors="coerce").dropna()
+        if len(_allv):
+            _ymin0, _ymax0 = float(_allv.min()), float(_allv.max())
+            _pad = (_ymax0 - _ymin0) * 0.12 if _ymax0 > _ymin0 else max(1.0, abs(_ymax0) * 0.12)
+            _yrange = (_ymin0 - _pad, _ymax0 + _pad)
         else:
-            _all_vals = []
-            for name in names:
-                _sub = df[df["name"] == name]
-                _vals = pd.to_numeric(_sub[metric], errors="coerce").dropna()
-                _all_vals.extend(_vals.tolist())
-            if _all_vals:
-                _y_max = max(_all_vals) * 1.15
-                fig.update_layout(yaxis=dict(range=[0, _y_max]))
+            _yrange = (0.0, 1.0)
+        _n = len(labels)
+        _W, _H = 430, height
+        _mt, _mb = 110, 48
+        _ml, _mr = margin_l, margin_r
+        _pw = _W - _ml - _mr
+        _ph = _H - _mt - _mb
+
+        def _xpx(mi, xs):
+            return _ml + (mi / (_n - 1)) * _pw + xs if _n > 1 else _ml + _pw / 2
+
+        def _ypx(yv):
+            return _mt + (_yrange[1] - yv) / (_yrange[1] - _yrange[0]) * _ph
+
+        def _cw(t):
+            return sum(12 if ord(ch) > 0x2E80 else 7 for ch in t) + 6
+
+        for s in label_specs:
+            s["cy"] = (_ypx(s["yval"]) - s["yshift"]) if s["above"] else (_ypx(s["yval"]) + s["yshift"])
+            s["w"] = max(22, _cw(s["text"]))
+            s["h"] = 16
+            s["x0"] = _xpx(s["mi"], s["xshift"]) - s["w"] / 2
+            s["x1"] = s["x0"] + s["w"]
+        for _ in range(20):
+            _changed = False
+            _order = sorted(range(len(label_specs)), key=lambda k: label_specs[k]["cy"])
+            for a in range(len(_order)):
+                i = _order[a]
+                for b in range(a - 1, -1, -1):
+                    j = _order[b]
+                    if not (label_specs[i]["x1"] > label_specs[j]["x0"] and label_specs[i]["x0"] < label_specs[j]["x1"]):
+                        continue
+                    if not (label_specs[i]["cy"] < label_specs[j]["cy"] + label_specs[j]["h"] / 2 + label_specs[i]["h"] / 2
+                            and label_specs[i]["cy"] > label_specs[j]["cy"] - label_specs[j]["h"] / 2 - label_specs[i]["h"] / 2):
+                        continue
+                    _ov = (label_specs[j]["h"] / 2 + label_specs[i]["h"] / 2) - abs(label_specs[i]["cy"] - label_specs[j]["cy"])
+                    if _ov <= 0:
+                        continue
+                    _push = _ov / 2 + 1.5
+                    # 两个标签反向推开：i 按其侧向上/下，j 按其侧向下/上，最大化间距
+                    if label_specs[i]["above"]:
+                        label_specs[i]["cy"] -= _push
+                    else:
+                        label_specs[i]["cy"] += _push
+                    if label_specs[j]["above"]:
+                        label_specs[j]["cy"] += _push
+                    else:
+                        label_specs[j]["cy"] -= _push
+                    for s in (label_specs[i], label_specs[j]):
+                        _dist = abs(s["cy"] - _ypx(s["yval"]))
+                        if _dist < 11:
+                            if s["above"]:
+                                s["cy"] = min(s["cy"], _ypx(s["yval"]) - 11)
+                            else:
+                                s["cy"] = max(s["cy"], _ypx(s["yval"]) + 11)
+                    _changed = True
+            if not _changed:
+                break
+        for s in label_specs:
+            s["yshift"] = max(3.0, (_ypx(s["yval"]) - s["cy"]) if s["above"] else (s["cy"] - _ypx(s["yval"])))
+            fig.add_annotation(
+                x=labels[s["mi"]], y=s["yval"], text=s["text"],
+                showarrow=False, xshift=s["xshift"], yshift=s["yshift"],
+                font=s["font"],
+            )
+        fig.update_layout(yaxis=dict(range=list(_yrange)))
     return fig
 
 
@@ -4091,7 +4151,7 @@ with tab_b:
     _SECTION2 = '<div class="section-header"><span class="num">2</span><span>品牌竞争分析</span></div>'
     _SECTION3 = '<div class="section-header"><span class="num">3</span><span>SKU/品线分析</span></div>'
 
-    if st.session_state.get("exp_all_cat", True):
+    if st.session_state.get("exp_all_cat", False):
         for _ci, _cat in enumerate(FP_CATEGORY_CONFIG.keys()):
             if _ci > 0:
                 st.markdown('<div class="cat-export-break"></div>', unsafe_allow_html=True)
@@ -4284,7 +4344,7 @@ with col_pdf2:
 # 勾选后 Tab B 会一次性渲染全部 8 个品类（用于“导出整个网页”时拿到完整内容）；取消则仅当前选中品类，保持页面轻量
 exp_all_cat = st.checkbox(
     "导出完整报告时，Tab B 包含全部 8 个品类（取消则仅当前选中品类，页面更轻量）",
-    value=True, key="exp_all_cat",
+    value=False, key="exp_all_cat",
 )
 
 col_all1, col_all2, col_all3 = st.columns([1, 2, 1])
