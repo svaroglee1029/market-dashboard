@@ -1045,9 +1045,14 @@ st.markdown("""
         border-color: #F5A623 !important;
     }
 
-    /* 图例中虚线（ND数值铺货率）取样线变细，避免过粗 */
-    .legendlines path[style*="dash"] {
-        stroke-width: 1px !important;
+    /* 图例取样线：实线 1.2px（默认约2px，偏细更清爽）；
+       虚线因断口视觉上偏细，单独加粗到 2.4px 补偿，使实/虚线观感接近 */
+    .legendlines path {
+        stroke-width: 1.2px !important;
+    }
+    .legendlines path[style*="dasharray"],
+    .legendlines path[stroke-dasharray] {
+        stroke-width: 2.4px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1435,13 +1440,13 @@ def page1(sel_ym, SEL_M):
                 tfs = "12px"
                 hfs = "11.5px"  # 月度标签(25M1等)比数据小半个字号
                 tdp = "6px 2px"
-                hdr = "".join(f"<th style='font-size:{hfs};padding:{tdp};text-align:center;white-space:nowrap'>{m}</th>" for m in mlst)
-                vr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["VG"])
-                orr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["OG"])
-                trr = "".join(f"<td style='font-size:{tfs};padding:{tdp};text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["TG"])
+                hdr = "".join(f"<th style='font-size:{hfs};padding:{tdp};height:42px;text-align:center;white-space:nowrap'>{m}</th>" for m in mlst)
+                vr = "".join(f"<td style='font-size:{tfs};padding:{tdp};height:42px;text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["VG"])
+                orr = "".join(f"<td style='font-size:{tfs};padding:{tdp};height:42px;text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["OG"])
+                trr = "".join(f"<td style='font-size:{tfs};padding:{tdp};height:42px;text-align:center;white-space:nowrap'>{gh(v)}</td>" for v in mm["TG"])
 
                 st.markdown(f"""
-                <table class="dt" style='width:100%;table-layout:fixed'>
+                <table class="dt" style='width:100%;table-layout:fixed;margin-top:8px'>
                 <colgroup>{"".join(f"<col style='width:{round(100/len(mlst),2)}%'>" for _ in mlst)}</colgroup>
                 <tr>{hdr}</tr>
                 <tr>{vr}</tr>
@@ -2337,13 +2342,14 @@ def render_first_page(selected_cat, selected_month, display_months):
         if _vds_small:
             _vds_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:0;bottom:0;display:flex;align-items:center;transform:translateX(-100%) translateX(-6px);color:#ffffff;white-space:nowrap'>{_vds_lbl}</span>"
         else:
-            _vds_inner = _vds_lbl
+            # VDS 标注右对齐：贴齐整个柱状条最右端
+            _vds_inner = f"<span style='margin-left:auto;padding-right:6px;white-space:nowrap'>{_vds_lbl}</span>"
         # 下方同比：默认居中（与标注一致）；占比过小的一侧同比值连带移到外侧
         if _otc_small:
             _otc_d_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:50%;transform:translateX(8px) translateY(-50%);color:{_otc_c};white-space:nowrap'>{_otc_d}</span>"
         else:
             _otc_d_inner = _otc_d
-        _vds_d_inner = (f"<span style='position:absolute;left:{_otc_share:.4f}%;top:50%;transform:translateX(-100%) translateX(-6px) translateY(-50%);color:{_vds_c};white-space:nowrap'>{_vds_d}</span>" if _vds_small else _vds_d)
+        _vds_d_inner = (f"<span style='position:absolute;left:{_otc_share:.4f}%;top:50%;transform:translateX(-100%) translateX(-6px) translateY(-50%);color:{_vds_c};white-space:nowrap'>{_vds_d}</span>" if _vds_small else f"<span style='display:block;text-align:right;padding-right:6px'>{_vds_d}</span>")
         _otc_bar = f"<div style='width:{_otc_share:.4f}%;background:#8FAADC;display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;{_seg_font}'>{_otc_inner}</div>"
         _vds_bar = f"<div style='width:{_vds_share:.4f}%;background:#BF9000;display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;{_seg_font}'>{_vds_inner}</div>"
         # 同比行行首加"占比+-"标签（不上"同比"文字标签），同比值在其色块宽度内居中
@@ -2353,7 +2359,7 @@ def render_first_page(selected_cat, selected_month, display_months):
             f"<div style='border:1px solid #BFBFBF;border-radius:6px;margin:0 0 10px 0;overflow:hidden;background:#fff'>"
             f"<div style='text-align:center;font-weight:700;font-size:16px;color:#333;padding:8px 0;border-bottom:1px solid #E4E9F0'>{selected_cat}OTC&amp;VDS分布 | 销售额占比</div>"
             f"<div style='display:flex;align-items:stretch'>"
-            f"<div style='width:126px;flex:none;background:linear-gradient(90deg,#C8C8C8 0%,#F2F2F2 100%);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#404040'>{ytd_label}</div>"
+            f"<div style='width:126px;flex:none;background:linear-gradient(180deg,#F5F8FD 0%,#E7EEF9 100%);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#102F57'>{ytd_label}</div>"
             f"<div style='flex:1 1 auto;padding:10px 12px 8px 12px;min-width:0'>"
             f"<div style='position:relative;display:flex;height:44px;border-radius:2px;overflow:visible'>{_otc_bar}{_vds_bar}</div>"
             f"<div style='position:relative;display:flex;align-items:center;margin-top:6px;{_seg_font}'>{_otc_d_cell}{_vds_d_cell}</div>"
