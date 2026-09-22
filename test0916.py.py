@@ -3807,6 +3807,113 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
 
     label_specs = []  # 收集所有数据标签，最后统一做防重叠分离
 
+    # ===== 全局标注协调：跨线一致性 + 上下错峰 + 近线降密 =====
+    # Pre-pass: 收集每条线的均值 y 值和有效数据点
+    _line_info = []  # [(name, mean_y, vals_series, valid_indices)]
+    for _tname in names:
+        _tsub = df[df["name"] == _tname].set_index("label").reindex(labels)
+        _tvals = pd.to_numeric(_tsub[metric], errors="coerce")
+        if _tname in null_months:
+            _tnull = set(null_months[_tname])
+            for _ti in range(len(labels)):
+                if str(labels[_ti]) in _tnull and _ti < len(_tvals):
+                    _tvals.iloc[_ti] = float('nan')
+        _tvalid = [i for i, v in enumerate(_tvals) if not pd.isna(v)]
+        if _tvalid:
+            _tys = [float(_tvals.iloc[i]) for i in _tvalid]
+            _line_info.append((_tname, sum(_tys) / len(_tys), _tvals, _tvalid))
+
+    # 按均值 y 降序排列（高线在上），交替分配 above/below 防止标签交叉
+    _line_info.sort(key=lambda x: x[1], reverse=True)
+    _global_ab = {}  # name → True=标签在折线上方, False=下方
+    for _li, (_ln, _, _, _) in enumerate(_line_info):
+        # 高线(偶数索引)标签放线下方避免溢出图表顶部；低线(奇数)放线上方
+        _global_ab[_ln] = (_li % 2 == 1)
+
+    # 计算全局 y 范围用于近线检测
+    _all_ys_for_prox = []
+    for _, _, _tv, _td in _line_info:
+        _all_ys_for_prox.extend([float(_tv.iloc[i]) for i in _td])
+    _gy_range = (max(_all_ys_for_prox) - min(_all_ys_for_prox)) if _all_ys_for_prox else 1.0
+    _prox_thresh = _gy_range * 0.15 if _gy_range > 0 else 1.0  # 两线均值差 < 15% y范围 视为"近线"
+
+    # 确定全局共享的标注月份集合
+    # 策略：先收集每条线"想要"标注的月份并集；然后逐月检查是否"拥挤"（存在近线对）；
+    # 拥挤月份→全图仅保留首尾月；不拥挤月份→保留较密标注（隔1-2月）
+    _desired_per_line = {}  # name → set of indices
+    for _lname, _, _lvals, _lvalid in _line_info:
+        _pmode = product_mode.get(_lname, default_mode)
+        if _lname in full_above or _pmode == "all":
+            _dset = set(_lvalid)
+        elif _lname in full_below:
+            _dset = set(_lvalid)
+        elif _pmode in ("endpoints", "highlow"):
+            _dset = {_lvalid[0], _lvalid[-1]} if _lvalid else set()
+        elif _pmode == "alternate":
+            _dset = set(_lvalid[::2]) | {_lvalid[-1]} if _lvalid else set()
+        else:  # fallback
+            _dset = {_lvalid[0], _lvalid[-1]} if _lvalid else set()
+        # Apply start_from
+        if _lname in start_from:
+            try:
+                _sfv = int(start_from[_lname].split("M")[0]) * 12 + int(start_from[_lname].split("M")[1])
+                _dset = {i for i in _dset if i < len(labels) and (
+                    lambda v: int(str(v).split("M")[0])*12+int(str(v).split("M")[1]))(labels[i]) >= _sfv}
+            except Exception:
+                pass
+        _desired_per_line[_lname] = _dset
+
+    _global_month_union = set()
+    for _ds in _desired_per_line.values():
+        _global_month_union |= _ds
+
+    # 逐月检测是否"拥挤"：该月份任意两条线的 y 值差 < 阈值 → 拥挤
+    _crowded_months = set()
+    for _mi in sorted(_global_month_union):
+        _y_at_mi = []
+        for _lname, _, _lvals, _lvalid in _line_info:
+            if _mi < len(_lvals) and not pd.isna(_lvals.iloc[_mi]):
+                _y_at_mi.append((float(_lvals.iloc[_mi]), _lname))
+        # 检查是否有任意一对线在该月足够接近
+        for _ai in range(len(_y_at_mi)):
+            for _bi in range(_ai + 1, len(_y_at_mi)):
+                if abs(_y_at_mi[_ai][0] - _y_at_mi[_bi][0]) < _prox_thresh:
+                    _crowded_months.add(_mi)
+                    break
+            if _mi in _crowded_months:
+                break
+
+    # 构建最终的每线标注集合
+    _final_anno = {}  # name → set of indices
+    for _lname, _, _, _lvalid in _line_info:
+        _ds = _desired_per_line.get(_lname, set())
+        if _lvalid:
+            # 拥挤月份只留首尾；非拥挤月份保持原密度
+            _fs = {_lvalid[0], _lvalid[-1]}
+            for _idx in _ds:
+                if _idx not in _crowded_months:
+                    _fs.add(_idx)
+            # 始终保证首尾
+            if _lvalid:
+                _fs.add(_lvalid[0])
+                _fs.add(_lvalid[-1])
+        else:
+            _fs = set()
+        # Apply include_months (force add)
+        if _lname in include_months:
+            for _inc_m in include_months[_lname]:
+                for _ii, _ll in enumerate(labels):
+                    if str(_ll) == _inc_m and _ii < len(_line_info[[n for n,_ in _line_info].index(_lname)][2]) if _lname in [n for n,_ in _line_info] else False:
+                        pass  # handled below
+        # Apply skip_months
+        if _lname in skip_months:
+            _skip = set(skip_months[_lname])
+            _fs = {i for i in _fs if str(labels[i]) not in _skip}
+        _final_anno[_lname] = _fs
+
+    # Re-apply include_months properly (needs vals access, defer to main loop)
+    _deferred_include = include_months
+
     for idx, name in enumerate(names):
         sub = df[df["name"] == name].set_index("label").reindex(labels)
         vals = pd.to_numeric(sub[metric], errors="coerce")
@@ -3836,39 +3943,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         if not valid:
             continue
 
-        # --- Determine which months to annotate (Task 2-8) ---
-        # --- 标注规则（page3 折线图统一）：隔2月标注 + 首尾月份必标 ---
-        # 拥挤图表（≥4 条线 且 ≥14 个月）启用降密策略：中间线仅首尾；顶/底线（按均值最值识别）
-        # 仍按隔1月标注，保留走势范围可读。
-        _crowded = len(names) >= 4 and len(labels) >= 14
-        _top_name = None
-        _bot_name = None
-        if _crowded:
-            _max_avg = -1e18
-            _min_avg = 1e18
-            for _n in names:
-                _sv = pd.to_numeric(df[df["name"] == _n][metric], errors="coerce").dropna()
-                if len(_sv):
-                    _avg = float(_sv.mean())
-                    if _avg > _max_avg:
-                        _max_avg = _avg
-                        _top_name = _n
-                    if _avg < _min_avg:
-                        _min_avg = _avg
-                        _bot_name = _n
-        annotate_indices = set()
-        if _crowded and name not in (_top_name, _bot_name):
-            # 中间线：仅首尾
-            if valid:
-                annotate_indices.add(valid[0])
-                annotate_indices.add(valid[-1])
-        else:
-            # 默认/顶/底线：隔2月标注 + 首尾必标
-            for j in range(0, len(valid), 3):
-                annotate_indices.add(valid[j])
-            if valid:
-                annotate_indices.add(valid[-1])  # 尾月必标
-                annotate_indices.add(valid[0])   # 首月必标
+        # --- 使用全局协调后的标注集合 ---
+        annotate_indices = _final_anno.get(name, set()) if valid else set()
 
         # --- Apply start_from filter: skip labels before specified month ---
         if name in start_from:
@@ -3898,8 +3974,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             _skip_set = set(skip_months[name])
             annotate_indices = {i for i in annotate_indices if str(labels[i]) not in _skip_set}
 
-        # --- Determine yshift: above (positive) or below (negative) ---
-        # Labels close to data point, not overlapping; tight stagger
+        # --- Determine yshift: use globally coordinated above/below assignment ---
+        # _global_ab 已按均值 y 排序交替分配（高线→below，低线→above），防止标签交叉
         _ov = month_override.get(name, {})
 
         _ys = month_yshift.get(name, {})
@@ -3911,7 +3987,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             if _lbl in _ov:
                 _below = _ov[_lbl] == "below"
             else:
-                _below = name in full_below or name in alternate_below or name in highpoint_below
+                # 使用全局协调的 above/below（按均值 y 排序后交替分配）
+                _below = not _global_ab.get(name, True)
             # Also check hardcoded skip for start_from items
             if name in start_from:
                 try:
@@ -3952,8 +4029,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         _allv = pd.to_numeric(df[metric], errors="coerce").dropna()
         if len(_allv):
             _ymin0, _ymax0 = float(_allv.min()), float(_allv.max())
-            # 上下加大留白（22%），防止上方/下方的数据标签被图表边缘裁剪
-            _pad = (_ymax0 - _ymin0) * 0.22 if _ymax0 > _ymin0 else max(1.0, abs(_ymax0) * 0.22)
+            # 数据范围 < 50 用 8% 紧贴（避免空白过大）；否则用 12% 留白防顶部标签裁剪
+            _pad = (_ymax0 - _ymin0) * (0.08 if (_ymax0 - _ymin0) < 50 else 0.12) if _ymax0 > _ymin0 else max(1.0, abs(_ymax0) * 0.08)
             _yrange = (_ymin0 - _pad, _ymax0 + _pad)
         else:
             _yrange = (0.0, 1.0)
