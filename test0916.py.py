@@ -1204,9 +1204,12 @@ def growth_color(v):
     return GREEN if v > 0 else RED
 
 def format_pct(v, decimal=0):
+    """百分比格式：表格内正值省略 + 号，只负值保留 -"""
     if pd.isna(v):
         return "-"
-    return f"{v:+.0f}%" if decimal == 0 else f"{v:+.{decimal}f}%"
+    if v < 0:
+        return f"{v:+.{decimal}f}%" if decimal else f"{v:+.0f}%"
+    return f"{v:.{decimal}f}%" if decimal else f"{v:.0f}%"
 
 def format_share(v):
     if pd.isna(v):
@@ -1604,7 +1607,7 @@ def page2(sel_month, trend_months):
                 if pd.isna(sy):
                     sy_str, sy_color = "-", C_TXT
                 else:
-                    sy_str = f"{sy:+.0f}%" if sy != 0 else "0%"
+                    sy_str = (f"{sy:+.0f}%" if sy < 0 else f"{sy:.0f}%") if sy != 0 else "0%"
                     sy_color = "#00B050" if sy > 0 else "#FF0000"
                 table_rows.append(
                     f"<tr><td style='color:{c};font-weight:600;'>"
@@ -1857,7 +1860,8 @@ def page3(sel_ym, SEL_MONTHS):
                 cells.append("<td style='text-align:center'>-</td>")
             else:
                 color = "#FF0000" if v < 0 else ("#00B050" if v > 10 else C_TXT)
-                cells.append(f"<td style='color:{color};text-align:center'>{v:+.0f}%</td>")
+                s = f"{v:+.0f}%" if v < 0 else f"{v:.0f}%"  # 正值省略 + 号
+                cells.append(f"<td style='color:{color};text-align:center'>{s}</td>")
         table_rows.append("<tr>" + "".join(cells) + "</tr>")
 
     _n_p3 = len(SEL_MONTHS)
@@ -2100,7 +2104,7 @@ def page4(selected_month):
         if pd.isna(v):
             return '<td class="num share-change">-</td>'
         c_color, f_color = share_change_color(v)
-        s = f"{v:+.1f}"
+        s = f"{v:+.1f}" if v < 0 else f"{v:.1f}"  # 正值省略 + 号
         return f'<td class="num share-change" style="color:{f_color}">{circle_svg(c_color)}<span>{s}</span></td>'
 
     def td_sales_plain(v):
@@ -2208,18 +2212,26 @@ def fp_growth_color(v):
 
 
 def fp_fmt_pct(v):
-    """智能百分比：>=1% 不保留小数，<1% 保留 1-3 位小数"""
+    """智能百分比：>=1% 不保留小数，<1% 保留 1-3 位小数。表格内正值省略 + 号。"""
     if pd.isna(v):
         return "-"
     if v == 0:
         return "0%"
     if abs(v) >= 1:
-        return f"{v:+.0f}%"
+        return f"{v:+.0f}%" if v < 0 else f"{v:.0f}%"
+    # |v| < 1
+    if v < 0:
+        for n in [1, 2, 3]:
+            s = f"{v:+.{n}f}%"
+            if abs(float(s.rstrip("%"))) >= 0.001:
+                return s
+        return f"{v:+.3f}%"
+    # 正值
     for n in [1, 2, 3]:
-        s = f"{v:+.{n}f}%"
+        s = f"{v:.{n}f}%"
         if abs(float(s.rstrip("%"))) >= 0.001:
             return s
-    return f"{v:+.3f}%"
+    return f"{v:.3f}%"
 
 
 def fp_calc_agg(df, months, filters):
@@ -2330,8 +2342,9 @@ def render_first_page(selected_cat, selected_month, display_months):
         _vds_small = _vds_share < 13
         _otc_lbl = f"OTC, {_otc_share:.0f}%"
         _vds_lbl = f"VDS, {_vds_share:.0f}%"
-        _otc_d = f"{_d_otc:+.1f}%"
-        _vds_d = f"{_d_vds:+.1f}%"
+        # 表格内正值省略 + 号，只保留 -
+        _otc_d = f"{_d_otc:+.1f}%" if _d_otc < 0 else f"{_d_otc:.1f}%"
+        _vds_d = f"{_d_vds:+.1f}%" if _d_vds < 0 else f"{_d_vds:.1f}%"
         _otc_c = "#00A85A" if _d_otc >= 0 else "#E53935"
         _vds_c = "#00A85A" if _d_vds >= 0 else "#E53935"
         _seg_font = "font-size:14px;font-weight:700;font-family:Arial,&quot;Microsoft YaHei&quot;,sans-serif"
@@ -2340,16 +2353,18 @@ def render_first_page(selected_cat, selected_month, display_months):
         else:
             _otc_inner = _otc_lbl
         if _vds_small:
-            _vds_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:0;bottom:0;display:flex;align-items:center;transform:translateX(-100%) translateX(-6px);color:#ffffff;white-space:nowrap'>{_vds_lbl}</span>"
+            # VDS 占比过小(<13%)：标签放到整个柱状条最右端（窄段放不下时外溢到条右侧留白），
+            # 深色字便于在白色/黄色背景上阅读
+            _vds_inner = f"<span style='margin-left:auto;padding-right:6px;white-space:nowrap;color:#102F57'>{_vds_lbl}</span>"
         else:
             # VDS 标注右对齐：贴齐整个柱状条最右端
             _vds_inner = f"<span style='margin-left:auto;padding-right:6px;white-space:nowrap'>{_vds_lbl}</span>"
-        # 下方同比：默认居中（与标注一致）；占比过小的一侧同比值连带移到外侧
+        # 下方同比：默认右对齐贴齐整条最右端（与标注位置一致）
         if _otc_small:
             _otc_d_inner = f"<span style='position:absolute;left:{_otc_share:.4f}%;top:50%;transform:translateX(8px) translateY(-50%);color:{_otc_c};white-space:nowrap'>{_otc_d}</span>"
         else:
             _otc_d_inner = _otc_d
-        _vds_d_inner = (f"<span style='position:absolute;left:{_otc_share:.4f}%;top:50%;transform:translateX(-100%) translateX(-6px) translateY(-50%);color:{_vds_c};white-space:nowrap'>{_vds_d}</span>" if _vds_small else f"<span style='display:block;text-align:right;padding-right:6px'>{_vds_d}</span>")
+        _vds_d_inner = f"<span style='display:block;text-align:right;padding-right:6px'>{_vds_d}</span>"
         _otc_bar = f"<div style='width:{_otc_share:.4f}%;background:#8FAADC;display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;{_seg_font}'>{_otc_inner}</div>"
         _vds_bar = f"<div style='width:{_vds_share:.4f}%;background:#BF9000;display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;{_seg_font}'>{_vds_inner}</div>"
         # 同比行行首加"占比+-"标签（不上"同比"文字标签），同比值在其色块宽度内居中
@@ -3803,9 +3818,11 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                     vals.iloc[_ni] = float('nan')
         c = colors.get(name, SA_COLORS[idx % len(SA_COLORS)])
         if dashed:
+            # ND 虚线：在线条上每个数据点加一个小圆点，图例仍为虚线（中间出现圆点标记）
             fig.add_scatter(
-                x=labels, y=vals, mode="lines", name=name,
+                x=labels, y=vals, mode="lines+markers", name=name,
                 line=dict(width=2.0, shape="spline", smoothing=1.3, color=c, dash="6px,4px"),
+                marker=dict(symbol="circle", size=6, color=c, line=dict(width=0)),
                 hovertemplate=f"{name}<br>%{{x}}：%{{y:.{decimals}f}}<extra></extra>",
             )
         else:
@@ -3820,13 +3837,38 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             continue
 
         # --- Determine which months to annotate (Task 2-8) ---
-        # --- 标注规则（page3 折线图统一）：隔1个月标注 + 首尾月份必标 ---
+        # --- 标注规则（page3 折线图统一）：隔2月标注 + 首尾月份必标 ---
+        # 拥挤图表（≥4 条线 且 ≥14 个月）启用降密策略：中间线仅首尾；顶/底线（按均值最值识别）
+        # 仍按隔1月标注，保留走势范围可读。
+        _crowded = len(names) >= 4 and len(labels) >= 14
+        _top_name = None
+        _bot_name = None
+        if _crowded:
+            _max_avg = -1e18
+            _min_avg = 1e18
+            for _n in names:
+                _sv = pd.to_numeric(df[df["name"] == _n][metric], errors="coerce").dropna()
+                if len(_sv):
+                    _avg = float(_sv.mean())
+                    if _avg > _max_avg:
+                        _max_avg = _avg
+                        _top_name = _n
+                    if _avg < _min_avg:
+                        _min_avg = _avg
+                        _bot_name = _n
         annotate_indices = set()
-        for j in range(0, len(valid), 2):
-            annotate_indices.add(valid[j])
-        if valid:
-            annotate_indices.add(valid[-1])  # 尾月必标
-            annotate_indices.add(valid[0])   # 首月必标
+        if _crowded and name not in (_top_name, _bot_name):
+            # 中间线：仅首尾
+            if valid:
+                annotate_indices.add(valid[0])
+                annotate_indices.add(valid[-1])
+        else:
+            # 默认/顶/底线：隔2月标注 + 首尾必标
+            for j in range(0, len(valid), 3):
+                annotate_indices.add(valid[j])
+            if valid:
+                annotate_indices.add(valid[-1])  # 尾月必标
+                annotate_indices.add(valid[0])   # 首月必标
 
         # --- Apply start_from filter: skip labels before specified month ---
         if name in start_from:
@@ -3910,7 +3952,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         _allv = pd.to_numeric(df[metric], errors="coerce").dropna()
         if len(_allv):
             _ymin0, _ymax0 = float(_allv.min()), float(_allv.max())
-            _pad = (_ymax0 - _ymin0) * 0.12 if _ymax0 > _ymin0 else max(1.0, abs(_ymax0) * 0.12)
+            # 上下加大留白（22%），防止上方/下方的数据标签被图表边缘裁剪
+            _pad = (_ymax0 - _ymin0) * 0.22 if _ymax0 > _ymin0 else max(1.0, abs(_ymax0) * 0.22)
             _yrange = (_ymin0 - _pad, _ymax0 + _pad)
         else:
             _yrange = (0.0, 1.0)
