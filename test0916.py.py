@@ -3830,16 +3830,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         # 高线(偶数索引)标签放线下方避免溢出图表顶部；低线(奇数)放线上方
         _global_ab[_ln] = (_li % 2 == 1)
 
-    # 计算全局 y 范围用于近线检测
-    _all_ys_for_prox = []
-    for _, _, _tv, _td in _line_info:
-        _all_ys_for_prox.extend([float(_tv.iloc[i]) for i in _td])
-    _gy_range = (max(_all_ys_for_prox) - min(_all_ys_for_prox)) if _all_ys_for_prox else 1.0
-    _prox_thresh = _gy_range * 0.15 if _gy_range > 0 else 1.0  # 两线均值差 < 15% y范围 视为"近线"
-
-    # 确定全局共享的标注月份集合
-    # 策略：先收集每条线"想要"标注的月份并集；然后逐月检查是否"拥挤"（存在近线对）；
-    # 拥挤月份→全图仅保留首尾月；不拥挤月份→保留较密标注（隔1-2月）
+    # 跨线一致性：收集所有线"想要"标注的月份并集；每条线保持自身模式密度
+    # 不做全局拥挤降密——原有像素级防重叠算法（20轮迭代）已处理实际视觉重叠
     _desired_per_line = {}  # name → set of indices
     for _lname, _, _lvals, _lvalid in _line_info:
         _pmode = product_mode.get(_lname, default_mode)
@@ -3867,52 +3859,30 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
     for _ds in _desired_per_line.values():
         _global_month_union |= _ds
 
-    # 逐月检测是否"拥挤"：该月份任意两条线的 y 值差 < 阈值 → 拥挤
-    _crowded_months = set()
-    for _mi in sorted(_global_month_union):
-        _y_at_mi = []
-        for _lname, _, _lvals, _lvalid in _line_info:
-            if _mi < len(_lvals) and not pd.isna(_lvals.iloc[_mi]):
-                _y_at_mi.append((float(_lvals.iloc[_mi]), _lname))
-        # 检查是否有任意一对线在该月足够接近
-        for _ai in range(len(_y_at_mi)):
-            for _bi in range(_ai + 1, len(_y_at_mi)):
-                if abs(_y_at_mi[_ai][0] - _y_at_mi[_bi][0]) < _prox_thresh:
-                    _crowded_months.add(_mi)
-                    break
-            if _mi in _crowded_months:
-                break
+    # 全局共享月份：任意一条线想标的月份
+    _global_month_union = set()
+    for _ds in _desired_per_line.values():
+        _global_month_union |= _ds
 
-    # 构建最终的每线标注集合
+    # 构建最终标注集合：保持每条线原有密度 + 跨线补齐（非 endpoints 模式自动补其他线想标的月）
     _final_anno = {}  # name → set of indices
     for _lname, _, _, _lvalid in _line_info:
         _ds = _desired_per_line.get(_lname, set())
+        _fs = set(_ds)
+        # 跨线一致性：其他线标了而这条没标的月份 → 补上（endpoints 模式除外，保持稀疏）
+        _pmode2 = product_mode.get(_lname, default_mode)
+        if _pmode2 not in ("endpoints",):
+            for _mi in _global_month_union:
+                if _mi in _lvalid and _mi not in _fs:
+                    _fs.add(_mi)
+        # 始终保证首尾
         if _lvalid:
-            # 拥挤月份只留首尾；非拥挤月份保持原密度
-            _fs = {_lvalid[0], _lvalid[-1]}
-            for _idx in _ds:
-                if _idx not in _crowded_months:
-                    _fs.add(_idx)
-            # 始终保证首尾
-            if _lvalid:
-                _fs.add(_lvalid[0])
-                _fs.add(_lvalid[-1])
+            _fs.add(_lvalid[0])
+            _fs.add(_lvalid[-1])
         else:
             _fs = set()
-        # Apply include_months (force add)
-        if _lname in include_months:
-            for _inc_m in include_months[_lname]:
-                for _ii, _ll in enumerate(labels):
-                    if str(_ll) == _inc_m and _ii < len(_line_info[[n for n,_ in _line_info].index(_lname)][2]) if _lname in [n for n,_ in _line_info] else False:
-                        pass  # handled below
-        # Apply skip_months
-        if _lname in skip_months:
-            _skip = set(skip_months[_lname])
-            _fs = {i for i in _fs if str(labels[i]) not in _skip}
+        # Apply include_months (force add) — 在主循环中统一处理
         _final_anno[_lname] = _fs
-
-    # Re-apply include_months properly (needs vals access, defer to main loop)
-    _deferred_include = include_months
 
     for idx, name in enumerate(names):
         sub = df[df["name"] == name].set_index("label").reindex(labels)
