@@ -205,6 +205,24 @@ WD_COL = next((c for c in WD_COL_CANDIDATES if c in sku_df.columns or c in brand
 # ND 数值铺货率可用：存在“铺货率”列，或缺失时存在“加权铺货率”可作回落
 ND_AVAILABLE = any(c in df_.columns for df_ in (sku_df, brand_df, dist_df) for c in (ND_COL, ND_FALLBACK))
 
+# 各数据源是否真正具备“铺货率”列（用于排查 ND 与 WD 相同的问题）
+ND_COL_HAS = {_nm: (ND_COL in _df.columns and _df[ND_COL].notna().sum() > 0)
+              for _nm, _df in (("sku", sku_df), ("brand", brand_df), ("distribution", dist_df))}
+# 运行过程中若有任何一张图的 ND 被迫回退到加权铺货率，在此登记并在页面告警
+ND_FALLBACK_HITS = []
+
+# ===== 启动诊断：打印到终端，便于确认数据源与铺货率列是否就绪 =====
+print("=" * 60)
+print(f"[数据源] MySQL 连接 = {_DB_OK}（False=已回退到 data 目录 parquet）")
+for _nm, _df in (("sku", sku_df), ("brand", brand_df), ("distribution", dist_df)):
+    _has = ND_COL in _df.columns
+    _n = int(_df[ND_COL].notna().sum()) if _has else 0
+    print(f"[数据源] {_nm:<12} 行数={len(_df):<7} 铺货率列={_has} 非空={_n}  加权铺货率列={ND_FALLBACK in _df.columns}")
+print(f"[数据源] WD 实际取列 = {WD_COL}；ND 铺货率列就绪 = {ND_COL_HAS}")
+if not all(ND_COL_HAS.values()):
+    print("[数据源][警告] 部分数据源缺少“铺货率”列，ND 数值铺货率将回退为加权铺货率（会与 WD 图相同）！")
+print("=" * 60)
+
 import gc
 gc.collect()
 
@@ -3527,7 +3545,7 @@ def calc_dist(row_conf, months):
     return rate * 100
 
 
-_CACHE_VER = 17  # 强制使旧版 ND 误用加权铺货率的缓存失效
+_CACHE_VER = 18  # 强制使旧版 ND 误用加权铺货率的缓存失效；启用铺货率列诊断
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -3603,6 +3621,9 @@ def build_metrics_cached(cat, rows_json, months_json, _ver=_CACHE_VER):
                 _c = col
                 if _c not in ddf.columns and col == ND_COL and ND_FALLBACK in ddf.columns:
                     _c = ND_FALLBACK
+                    _tag = f"{cat}/{row['name']} 缺少“铺货率”列，ND 已回退为加权铺货率"
+                    if _tag not in ND_FALLBACK_HITS:
+                        ND_FALLBACK_HITS.append(_tag)
                 if ddf.empty or _c not in ddf.columns:
                     return np.nan
                 col = _c
@@ -4736,6 +4757,13 @@ def render_sku_analysis(selected_cat, selected_month, display_months):
 
     with st.spinner("正在加载图表..."):
         metric_df = build_metrics_cached(config["cat"], row_keys_json, months_json)
+        _bad = [h for h in ND_FALLBACK_HITS if h.startswith(config["cat"] + "/")]
+        if _bad:
+            st.error(
+                "⚠️ 检测到当前数据源缺少“铺货率”列，ND数值铺货率已被迫用“加权铺货率”顶替（因此与 WD 图完全相同）。\n\n"
+                "请**彻底重启**看板（运行窗口 Ctrl+C 后重新 streamlit run），并确认终端启动诊断中各表“铺货率列=True”。\n\n"
+                "明细：" + "；".join(_bad)
+            )
         st.markdown(f"<h3 style='text-align:center;margin:12px 0 18px;color:#111'>{TITLE_MAP.get(selected_cat, selected_cat)}</h3>", unsafe_allow_html=True)
         render_charts(metric_df, selected_cat)
 
