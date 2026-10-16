@@ -3527,7 +3527,7 @@ def calc_dist(row_conf, months):
     return rate * 100
 
 
-_CACHE_VER = 16
+_CACHE_VER = 17  # 强制使旧版 ND 误用加权铺货率的缓存失效
 
 
 @st.cache_data(ttl=300, show_spinner=False)
