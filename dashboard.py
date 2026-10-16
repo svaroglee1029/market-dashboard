@@ -4634,8 +4634,8 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 if not s.get("is_endpoint"):
                     s["xshift"] = 0
                 elif _is_ep_month and _near_seq > 0:
-                    # 端点月接近：一个向左移12px，其余略微往外侧移（每次再外移6px）
-                    s["xshift"] = _dir * (12 + 6 * (_near_seq - 1))
+                    # 端点月接近：一个向左移6px，其余略微往外侧移（每次再外移4px）
+                    s["xshift"] = _dir * (6 + 4 * (_near_seq - 1))
                 s["yshift"] = _dy
     else:
         _yrange = None
@@ -4678,7 +4678,7 @@ def render_charts(metric_df, cat_label):
         # 均价图允许单独覆盖颜色（如氨糖蓝氨糖120片在均价线中用浅蓝）
         price_colors = dict(colors)
         price_colors.update(cfg.get("price_colors", {}))
-        _LM = dict(l=24, r=24)  # 线图左右边距相等，绘图区向右拉长
+        _LM = dict(l=34, r=34)  # 线图左右边距相等；左右留余量容纳首尾月数据标签，避免飘出/贴边
         _share_lbl_color = "black" if cat_label == "成人钙" else None  # 成人钙份额柱：段标签统一黑色
         # 所有品类补全柱图段标签：间距阈值统一降到 0.01/0.1；氨糖 OTC 为新品重点，完全关闭隐藏
         _bar_gap_kwargs = dict(min_gap_ratio=0.0, min_gap_abs=0.0) if cat_label == "氨糖" else dict(min_gap_ratio=0.01, min_gap_abs=0.1)
