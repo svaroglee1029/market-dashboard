@@ -3996,15 +3996,18 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("成人钙", "dist"): {
-            # 每个图例每月数据标签都显示；焕动力120粒仅首尾（新品前两月标签重叠）
+            # 其他系列每月都显；焕动力120粒隔月标（新品前两月标签重叠、避免中间空窗）
             "default": "all",
             "product_mode": {
-                "焕动力120粒": "endpoints",
+                "焕动力120粒": "alternate",
             },
         },
         ("成人钙", "nd"): {
-            # 每个图例每月数据标签都显示
+            # 其他系列每月都显；焕动力120粒隔月标（新品前两月标签重叠）
             "default": "all",
+            "product_mode": {
+                "焕动力120粒": "alternate",
+            },
         },
         ("成人钙", "power"): {
             # 200粒x2、120粒、汤臣钙DK整体：每月都显；钙尔奇：仅首尾；焕动力：首尾+隔月
