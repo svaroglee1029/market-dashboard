@@ -1826,8 +1826,8 @@ def page3(sel_ym, SEL_MONTHS):
             yref="paper",
             x0=first_idx - 0.5,
             x1=last_idx + 0.5,
-            y0=1.10,
-            y1=1.18,
+            y0=0.95,
+            y1=0.99,
             fillcolor="#f0f0f0",
             line=dict(color="#ddd", width=1),
             layer="above"
@@ -1835,7 +1835,7 @@ def page3(sel_ym, SEL_MONTHS):
 
         fig.add_annotation(
             x=mid_idx,
-            y=1.14,
+            y=0.97,
             xref="x",
             yref="paper",
             text=f"{year}年",
@@ -1871,7 +1871,7 @@ def page3(sel_ym, SEL_MONTHS):
     def _s(v): return f"+{v:.1f}pts" if v >= 0 else f"{v:.1f}pts"
     fig.add_annotation(
         xref="paper", yref="paper",
-        x=0.99, y=0.97,
+        x=0.99, y=0.88,
         text=(f"<b>集团：</b>同比{_grp_yoy:+.0f}%，份额{_grp_sh_ytd:.1f}%"
               f"（<span style='color:{_c(_grp_sh_diff)}'>{_s(_grp_sh_diff)}</span>）<br>"
               f"<b>主品牌：</b>同比{_main_yoy:+.0f}%，份额{_main_sh_ytd:.1f}%"
@@ -1882,10 +1882,10 @@ def page3(sel_ym, SEL_MONTHS):
     )
 
     fig.update_layout(
-        height=380,
+        height=420,
         barmode="stack",
         bargap=0.15,
-        margin=dict(t=130, b=30, l=0, r=0),
+        margin=dict(t=100, b=30, l=0, r=0),
         paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(size=15, family="Microsoft YaHei, sans-serif"),
@@ -1911,7 +1911,7 @@ def page3(sel_ym, SEL_MONTHS):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=0.98,
+            y=1.02,
             xanchor="center",
             x=0.5,
             font=dict(size=11),
@@ -4839,7 +4839,7 @@ with tab_a:
     st.markdown('<div class="time-selector-label"><span class="dot"></span>时间范围选择</div>', unsafe_allow_html=True)
     tc1, tc2 = st.columns([0.25, 0.75], gap="small")
     with tc1:
-        sel_ym_a = st.selectbox("统计截止月份", options=ind_months, index=len(ind_months) - 1, label_visibility="collapsed", key="tab_a_month")
+        sel_ym_a = st.selectbox("统计截止月份", options=list(reversed(ind_months)), index=0, label_visibility="collapsed", key="tab_a_month")
     with tc2:
         # 默认从25M1开始到最新月份
         _target_left_a = "202501"
@@ -4874,7 +4874,7 @@ with tab_b:
     st.markdown('<div class="partb-filter">', unsafe_allow_html=True)
     cf1, cf2 = st.columns([0.28, 0.72], gap="small")
     with cf1:
-        selected_month = st.selectbox("选择报告月份", options=all_months, index=len(all_months) - 1, label_visibility="collapsed")
+        selected_month = st.selectbox("选择报告月份", options=list(reversed(all_months)), index=0, label_visibility="collapsed")
     with cf2:
         # 默认从25M1开始到最新月份
         _target_left = "202501"
