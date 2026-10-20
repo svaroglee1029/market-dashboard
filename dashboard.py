@@ -1851,8 +1851,38 @@ def page3(sel_ym, SEL_MONTHS):
     y1_max = bar_max * 1.5 if not pd.isna(bar_max) and bar_max > 0 else None
     y2_max = share_max * 1.1 if not pd.isna(share_max) and share_max > 0 else None
 
+    # ===== YTD 摘要（右上角黄底框）=====
+    _ytd_m = period_months("YTD", sel_ym)
+    _ytd_ly_m = period_months("YTD_LY", sel_ym)
+    _df_ytd = df_full[df_full["year_month"].isin(_ytd_m)]
+    _df_ly  = df_full[df_full["year_month"].isin(_ytd_ly_m)]
+    _vds_ytd = _df_ytd["VDS"].sum(); _vds_ly = _df_ly["VDS"].sum()
+    _grp_ytd = _df_ytd["汤臣倍健集团"].sum(); _grp_ly = _df_ly["汤臣倍健集团"].sum()
+    _main_ytd = _df_ytd["汤臣主品牌"].sum(); _main_ly = _df_ly["汤臣主品牌"].sum()
+    _grp_yoy = (_grp_ytd/_grp_ly - 1)*100 if _grp_ly else np.nan
+    _main_yoy = (_main_ytd/_main_ly - 1)*100 if _main_ly else np.nan
+    _grp_sh_ytd = _grp_ytd/_vds_ytd*100 if _vds_ytd else np.nan
+    _grp_sh_ly = _grp_ly/_vds_ly*100 if _vds_ly else np.nan
+    _grp_sh_diff = _grp_sh_ytd - _grp_sh_ly
+    _main_sh_ytd = _main_ytd/_vds_ytd*100 if _vds_ytd else np.nan
+    _main_sh_ly = _main_ly/_vds_ly*100 if _vds_ly else np.nan
+    _main_sh_diff = _main_sh_ytd - _main_sh_ly
+    def _c(v): return "#E53935" if v < 0 else "#00B050"
+    def _s(v): return f"+{v:.1f}pts" if v >= 0 else f"{v:.1f}pts"
+    fig.add_annotation(
+        xref="paper", yref="paper",
+        x=0.99, y=0.97,
+        text=(f"<b>集团：</b>同比{_grp_yoy:+.0f}%，份额{_grp_sh_ytd:.1f}%"
+              f"（<span style='color:{_c(_grp_sh_diff)}'>{_s(_grp_sh_diff)}</span>）<br>"
+              f"<b>主品牌：</b>同比{_main_yoy:+.0f}%，份额{_main_sh_ytd:.1f}%"
+              f"（<span style='color:{_c(_main_sh_diff)}'>{_s(_main_sh_diff)}</span>）"),
+        showarrow=False, xanchor="right", yanchor="top",
+        align="left", font=dict(size=13, color="#333", family="Microsoft YaHei"),
+        bgcolor="#FFF8E1", bordercolor="#FFB300", borderwidth=1, borderpad=6,
+    )
+
     fig.update_layout(
-        height=520,
+        height=380,
         barmode="stack",
         bargap=0.15,
         margin=dict(t=130, b=30, l=0, r=0),
@@ -4767,43 +4797,6 @@ def render_sku_analysis(selected_cat, selected_month, display_months):
     ytd_label, ly_label, l3m_label, yy, lyy = period_labels(selected_month)
 
     render_conclusion(f"sa_{selected_cat}", selected_month)
-
-    # ===== YTD 摘要框（参考集团图右上角黄底框）=====
-    _ytd_m = period_months("YTD", selected_month)
-    _ytd_ly_m = period_months("YTD_LY", selected_month)
-    _cat = config["cat"]
-    _cat_mask = sku_df["品类"] == _cat
-    # 汤臣品牌筛选：从 rows 里 brand_total_name 对应的 filters 取品牌
-    _btn_name = CHART_NAMES.get(selected_cat, {}).get("brand_total_name")
-    _brand_filter = None
-    for _r in config["rows"]:
-        if _r["name"] == _btn_name:
-            _brand_filter = _r.get("filters", {})
-            break
-    _brand_mask = _cat_mask
-    if _brand_filter:
-        for _k, _v in _brand_filter.items():
-            if _k == "品类":
-                continue
-            _brand_mask = _brand_mask & (sku_df[_k] == _v)
-    _cat_ytd = sku_df.loc[_cat_mask & sku_df["year_month"].isin(_ytd_m), SALES_COL].sum()
-    _cat_ly  = sku_df.loc[_cat_mask & sku_df["year_month"].isin(_ytd_ly_m), SALES_COL].sum()
-    _brand_ytd = sku_df.loc[_brand_mask & sku_df["year_month"].isin(_ytd_m), SALES_COL].sum()
-    _brand_ly  = sku_df.loc[_brand_mask & sku_df["year_month"].isin(_ytd_ly_m), SALES_COL].sum()
-    _cat_yoy = (_cat_ytd / _cat_ly - 1) * 100 if _cat_ly else np.nan
-    _sh_ytd = _brand_ytd / _cat_ytd * 100 if _cat_ytd else np.nan
-    _sh_ly  = _brand_ly / _cat_ly * 100 if _cat_ly else np.nan
-    _sh_diff = _sh_ytd - _sh_ly if not (np.isnan(_sh_ytd) or np.isnan(_sh_ly)) else np.nan
-    _cat_yoy_color = "#E53935" if _cat_yoy < 0 else "#00B050"
-    _sh_diff_color = "#00B050" if _sh_diff >= 0 else "#E53935"
-    _sh_diff_sign = "+" if _sh_diff >= 0 else ""
-    st.markdown(f"""
-    <div style="background:#FFF8E1;border:1px solid #FFB300;border-radius:6px;padding:8px 14px;margin:0 0 8px 0;font-size:13px;line-height:1.6;">
-        <b>{_cat}大盘：</b><span style="color:{_cat_yoy_color}">{_cat_yoy:+.0f}%</span>
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-        <b>汤臣YTD份额：</b>{_sh_ytd:.1f}%（<span style="color:{_sh_diff_color}">{_sh_diff_sign}{_sh_diff:.1f}pts</span>）
-    </div>
-    """, unsafe_allow_html=True)
 
     row_keys_json = json.dumps(config["rows"])
     months_json = json.dumps(display_months)
