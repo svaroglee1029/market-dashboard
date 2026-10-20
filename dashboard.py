@@ -1634,7 +1634,7 @@ def page2(sel_month, trend_months):
 
             _y_max = max(cr5_ly, cr5_ytd) * 1.12
             fig.update_layout(
-                height=340,
+                height=460,
                 barmode="stack",
                 bargap=0.35,
                 margin=dict(t=30, b=25, l=10, r=55),
@@ -1709,7 +1709,7 @@ def page2(sel_month, trend_months):
             ))
 
         fig2.update_layout(
-            height=340,
+            height=460,
             margin=dict(t=55, b=25, l=40, r=20),
             paper_bgcolor="white",
             plot_bgcolor="white",
@@ -1826,8 +1826,8 @@ def page3(sel_ym, SEL_MONTHS):
             yref="paper",
             x0=first_idx - 0.5,
             x1=last_idx + 0.5,
-            y0=0.96,
-            y1=1.00,
+            y0=1.03,
+            y1=1.07,
             fillcolor="#f0f0f0",
             line=dict(color="#ddd", width=1),
             layer="above"
@@ -1835,7 +1835,7 @@ def page3(sel_ym, SEL_MONTHS):
 
         fig.add_annotation(
             x=mid_idx,
-            y=0.98,
+            y=1.05,
             xref="x",
             yref="paper",
             text=f"{year}年",
@@ -1885,7 +1885,7 @@ def page3(sel_ym, SEL_MONTHS):
         height=420,
         barmode="stack",
         bargap=0.15,
-        margin=dict(t=120, b=30, l=0, r=0),
+        margin=dict(t=140, b=30, l=0, r=0),
         paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(size=15, family="Microsoft YaHei, sans-serif"),
@@ -1911,7 +1911,7 @@ def page3(sel_ym, SEL_MONTHS):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=1.06,
+            y=1.15,
             xanchor="center",
             x=0.5,
             font=dict(size=11),
@@ -3212,7 +3212,7 @@ def make_trend_chart(cat_label, cat, brands, months):
                 break
     fig.update_layout(
         title=dict(text=f"{cat_label}-重点品牌份额(%)趋势", x=0.5, font=dict(size=16, color="#666")),
-        height=315,
+        height=280,
         margin=dict(t=46, b=48, l=0, r=0),
         paper_bgcolor="white",
         plot_bgcolor="white",
@@ -3246,7 +3246,7 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
     n_table_rows = len(table_brands) + 3  # +1 category row, +2 header rows
     table_row_h = 30  # brand-table row height - reduced to align with trend chart bottom
     table_height = n_table_rows * table_row_h
-    trend_chart_h = 351  # make_trend_chart height
+    trend_chart_h = 280  # make_trend_chart height
     streamlit_gap_ba = 18  # gap between table and trend chart
     left_chart_height = table_height + streamlit_gap_ba + trend_chart_h
 
@@ -3984,9 +3984,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
             "product_side": {
                 "白金礼盒装330g*2p": "above",
-                "金装礼盒装300g*2p": "above",
                 "白金480g": "above",
-                "新白金礼盒": "below",
+                "金装礼盒装300g*2p": "below",
+                "新白金礼盒": "above",
                 "金装450g": "below",
                 "E钙蛋520g": "below",
             },
@@ -4002,6 +4002,14 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 "E钙": "endpoints",
                 "新白金礼盒": "endpoints",
             },
+            "product_side": {
+                "汤臣整体": "above",
+                "金装": "above",
+                "白金": "above",
+                "旧品": "below",
+                "E钙": "below",
+                "新白金礼盒": "below",
+            },
         },
         ("蛋白粉", "nd"): {
             # 汤臣整体/旧品/金装：隔月；白金/E钙/新白金礼盒：仅首尾
@@ -4014,6 +4022,14 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 "E钙": "endpoints",
                 "新白金礼盒": "endpoints",
             },
+            "product_side": {
+                "汤臣整体": "above",
+                "金装": "above",
+                "白金": "above",
+                "旧品": "below",
+                "E钙": "below",
+                "新白金礼盒": "below",
+            },
         },
         ("蛋白粉", "power"): {
             # 汤臣整体：隔月；金装：首尾；白金/E钙/新白金礼盒：仅首尾；旧品：不显示
@@ -4025,6 +4041,13 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 "白金": "endpoints",
                 "E钙": "endpoints",
                 "新白金礼盒": "endpoints",
+            },
+            "product_side": {
+                "汤臣整体": "above",
+                "白金": "above",
+                "金装": "below",
+                "E钙": "below",
+                "新白金礼盒": "below",
             },
         },
 
