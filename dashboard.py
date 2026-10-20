@@ -1634,7 +1634,7 @@ def page2(sel_month, trend_months):
 
             _y_max = max(cr5_ly, cr5_ytd) * 1.12
             fig.update_layout(
-                height=460,
+                height=340,
                 barmode="stack",
                 bargap=0.35,
                 margin=dict(t=30, b=25, l=10, r=55),
@@ -1709,7 +1709,7 @@ def page2(sel_month, trend_months):
             ))
 
         fig2.update_layout(
-            height=460,
+            height=340,
             margin=dict(t=55, b=25, l=40, r=20),
             paper_bgcolor="white",
             plot_bgcolor="white",
@@ -1826,8 +1826,8 @@ def page3(sel_ym, SEL_MONTHS):
             yref="paper",
             x0=first_idx - 0.5,
             x1=last_idx + 0.5,
-            y0=0.95,
-            y1=0.99,
+            y0=0.96,
+            y1=1.00,
             fillcolor="#f0f0f0",
             line=dict(color="#ddd", width=1),
             layer="above"
@@ -1835,7 +1835,7 @@ def page3(sel_ym, SEL_MONTHS):
 
         fig.add_annotation(
             x=mid_idx,
-            y=0.97,
+            y=0.98,
             xref="x",
             yref="paper",
             text=f"{year}年",
@@ -1871,7 +1871,7 @@ def page3(sel_ym, SEL_MONTHS):
     def _s(v): return f"+{v:.1f}pts" if v >= 0 else f"{v:.1f}pts"
     fig.add_annotation(
         xref="paper", yref="paper",
-        x=0.99, y=0.88,
+        x=0.99, y=0.90,
         text=(f"<b>集团：</b>同比{_grp_yoy:+.0f}%，份额{_grp_sh_ytd:.1f}%"
               f"（<span style='color:{_c(_grp_sh_diff)}'>{_s(_grp_sh_diff)}</span>）<br>"
               f"<b>主品牌：</b>同比{_main_yoy:+.0f}%，份额{_main_sh_ytd:.1f}%"
@@ -1885,7 +1885,7 @@ def page3(sel_ym, SEL_MONTHS):
         height=420,
         barmode="stack",
         bargap=0.15,
-        margin=dict(t=100, b=30, l=0, r=0),
+        margin=dict(t=120, b=30, l=0, r=0),
         paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(size=15, family="Microsoft YaHei, sans-serif"),
@@ -1911,7 +1911,7 @@ def page3(sel_ym, SEL_MONTHS):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=1.02,
+            y=1.06,
             xanchor="center",
             x=0.5,
             font=dict(size=11),
@@ -2981,7 +2981,7 @@ def build_table_html(cat_label, cat, table_brands, current_ym):
     return "".join(html)
 
 
-def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=690):
+def make_top10_share_chart(cat_label, cat, top_brands, current_ym, chart_height=450):
     ytd_label, ly_label, _, _, _ = period_labels(current_ym)
     ytd_months = period_months("YTD", current_ym)
     ly_months = period_months("YTD_LY", current_ym)
@@ -3982,36 +3982,44 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 "新白金礼盒": "endpoints",
                 "E钙蛋520g": "alternate",
             },
+            "product_side": {
+                "白金礼盒装330g*2p": "above",
+                "金装礼盒装300g*2p": "above",
+                "白金480g": "above",
+                "新白金礼盒": "below",
+                "金装450g": "below",
+                "E钙蛋520g": "below",
+            },
         },
         ("蛋白粉", "dist"): {
-            # 汤臣整体/旧品/金装：每月都显；白金/E钙/新白金礼盒：仅首尾
-            "default": "all",
+            # 汤臣整体/旧品/金装：隔月；白金/E钙/新白金礼盒：仅首尾
+            "default": "alternate",
             "product_mode": {
-                "汤臣整体": "all",
-                "旧品": "all",
-                "金装": "all",
+                "汤臣整体": "alternate",
+                "旧品": "alternate",
+                "金装": "alternate",
                 "白金": "endpoints",
                 "E钙": "endpoints",
                 "新白金礼盒": "endpoints",
             },
         },
         ("蛋白粉", "nd"): {
-            # 汤臣整体/旧品/金装：每月都显；白金/E钙/新白金礼盒：仅首尾
-            "default": "all",
+            # 汤臣整体/旧品/金装：隔月；白金/E钙/新白金礼盒：仅首尾
+            "default": "alternate",
             "product_mode": {
-                "汤臣整体": "all",
-                "旧品": "all",
-                "金装": "all",
+                "汤臣整体": "alternate",
+                "旧品": "alternate",
+                "金装": "alternate",
                 "白金": "endpoints",
                 "E钙": "endpoints",
                 "新白金礼盒": "endpoints",
             },
         },
         ("蛋白粉", "power"): {
-            # 汤臣整体：每月都显；金装：首尾月；白金/E钙/新白金礼盒：仅首尾；旧品：不显示
-            "default": "all",
+            # 汤臣整体：隔月；金装：首尾；白金/E钙/新白金礼盒：仅首尾；旧品：不显示
+            "default": "alternate",
             "product_mode": {
-                "汤臣整体": "all",
+                "汤臣整体": "alternate",
                 "旧品": "none",
                 "金装": "endpoints",
                 "白金": "endpoints",
@@ -4022,36 +4030,38 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
 
         # ==================== 成人钙 ====================
         ("成人钙", "price"): {
-            # 每个图例每月数据标签都显示；钙尔奇D600标签在下方，焕动力120粒在上方
-            "default": "all",
+            # 隔月显示；钙尔奇在下方，焕动力在上方
+            "default": "alternate",
             "product_side": {
                 "钙尔奇D600 60片": "below",
                 "焕动力120粒": "above",
+                "200粒x2": "above",
+                "120粒": "below",
             },
         },
         ("成人钙", "dist"): {
-            # 其他系列每月都显；焕动力120粒隔月标（新品前两月标签重叠、避免中间空窗）
-            "default": "all",
+            # 隔月显示；焕动力隔月标
+            "default": "alternate",
             "product_mode": {
                 "焕动力120粒": "alternate",
             },
         },
         ("成人钙", "nd"): {
-            # 其他系列每月都显；焕动力120粒隔月标（新品前两月标签重叠）
-            "default": "all",
+            # 隔月显示；焕动力隔月标
+            "default": "alternate",
             "product_mode": {
                 "焕动力120粒": "alternate",
             },
         },
         ("成人钙", "power"): {
-            # 200粒x2、120粒、汤臣钙DK整体：每月都显；钙尔奇：仅首尾；焕动力：首尾+隔月
+            # 隔月显示；钙尔奇仅首尾；焕动力隔月
             "y_max": 21,
             "y_min": 3,
-            "default": "all",
+            "default": "alternate",
             "product_mode": {
-                "200粒x2": "all",
-                "120粒": "all",
-                "汤臣钙DK整体": "all",
+                "200粒x2": "alternate",
+                "120粒": "alternate",
+                "汤臣钙DK整体": "alternate",
                 "钙尔奇D600 60片": "endpoints",
                 "焕动力120粒": "alternate",
             },
@@ -4059,7 +4069,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
 
         # ==================== 儿童钙 ====================
         ("儿童钙", "price"): {
-            "all_above": True,
             # 所有：首尾两月，中间隔1月显示一个
             "default": "alternate",
             "product_mode": {
@@ -4071,7 +4080,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("儿童钙", "dist"): {
-            "all_above": True,
             # 锌钙特、钙铁锌60片：首尾+波峰值；其他：仅首尾
             "product_mode": {
                 "钙铁锌60片": "peak",
@@ -4082,7 +4090,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("儿童钙", "nd"): {
-            "all_above": True,
             # 锌钙特、钙铁锌60片：首尾+波峰值；其他：仅首尾
             "product_mode": {
                 "钙铁锌60片": "peak",
@@ -4093,7 +4100,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("儿童钙", "power"): {
-            "all_above": True,
             # 液体钙12袋、锌钙特、牛初乳：首尾+波峰值；其他：仅首尾
             "product_mode": {
                 "液体钙12袋": "peak",
@@ -4106,7 +4112,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
 
         # ==================== 成人多维 ====================
         ("成人多维", "price"): {
-            "all_above": True,
             # 男多维60片：首尾月；其他：首尾+隔月
             "product_mode": {
                 "女维120片": "alternate",
@@ -4118,7 +4123,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("成人多维", "dist"): {
-            "all_above": True,
             # 银善存、善存、女维60片、男维120片：首尾+波峰值；其他：仅首尾
             "product_mode": {
                 "银善存91sx2p": "peak",
@@ -4130,7 +4134,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("成人多维", "nd"): {
-            "all_above": True,
             # 银善存、善存、女维60片、男维120片：首尾+波峰值；其他：仅首尾
             "product_mode": {
                 "银善存91sx2p": "peak",
@@ -4142,7 +4145,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("成人多维", "power"): {
-            "all_above": True,
             # 银善存、善存：首尾+隔月；女维120片、男维60片：仅首尾；其他不显示
             "product_mode": {
                 "银善存91sx2p": "alternate",
@@ -4156,7 +4158,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
 
         # ==================== 儿童多维 ====================
         ("儿童多维", "price"): {
-            "all_above": True,
             # 所有：首尾月&每隔1月显示
             "default": "alternate",
             "product_mode": {
@@ -4168,7 +4169,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("儿童多维", "dist"): {
-            "all_above": True,
             # 小施尔康、汤臣儿童60片、仁合堂：首尾+隔月；汤臣青少年、草仙药业：仅首尾
             "product_mode": {
                 "小施尔康多维咀嚼片(10)30s": "alternate",
@@ -4179,7 +4179,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("儿童多维", "nd"): {
-            "all_above": True,
             # 小施尔康、汤臣儿童60片、仁合堂：首尾+隔月；汤臣青少年、草仙药业：仅首尾
             "product_mode": {
                 "小施尔康多维咀嚼片(10)30s": "alternate",
@@ -4190,7 +4189,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("儿童多维", "power"): {
-            "all_above": True,
             # 汤臣青少年60片 与 汤臣儿童60片 数值接近：标签强制放折线下方避免重叠
             "product_side": {"汤臣青少年60片": "below"},
             # 所有：首尾月&每隔1月显示
@@ -4206,7 +4204,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
 
         # ==================== 鱼油 ====================
         ("鱼油", "price"): {
-            "all_above": True,
             # 首尾月&每隔1月显示
             "default": "alternate",
             "product_mode": {
@@ -4217,17 +4214,14 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("鱼油", "dist"): {
-            "all_above": True,
-            # 显示所有月份
-            "default": "all",
+            # 隔月显示
+            "default": "alternate",
         },
         ("鱼油", "nd"): {
-            "all_above": True,
-            # 显示所有月份
-            "default": "all",
+            # 隔月显示
+            "default": "alternate",
         },
         ("鱼油", "power"): {
-            "all_above": True,
             # 100粒：首尾+隔月；其他：首尾+波峰值
             "product_mode": {
                 "100粒": "alternate",
@@ -4239,7 +4233,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
 
         # ==================== 氨糖 ====================
         ("氨糖", "price"): {
-            "all_above": True,
             # 所有都每隔1月显示
             "default": "alternate",
             "product_mode": {
@@ -4250,20 +4243,17 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             },
         },
         ("氨糖", "dist"): {
-            "all_above": True,
-            # 显示所有月份
-            "default": "all",
+            # 隔月显示
+            "default": "alternate",
         },
         ("氨糖", "nd"): {
-            "all_above": True,
-            # 显示所有月份，OTC显示首尾月&每隔1月
-            "default": "all",
+            # 隔月显示，OTC隔月
+            "default": "alternate",
             "product_mode": {
                 "OTC": "alternate",
             },
         },
         ("氨糖", "power"): {
-            "all_above": True,
             "y_max": 70,
             # 金装、OTC：首尾+隔月；白金、旧品：仅首尾
             "product_mode": {
@@ -4276,7 +4266,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
 
         # ==================== 益生菌 ====================
         ("益生菌", "price"): {
-            "all_above": True,
             # 首尾月&每隔1月显示
             "default": "alternate",
             "product_mode": {
@@ -4287,10 +4276,17 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 "B420 20袋": "alternate",
                 "益君康30片": "alternate",
             },
+            "product_side": {
+                "蓝帽48袋": "above",
+                "蓝帽20袋": "above",
+                "益君康30片": "above",
+                "B420 20袋": "below",
+                "畅护10袋": "below",
+                "益倍适总体": "below",
+            },
             "start_from": {"B420 20袋": "26M4"},
         },
         ("益生菌", "dist"): {
-            "all_above": True,
             # 首尾月&每隔1月显示
             "default": "alternate",
             "product_mode": {
@@ -4305,7 +4301,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             "null_months": {"畅护10袋": ["25M4"]},
         },
         ("益生菌", "nd"): {
-            "all_above": True,
             # 首尾月&每隔1月显示
             "default": "alternate",
             "product_mode": {
@@ -4320,7 +4315,6 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             "null_months": {"畅护10袋": ["25M4"]},
         },
         ("益生菌", "power"): {
-            "all_above": True,
             "y_max": 60,
             # 蓝帽48袋、益倍适总体、畅护10袋、B420：首尾+隔月；蓝帽20袋：前三月+后三月；益君康：仅首尾
             "product_mode": {
@@ -4330,6 +4324,14 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 "B420 20袋": "alternate",
                 "蓝帽20袋": "first3last3",
                 "益君康30片": "endpoints",
+            },
+            "product_side": {
+                "蓝帽48袋": "above",
+                "B420 20袋": "above",
+                "益倍适总体": "above",
+                "蓝帽20袋": "below",
+                "益君康30片": "below",
+                "畅护10袋": "below",
             },
             "start_from": {"畅护10袋": "25M5", "B420 20袋": "26M5"},
             "null_months": {"畅护10袋": ["25M4"], "B420 20袋": ["26M4"]},
