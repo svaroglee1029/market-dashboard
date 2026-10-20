@@ -3242,6 +3242,7 @@ SA_CATEGORY_CONFIG = {
             {"name": "E钙蛋520g",          "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健(钙维生素E蛋白粉)", "产品包装": "520g"}},
             {"name": "金装450g",          "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健金装(蛋白粉)", "产品包装": "450g"}},
             {"name": "白金480g",          "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健白金(蛋白粉)", "产品包装": "480g"}},
+            {"name": "新白金礼盒",         "source": "sku", "filters": {"品类": "蛋白粉", "品牌产品": "汤臣倍健白金(蛋白粉)", "产品包装": "300gx2p"}},
             {"name": "汤臣整体",           "source": "sku", "filters": {"品类": "蛋白粉", "品牌": "汤臣倍健"}, "dist_source": "distribution", "dist_filters": {"品牌_NEW": "汤臣倍健蛋白粉"}},
         ],
     },
@@ -3376,16 +3377,17 @@ SHARE_DECIMALS = {
 
 CHART_NAMES = {
     "蛋白粉": {
-        "bar":    ["旧品", "金装", "白金", "E钙"],
+        "bar":    ["旧品", "金装", "白金", "E钙", "新白金礼盒"],
         "brand_total_name": "汤臣整体",
-        "price":  ["金装礼盒装300g*2p", "白金礼盒装330g*2p", "E钙蛋520g", "金装450g", "白金480g"],
-        "dist":   ["旧品", "金装", "白金", "E钙", "汤臣整体"],
-        "power":  ["金装", "白金", "E钙", "汤臣整体"],
+        "price":  ["金装礼盒装300g*2p", "白金礼盒装330g*2p", "新白金礼盒", "E钙蛋520g", "金装450g", "白金480g"],
+        "dist":   ["旧品", "金装", "白金", "E钙", "新白金礼盒", "汤臣整体"],
+        "power":  ["金装", "白金", "E钙", "新白金礼盒", "汤臣整体"],
         "bar_colors": {
             "旧品": "#A6A6A6",
             "金装": "#4472C4",
             "白金": "#FFC000",
             "E钙": "#92D050",
+            "新白金礼盒": "#FFE699",
             "金装礼盒装300g*2p": "#5B9BD5",
             "白金礼盒装330g*2p": "#FFD966",
             "E钙蛋520g": "#00B050",
@@ -3943,11 +3945,12 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 "白金480g": "endpoints",
                 "金装礼盒装300g*2p": "alternate",
                 "白金礼盒装330g*2p": "alternate",
+                "新白金礼盒": "endpoints",
                 "E钙蛋520g": "alternate",
             },
         },
         ("蛋白粉", "dist"): {
-            # 汤臣整体/旧品/金装：每月都显；白金/E钙：仅首尾
+            # 汤臣整体/旧品/金装：每月都显；白金/E钙/新白金礼盒：仅首尾
             "default": "all",
             "product_mode": {
                 "汤臣整体": "all",
@@ -3955,10 +3958,11 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 "金装": "all",
                 "白金": "endpoints",
                 "E钙": "endpoints",
+                "新白金礼盒": "endpoints",
             },
         },
         ("蛋白粉", "nd"): {
-            # 汤臣整体/旧品/金装：每月都显；白金/E钙：仅首尾
+            # 汤臣整体/旧品/金装：每月都显；白金/E钙/新白金礼盒：仅首尾
             "default": "all",
             "product_mode": {
                 "汤臣整体": "all",
@@ -3966,10 +3970,11 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 "金装": "all",
                 "白金": "endpoints",
                 "E钙": "endpoints",
+                "新白金礼盒": "endpoints",
             },
         },
         ("蛋白粉", "power"): {
-            # 汤臣整体：每月都显；金装：首尾月；白金/E钙：仅首尾；旧品：不显示
+            # 汤臣整体：每月都显；金装：首尾月；白金/E钙/新白金礼盒：仅首尾；旧品：不显示
             "default": "all",
             "product_mode": {
                 "汤臣整体": "all",
@@ -3977,6 +3982,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 "金装": "endpoints",
                 "白金": "endpoints",
                 "E钙": "endpoints",
+                "新白金礼盒": "endpoints",
             },
         },
 
