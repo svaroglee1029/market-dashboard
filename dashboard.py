@@ -1826,8 +1826,8 @@ def page3(sel_ym, SEL_MONTHS):
             yref="paper",
             x0=first_idx - 0.5,
             x1=last_idx + 0.5,
-            y0=1.03,
-            y1=1.07,
+            y0=1.12,
+            y1=1.16,
             fillcolor="#f0f0f0",
             line=dict(color="#ddd", width=1),
             layer="above"
@@ -1835,7 +1835,7 @@ def page3(sel_ym, SEL_MONTHS):
 
         fig.add_annotation(
             x=mid_idx,
-            y=1.05,
+            y=1.14,
             xref="x",
             yref="paper",
             text=f"{year}年",
@@ -1885,7 +1885,7 @@ def page3(sel_ym, SEL_MONTHS):
         height=420,
         barmode="stack",
         bargap=0.15,
-        margin=dict(t=140, b=30, l=0, r=0),
+        margin=dict(t=170, b=30, l=0, r=0),
         paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(size=15, family="Microsoft YaHei, sans-serif"),
@@ -1911,7 +1911,7 @@ def page3(sel_ym, SEL_MONTHS):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=1.15,
+            y=1.28,
             xanchor="center",
             x=0.5,
             font=dict(size=11),
