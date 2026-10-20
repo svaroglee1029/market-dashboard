@@ -3751,9 +3751,8 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
             _line_dec = text_decimals
             if name_decimals and name in name_decimals:
                 _line_dec = name_decimals[name]
-            if round(v, _line_dec) == 0:
-                if round(v, 1) == 0:
-                    continue
+            # 规则：<0.5 强制显示1位小数（覆盖配置），否则按品类配置的位数
+            if abs(v) < 0.5:
                 _display_dec = 1
             else:
                 _display_dec = _line_dec
@@ -3806,9 +3805,14 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
             if label_color and y_max is not None and _t_pos > float(y_max) - 1.0:
                 # 总和标签超出柱状图范围：改为黑色
                 _t_color = "black"
+            # <0.5 强制1位小数，否则按品类配置
+            if abs(_t_display) < 0.5:
+                _t_text = f"{_t_display:.1f}"
+            else:
+                _t_text = f"{_t_display:.{_decimals_total}f}"
             _all_labels[_lbl].append({
                 "y": _total_label_y,
-                "text": f"{_t_display:.{_decimals_total}f}",
+                "text": _t_text,
                 "color": _t_color,
                 "is_total": True,
                 "x_label": _lbl,
@@ -4476,18 +4480,16 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                     vals.iloc[_ni] = float('nan')
         c = colors.get(name, SA_COLORS[idx % len(SA_COLORS)])
         if dashed:
-            # ND 虚线：在线条上每个数据点加一个小圆点，图例仍为虚线（中间出现圆点标记）
+            # ND 虚线：纯虚线，不加圆点
             fig.add_scatter(
-                x=labels, y=vals, mode="lines+markers", name=name,
+                x=labels, y=vals, mode="lines", name=name,
                 line=dict(width=2.0, shape="spline", smoothing=1.3, color=c, dash="6px,4px"),
-                marker=dict(symbol="circle", size=6, color=c, line=dict(width=0)),
                 hovertemplate=f"{name}<br>%{{x}}：%{{y:.{decimals}f}}<extra></extra>",
             )
         else:
             fig.add_scatter(
-                x=labels, y=vals, mode="lines+markers", name=name,
+                x=labels, y=vals, mode="lines", name=name,
                 line=dict(width=2.3, shape="spline", smoothing=1.3, color=c),
-                marker=dict(size=5),
                 hovertemplate=f"{name}<br>%{{x}}：%{{y:.{decimals}f}}<extra></extra>",
             )
         valid = [i for i, v in enumerate(vals) if not pd.isna(v)]
@@ -4542,20 +4544,21 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             # 计算同侧排名（同侧第0、1、2个...）
             _side_rank = _rank // 2
 
-        # 规则化标签：默认 top 6px；月度避让在下方统一处理
-        yshift = 6
+        # 规则化标签：默认 top 12px（拉开与折线距离）；月度避让在下方统一处理
+        yshift = 12
         _xshift = 0
 
         for i in sorted(annotate_indices):
             if i >= len(vals) or pd.isna(vals.iloc[i]):
                 continue
             _v = float(vals.iloc[i])
-            # 值为0时保留一位小数；name_decimals 可单独指定某条线的小数位
-            _disp_dec = decimals
+            # <0.5 强制1位小数；name_decimals 优先级最高；否则按品类 decimals 配置
             if name_decimals and name in name_decimals:
                 _disp_dec = name_decimals[name]
-            elif decimals == 0 and round(_v, 0) == 0:
+            elif abs(_v) < 0.5:
                 _disp_dec = 1
+            else:
+                _disp_dec = decimals
             # 首尾月标签贴近对应圆点（仅小幅偏移）；上下线接近时的左右错开在月度避让中处理
             _xs = 0
             if i == valid[0]:
@@ -4726,12 +4729,12 @@ def render_charts(metric_df, cat_label):
         _hide_seg = dict(OTC=["25M10", "25M11", "25M12", "26M1", "26M2"]) if cat_label == "氨糖" else None
         _name_lbl_color = dict(青少年多维60s="white") if cat_label == "儿童多维" else None
         _figs = {
-            "bar1": make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=sales_dec, height=437, brand_total_name=_btn, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar1_dec_kwargs),
-            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=437, y_max=share_ymax, brand_total_name=_btn, label_color=_share_lbl_color, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar2_dec_kwargs),
-            "line_wd": make_line_chart(metric_df, "dist", "WD动销铺货率（%）", dist_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"], **_wd_dec_kw),
-            "line_nd": make_line_chart(metric_df, "nd", "ND数值铺货率（%）", nd_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label, dashed=True, margin_l=_LM["l"], margin_r=_LM["r"], **_nd_dec_kw),
-            "line_price": make_line_chart(metric_df, "price", "重点SKU均价（元/盒）", price_names, price_colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
-            "line_power": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=437, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
+            "bar1": make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=sales_dec, height=340, brand_total_name=_btn, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar1_dec_kwargs),
+            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=340, y_max=share_ymax, brand_total_name=_btn, label_color=_share_lbl_color, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar2_dec_kwargs),
+            "line_wd": make_line_chart(metric_df, "dist", "WD动销铺货率（%）", dist_names, colors, decimals=0, height=340, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"], **_wd_dec_kw),
+            "line_nd": make_line_chart(metric_df, "nd", "ND数值铺货率（%）", nd_names, colors, decimals=0, height=340, label_mode="alternate", cat_label=cat_label, dashed=True, margin_l=_LM["l"], margin_r=_LM["r"], **_nd_dec_kw),
+            "line_price": make_line_chart(metric_df, "price", "重点SKU均价（元/盒）", price_names, price_colors, decimals=0, height=340, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
+            "line_power": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=340, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
         }
         for _lk in ("line_wd", "line_nd", "line_price", "line_power"):
             _figs[_lk].update_layout(
@@ -4765,6 +4768,43 @@ def render_sku_analysis(selected_cat, selected_month, display_months):
 
     render_conclusion(f"sa_{selected_cat}", selected_month)
 
+    # ===== YTD 摘要框（参考集团图右上角黄底框）=====
+    _ytd_m = period_months("YTD", selected_month)
+    _ytd_ly_m = period_months("YTD_LY", selected_month)
+    _cat = config["cat"]
+    _cat_mask = sku_df["品类"] == _cat
+    # 汤臣品牌筛选：从 rows 里 brand_total_name 对应的 filters 取品牌
+    _btn_name = CHART_NAMES.get(selected_cat, {}).get("brand_total_name")
+    _brand_filter = None
+    for _r in config["rows"]:
+        if _r["name"] == _btn_name:
+            _brand_filter = _r.get("filters", {})
+            break
+    _brand_mask = _cat_mask
+    if _brand_filter:
+        for _k, _v in _brand_filter.items():
+            if _k == "品类":
+                continue
+            _brand_mask = _brand_mask & (sku_df[_k] == _v)
+    _cat_ytd = sku_df.loc[_cat_mask & sku_df["year_month"].isin(_ytd_m), SALES_COL].sum()
+    _cat_ly  = sku_df.loc[_cat_mask & sku_df["year_month"].isin(_ytd_ly_m), SALES_COL].sum()
+    _brand_ytd = sku_df.loc[_brand_mask & sku_df["year_month"].isin(_ytd_m), SALES_COL].sum()
+    _brand_ly  = sku_df.loc[_brand_mask & sku_df["year_month"].isin(_ytd_ly_m), SALES_COL].sum()
+    _cat_yoy = (_cat_ytd / _cat_ly - 1) * 100 if _cat_ly else np.nan
+    _sh_ytd = _brand_ytd / _cat_ytd * 100 if _cat_ytd else np.nan
+    _sh_ly  = _brand_ly / _cat_ly * 100 if _cat_ly else np.nan
+    _sh_diff = _sh_ytd - _sh_ly if not (np.isnan(_sh_ytd) or np.isnan(_sh_ly)) else np.nan
+    _cat_yoy_color = "#E53935" if _cat_yoy < 0 else "#00B050"
+    _sh_diff_color = "#00B050" if _sh_diff >= 0 else "#E53935"
+    _sh_diff_sign = "+" if _sh_diff >= 0 else ""
+    st.markdown(f"""
+    <div style="background:#FFF8E1;border:1px solid #FFB300;border-radius:6px;padding:8px 14px;margin:0 0 8px 0;font-size:13px;line-height:1.6;">
+        <b>{_cat}大盘：</b><span style="color:{_cat_yoy_color}">{_cat_yoy:+.0f}%</span>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <b>汤臣YTD份额：</b>{_sh_ytd:.1f}%（<span style="color:{_sh_diff_color}">{_sh_diff_sign}{_sh_diff:.1f}pts</span>）
+    </div>
+    """, unsafe_allow_html=True)
+
     row_keys_json = json.dumps(config["rows"])
     months_json = json.dumps(display_months)
 
@@ -4777,7 +4817,7 @@ def render_sku_analysis(selected_cat, selected_month, display_months):
                 "请**彻底重启**看板（运行窗口 Ctrl+C 后重新 streamlit run），并确认终端启动诊断中各表“铺货率列=True”。\n\n"
                 "明细：" + "；".join(_bad)
             )
-        st.markdown(f"<h3 style='text-align:center;margin:12px 0 18px;color:#111'>{TITLE_MAP.get(selected_cat, selected_cat)}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='text-align:center;margin:8px 0 10px;color:#111'>{TITLE_MAP.get(selected_cat, selected_cat)}</h3>", unsafe_allow_html=True)
         render_charts(metric_df, selected_cat)
 
 
