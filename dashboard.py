@@ -3086,6 +3086,10 @@ def make_trend_chart(cat_label, cat, brands, months):
             if cat_label == "成人多维" and "汤臣倍健" in _bn and m >= "202504":
                 _tp.append("bottom center")
                 continue
+            # 氨糖-朗迪：26M6/26M7/26M8 数据标签放折线下方
+            if cat_label == "氨糖" and "朗迪" in _bn and _lbl in ("26M6", "26M7", "26M8"):
+                _tp.append("bottom center")
+                continue
             # Check for overlap with other brands at this month
             _overlap = False
             _am_higher = True
@@ -3156,7 +3160,7 @@ def make_trend_chart(cat_label, cat, brands, months):
                 if _lbl == "25M10":
                     _ys = -18
                 elif _lbl == "25M12":
-                    _ys = 18
+                    _ys = 14
             # 氨糖-九力：26M8 标签放对应点位置右侧（与圆点同高）
             if cat_label == "氨糖" and "九力" in _bn:
                 _lbl = ym_lab(_m)
@@ -3166,6 +3170,11 @@ def make_trend_chart(cat_label, cat, brands, months):
             # 成人多维-汤臣倍健 25M4起：标签放折线下方但收小下移量，避免与下方月份刻度重叠
             if cat_label == "成人多维" and "汤臣倍健" in _bn and _m >= "202504":
                 _ys = -8
+            # 益生菌-益君康：26M7/26M8 数据标签往下移动一丢丢
+            if cat_label == "益生菌" and "益君康" in _bn:
+                _lbl = ym_lab(_m)
+                if _lbl in ("26M7", "26M8"):
+                    _ys = 12
             # 成人钙-励全：首尾月标签手动偏移（25M1 左下、26M8 右移）
             if cat_label == "成人钙" and "励全" in _bn:
                 _lbl = ym_lab(_m)
@@ -3946,7 +3955,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                 y_cursor += float(last_v.iloc[0]) if last_v.notna().any() else 0
     fig = _chart_base(fig, title, height, legend_y, show_yaxis=False, legend_below=True)
     # 柱图绘图区向两边拉长：左右边距与下方线图一致（l=24/r=24），柱子整体更宽
-    fig.update_layout(margin=dict(t=80, b=48, l=24, r=24))
+    fig.update_layout(margin=dict(t=115, b=48, l=24, r=24))
     fig.update_layout(showlegend=True)
     fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
     if metric == "share":
@@ -4882,9 +4891,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("益生菌", "power", "益君康30片", 19): (20, 6),
         ("益生菌", "power", "蓝帽20袋", 0): (-20, 0),
         ("益生菌", "power", "蓝帽20袋", 19): (20, 0),
-        # 益生菌-单点卖力：B420 20袋 26M5、26M8 往下方移动
-        ("益生菌", "power", "B420 20袋", 16): (0, -20),
-        ("益生菌", "power", "B420 20袋", 19): (10, -20),
+        # 益生菌-单点卖力：B420 20袋 26M5、26M8 往上方移一丢丢
+        ("益生菌", "power", "B420 20袋", 16): (0, -14),
+        ("益生菌", "power", "B420 20袋", 19): (10, -14),
         # 益生菌-均价：蓝帽20袋 26M8 数据标签往右上移动
         ("益生菌", "price", "蓝帽20袋", 19): (10, 12),
     }
@@ -4959,7 +4968,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         # 益生菌 ND 整线：畅护10袋 除25M11外放折线上方；B420/蓝帽20袋 放折线下方（B420 26M8 再往下移一丢丢）
         if cat_label == "益生菌" and metric == "nd":
             if _s["name"] == "畅护10袋":
-                _s["yshift"] = -8 if _s["mi"] == 10 else 13   # 25M11 放下方，其他往上移动一丢丢
+                _s["yshift"] = -8 if _s["mi"] == 10 else (8 if _s["mi"] == 4 else 13)   # 25M11 放下方；25M5 往下移一丢丢；其他往上
             elif _s["name"] in ("B420 20袋", "蓝帽20袋"):
                 if _s["name"] == "B420 20袋" and _s["mi"] == 19:
                     _s["yshift"] = -13   # 26M8 往下移一丢丢
@@ -4978,9 +4987,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 _s["yshift"] = 8
         # 益生菌 单点卖力：畅护10袋 整线放折线下方；25M5 往左上移动（往下移一丢丢）
         if cat_label == "益生菌" and metric == "power" and _s["name"] == "畅护10袋":
-            if _s["mi"] == 4:   # 25M5 往左上移动、往下移一丢丢
+            if _s["mi"] == 4:   # 25M5 往左上移动、再往下移一丢丢
                 _s["xshift"] = -10
-                _s["yshift"] = 6
+                _s["yshift"] = 2
             else:
                 _s["yshift"] = -8
         # 益生菌 单点卖力：益倍适总体 数据标签放折线上方
@@ -5209,32 +5218,38 @@ def render_charts(metric_df, cat_label):
             _n = len(_line_names[_lk])
             # 儿童钙5条线但图例三行，需更小字体压成两行；且需更大顶部margin避免标题与图例重叠
             _is_kid = (cat_label == "儿童钙")
-            _leg_fs = 9 if _is_kid else 10
-            _leg_iw = 30
+            _is_multi_kid = (cat_label in ("儿童多维", "成人多维"))
+            _leg_fs = 8 if _is_multi_kid else (9 if _is_kid else 10)
+            _leg_iw = 170 if _is_multi_kid else 30
             # 儿童钙：长线名缩短，图例压成两行
             if _is_kid:
                 for _tr in _figs[_lk].data:
                     if _tr.name == "锌钙特葡萄糖酸钙锌口服液24袋":
                         _tr.name = "锌钙特口服液24袋"
             if _lk in ("line_wd", "line_nd"):
-                # WD/ND：margin 与柱状图一致(80)，图例与左侧柱状图图例水平对齐
-                _mt_wd = 80
+                # WD/ND：margin 与柱状图一致(115)，图例与左侧柱状图图例水平对齐
+                _mt_wd = 135 if _is_multi_kid else 115
                 _figs[_lk].update_layout(
                     margin=dict(t=_mt_wd, b=48),
-                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5,
+                    title=dict(y=0.97 if _is_multi_kid else 0.96),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.06 if _is_multi_kid else 1.05, xanchor="center", x=0.5,
                                 font=dict(size=_leg_fs, family="Microsoft YaHei"),
                                 itemsizing="constant", itemwidth=_leg_iw),
                 )
             else:
-                # 均价/单点：margin 与柱状图一致(80)，图例与左侧柱状图图例水平对齐
-                _mt = 80
-                _leg_y = 1.02 if _n < 6 else 1.005
+                # 均价/单点：margin 与柱状图一致(115)，图例与左侧柱状图图例水平对齐
+                _mt = 135 if _is_multi_kid else 115
+                _leg_y = (1.06 if _is_multi_kid else (1.05 if _n < 6 else 1.03))
                 _figs[_lk].update_layout(
                     margin=dict(t=_mt, b=48),
+                    title=dict(y=0.97 if _is_multi_kid else 0.96),
                     legend=dict(orientation="h", yanchor="bottom", y=_leg_y, xanchor="center", x=0.5,
                                 font=dict(size=_leg_fs, family="Microsoft YaHei"),
                                 itemsizing="constant", itemwidth=_leg_iw),
                 )
+        # 柱状图(bar1/bar2)：标题位置与折线图一致（更靠上、与图例拉开），横向居中
+        for _bk in ("bar1", "bar2"):
+            _figs[_bk].update_layout(title=dict(y=0.96, x=0.5, xanchor="center"))
         st.session_state[_cache_key] = _figs
         st.session_state[f"{_cache_key}_h"] = _data_hash
 
