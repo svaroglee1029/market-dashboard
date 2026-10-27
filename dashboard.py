@@ -427,9 +427,9 @@ st.markdown("""
         border-radius: 8px; overflow: hidden;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         table-layout: fixed;
-        height: 340px;
+        height: 460px;
     }
-    .dt-p2 tr { height: calc(340px / 6); }
+    .dt-p2 tr { height: calc(460px / 6); }
     .dt-p2 th { border: 1px solid #E4E9F0; background: #EEF2FA; font-weight: 600; color: #1A1A2E; font-size: 16px; padding: 6px 6px; line-height: 1.2; text-align: center; vertical-align: middle; }
     .dt-p2 td { border: 1px solid #E4E9F0; padding: 6px 10px; text-align: center; vertical-align: middle; font-size: 16px; }
     .dt-p2 td:first-child { text-align: left; font-weight: 600; }
@@ -940,7 +940,7 @@ st.markdown("""
 
     /* ====== 全局顶部留白，让标题下移 ====== */
     .main .block-container {
-        padding-top: 4rem !important;
+        padding-top: 7rem !important;
     }
 
     /* ====== 时间选择器 & 滚轴美化 ====== */
@@ -3214,7 +3214,7 @@ def make_trend_chart(cat_label, cat, brands, months):
                 break
     fig.update_layout(
         title=dict(text=f"{cat_label}-重点品牌份额(%)趋势", x=0.5, font=dict(size=16, color="#666")),
-        height=260,
+        height=280,
         margin=dict(t=46, b=48, l=0, r=0),
         paper_bgcolor="white",
         plot_bgcolor="white",
@@ -5232,8 +5232,7 @@ def render_charts(metric_df, cat_label):
     left, mid, right = st.columns([0.34, 0.33, 0.33], gap="medium")
     with left:
         st.plotly_chart(_figs["bar1"], width='stretch', config=_PCFG)
-        with st.expander("展开更多：销售额份额柱状图", expanded=False):
-            st.plotly_chart(_figs["bar2"], width='stretch', config=_PCFG)
+        st.plotly_chart(_figs["bar2"], width='stretch', config=_PCFG)
     with mid:
         st.plotly_chart(_figs["line_wd"], width='stretch', config=_PCFG)
         st.plotly_chart(_figs["line_nd"], width='stretch', config=_PCFG)
