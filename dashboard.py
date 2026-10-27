@@ -427,9 +427,9 @@ st.markdown("""
         border-radius: 8px; overflow: hidden;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         table-layout: fixed;
-        height: 340px;
+        height: 325px;
     }
-    .dt-p2 tr { height: calc(340px / 6); }
+    .dt-p2 tr { height: calc(325px / 6); }
     .dt-p2 th { border: 1px solid #E4E9F0; background: #EEF2FA; font-weight: 600; color: #1A1A2E; font-size: 16px; padding: 6px 6px; line-height: 1.2; text-align: center; vertical-align: middle; }
     .dt-p2 td { border: 1px solid #E4E9F0; padding: 6px 10px; text-align: center; vertical-align: middle; font-size: 16px; }
     .dt-p2 td:first-child { text-align: left; font-weight: 600; }
@@ -3214,7 +3214,7 @@ def make_trend_chart(cat_label, cat, brands, months):
                 break
     fig.update_layout(
         title=dict(text=f"{cat_label}-重点品牌份额(%)趋势", x=0.5, font=dict(size=16, color="#666")),
-        height=260,
+        height=250,
         margin=dict(t=46, b=48, l=0, r=0),
         paper_bgcolor="white",
         plot_bgcolor="white",
@@ -3248,7 +3248,7 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
     n_table_rows = len(table_brands) + 3  # +1 category row, +2 header rows
     table_row_h = 33
     table_height = n_table_rows * table_row_h
-    trend_chart_h = 260  # make_trend_chart height
+    trend_chart_h = 250  # make_trend_chart height
     streamlit_gap_ba = 18
     left_chart_height = table_height + streamlit_gap_ba + trend_chart_h
 
@@ -4877,11 +4877,14 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         ("益生菌", "nd", "益君康30片", 10): (0, -5),
         ("益生菌", "nd", "益君康30片", 12): (0, 10),
         ("益生菌", "nd", "益君康30片", 14): (0, -5),
-        # 益生菌-单点卖力：益君康30片、蓝帽20袋 首尾月标签与对应点同一水平线、留一点间隙
-        ("益生菌", "power", "益君康30片", 0): (20, 0),
-        ("益生菌", "power", "益君康30片", 19): (20, 0),
-        ("益生菌", "power", "蓝帽20袋", 0): (20, 0),
+        # 益生菌-单点卖力：益君康30片、蓝帽20袋 25M1 往左放对应点左侧留空隙；益君康30片 26M8 往上移一丢丢
+        ("益生菌", "power", "益君康30片", 0): (-20, 0),
+        ("益生菌", "power", "益君康30片", 19): (20, 6),
+        ("益生菌", "power", "蓝帽20袋", 0): (-20, 0),
         ("益生菌", "power", "蓝帽20袋", 19): (20, 0),
+        # 益生菌-单点卖力：B420 20袋 26M5 往上移一丢丢；26M8 往右上移一丢丢
+        ("益生菌", "power", "B420 20袋", 16): (0, 20),
+        ("益生菌", "power", "B420 20袋", 19): (10, 20),
         # 益生菌-均价：蓝帽20袋 26M8 数据标签往右上移动
         ("益生菌", "price", "蓝帽20袋", 19): (10, 12),
     }
@@ -4962,19 +4965,24 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                     _s["yshift"] = -13   # 26M8 往下移一丢丢
                 else:
                     _s["yshift"] = -8
+            elif _s["name"] == "蓝帽48袋":
+                _s["yshift"] = 8   # 蓝帽48袋 数据标签全部放折线上方、略微靠近折线
         # 益生菌 均价：畅护10袋 整线放折线下方；益君康30片 整线放折线上方
         if cat_label == "益生菌" and metric == "price":
             if _s["name"] == "畅护10袋":
-                _s["yshift"] = -16
+                _s["yshift"] = -12 if _s["mi"] == 3 else -16   # 25M4 往上移动一丢丢
             elif _s["name"] == "益君康30片":
                 _s["yshift"] = 8
-        # 益生菌 单点卖力：畅护10袋 整线放折线下方；25M5 往左上移动
+        # 益生菌 单点卖力：畅护10袋 整线放折线下方；25M5 往左上移动（往下移一丢丢）
         if cat_label == "益生菌" and metric == "power" and _s["name"] == "畅护10袋":
-            if _s["mi"] == 4:   # 25M5 往左上移动
+            if _s["mi"] == 4:   # 25M5 往左上移动、往下移一丢丢
                 _s["xshift"] = -10
-                _s["yshift"] = 10
+                _s["yshift"] = 6
             else:
                 _s["yshift"] = -8
+        # 益生菌 单点卖力：益倍适总体 数据标签放折线上方
+        if cat_label == "益生菌" and metric == "power" and _s["name"] == "益倍适总体":
+            _s["yshift"] = 8
         # 儿童多维-WD/ND：仁合堂五维赖氨酸12袋 整线标签放折线下方
         if cat_label == "儿童多维" and metric in ("dist", "nd") and _s["name"] == "仁合堂五维赖氨酸12袋":
             _s["yshift"] = -16
@@ -5186,12 +5194,12 @@ def render_charts(metric_df, cat_label):
         _hide_seg = dict(OTC=["25M10", "25M11", "25M12", "26M1", "26M2"]) if cat_label == "氨糖" else None
         _name_lbl_color = dict(青少年多维60s="white") if cat_label == "儿童多维" else None
         _figs = {
-            "bar1": make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=sales_dec, height=325, brand_total_name=_btn, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar1_dec_kwargs),
-            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=325, y_max=share_ymax, brand_total_name=_btn, label_color=_share_lbl_color, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, hide_below_value={"液体钙12袋": 0.1} if cat_label == "儿童钙" else None, force_show_names=["钙镁90片"] if cat_label == "儿童钙" else None, **_bar_gap_kwargs, **_bar2_dec_kwargs),
-            "line_wd": make_line_chart(metric_df, "dist", "WD动销铺货率（%）", dist_names, colors, decimals=0, height=325, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"], **_wd_dec_kw),
-            "line_nd": make_line_chart(metric_df, "nd", "ND数值铺货率（%）", nd_names, colors, decimals=0, height=325, label_mode="alternate", cat_label=cat_label, dashed=True, margin_l=_LM["l"], margin_r=_LM["r"], **_nd_dec_kw),
-            "line_price": make_line_chart(metric_df, "price", "重点SKU均价（元/盒）", price_names, price_colors, decimals=0, height=325, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
-            "line_power": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=325, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
+            "bar1": make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=sales_dec, height=320, brand_total_name=_btn, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar1_dec_kwargs),
+            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=320, y_max=share_ymax, brand_total_name=_btn, label_color=_share_lbl_color, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, hide_below_value={"液体钙12袋": 0.1} if cat_label == "儿童钙" else None, force_show_names=["钙镁90片"] if cat_label == "儿童钙" else None, **_bar_gap_kwargs, **_bar2_dec_kwargs),
+            "line_wd": make_line_chart(metric_df, "dist", "WD动销铺货率（%）", dist_names, colors, decimals=0, height=320, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"], **_wd_dec_kw),
+            "line_nd": make_line_chart(metric_df, "nd", "ND数值铺货率（%）", nd_names, colors, decimals=0, height=320, label_mode="alternate", cat_label=cat_label, dashed=True, margin_l=_LM["l"], margin_r=_LM["r"], **_nd_dec_kw),
+            "line_price": make_line_chart(metric_df, "price", "重点SKU均价（元/盒）", price_names, price_colors, decimals=0, height=320, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
+            "line_power": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=320, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
         }
         _line_names = {"line_wd": dist_names, "line_nd": nd_names, "line_price": price_names, "line_power": power_names}
         for _lk in ("line_wd", "line_nd", "line_price", "line_power"):
