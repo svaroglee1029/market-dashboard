@@ -4954,6 +4954,16 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                     _s["yshift"] = -20
             elif _s["name"] == "焕动力120粒" and _s["mi"] == 17:
                 _s["yshift"] = 20
+            elif _s["name"] == "焕动力120粒" and _s["mi"] == 13:
+                _s["yshift"] = 10
+        # 成人钙 ND：焕动力120粒 放折线下方；200粒x2 放折线上方
+        if cat_label == "成人钙" and metric == "nd":
+            if _s["name"] == "焕动力120粒":
+                _s["yshift"] = -14
+            elif _s["name"] == "200粒x2":
+                _s["yshift"] = 14
+            elif _s["name"] == "120粒":
+                _s["yshift"] = 8 if _s["yshift"] >= 0 else -8
         # 益生菌 WD 整线：所有标签贴近折线（±8）；畅护10袋 25M5 例外往下
         if cat_label == "益生菌" and metric == "dist":
             if _s["name"] in ("益君康30片", "畅护10袋"):
@@ -5231,25 +5241,25 @@ def render_charts(metric_df, cat_label):
                 _mt_wd = 135 if _is_multi_kid else 115
                 _figs[_lk].update_layout(
                     margin=dict(t=_mt_wd, b=48),
-                    title=dict(y=0.97 if _is_multi_kid else 0.96),
-                    legend=dict(orientation="h", yanchor="bottom", y=1.06 if _is_multi_kid else 1.05, xanchor="center", x=0.5,
+                    title=dict(y=0.92 if _is_multi_kid else 0.90),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.10 if _is_multi_kid else 1.08, xanchor="center", x=0.5,
                                 font=dict(size=_leg_fs, family="Microsoft YaHei"),
                                 itemsizing="constant", itemwidth=_leg_iw),
                 )
             else:
                 # 均价/单点：margin 与柱状图一致(115)，图例与左侧柱状图图例水平对齐
                 _mt = 135 if _is_multi_kid else 115
-                _leg_y = (1.06 if _is_multi_kid else (1.05 if _n < 6 else 1.03))
+                _leg_y = (1.10 if _is_multi_kid else (1.08 if _n < 6 else 1.06))
                 _figs[_lk].update_layout(
                     margin=dict(t=_mt, b=48),
-                    title=dict(y=0.97 if _is_multi_kid else 0.96),
+                    title=dict(y=0.92 if _is_multi_kid else 0.90),
                     legend=dict(orientation="h", yanchor="bottom", y=_leg_y, xanchor="center", x=0.5,
                                 font=dict(size=_leg_fs, family="Microsoft YaHei"),
                                 itemsizing="constant", itemwidth=_leg_iw),
                 )
         # 柱状图(bar1/bar2)：标题位置与折线图一致（更靠上、与图例拉开），横向居中
         for _bk in ("bar1", "bar2"):
-            _figs[_bk].update_layout(title=dict(y=0.96, x=0.5, xanchor="center"))
+            _figs[_bk].update_layout(title=dict(y=0.90, x=0.5, xanchor="center"), legend=dict(y=1.06))
         st.session_state[_cache_key] = _figs
         st.session_state[f"{_cache_key}_h"] = _data_hash
 
