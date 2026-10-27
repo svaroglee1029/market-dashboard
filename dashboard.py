@@ -5216,12 +5216,12 @@ def render_charts(metric_df, cat_label):
         _hide_seg = dict(OTC=["25M10", "25M11", "25M12", "26M1", "26M2"]) if cat_label == "氨糖" else None
         _name_lbl_color = dict(青少年多维60s="white") if cat_label == "儿童多维" else None
         _figs = {
-            "bar1": make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=sales_dec, height=335, brand_total_name=_btn, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar1_dec_kwargs),
-            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=335, y_max=share_ymax, brand_total_name=_btn, label_color=_share_lbl_color, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, hide_below_value={"液体钙12袋": 0.1} if cat_label == "儿童钙" else None, force_show_names=["钙镁90片"] if cat_label == "儿童钙" else None, **_bar_gap_kwargs, **_bar2_dec_kwargs),
-            "line_wd": make_line_chart(metric_df, "dist", "WD动销铺货率（%）", dist_names, colors, decimals=0, height=320, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"], **_wd_dec_kw),
-            "line_nd": make_line_chart(metric_df, "nd", "ND数值铺货率（%）", nd_names, colors, decimals=0, height=320, label_mode="alternate", cat_label=cat_label, dashed=True, margin_l=_LM["l"], margin_r=_LM["r"], **_nd_dec_kw),
-            "line_price": make_line_chart(metric_df, "price", "重点SKU均价（元/盒）", price_names, price_colors, decimals=0, height=320, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
-            "line_power": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=320, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
+            "bar1": make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=sales_dec, height=355, brand_total_name=_btn, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar1_dec_kwargs),
+            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=355, y_max=share_ymax, brand_total_name=_btn, label_color=_share_lbl_color, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, hide_below_value={"液体钙12袋": 0.1} if cat_label == "儿童钙" else None, force_show_names=["钙镁90片"] if cat_label == "儿童钙" else None, **_bar_gap_kwargs, **_bar2_dec_kwargs),
+            "line_wd": make_line_chart(metric_df, "dist", "WD动销铺货率（%）", dist_names, colors, decimals=0, height=355, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"], **_wd_dec_kw),
+            "line_nd": make_line_chart(metric_df, "nd", "ND数值铺货率（%）", nd_names, colors, decimals=0, height=355, label_mode="alternate", cat_label=cat_label, dashed=True, margin_l=_LM["l"], margin_r=_LM["r"], **_nd_dec_kw),
+            "line_price": make_line_chart(metric_df, "price", "重点SKU均价（元/盒）", price_names, price_colors, decimals=0, height=355, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
+            "line_power": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=355, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
         }
         _line_names = {"line_wd": dist_names, "line_nd": nd_names, "line_price": price_names, "line_power": power_names}
         for _lk in ("line_wd", "line_nd", "line_price", "line_power"):
@@ -5242,14 +5242,14 @@ def render_charts(metric_df, cat_label):
                 _figs[_lk].update_layout(
                     margin=dict(t=_mt_wd, b=48),
                     title=dict(y=0.95 if _is_multi_kid else 0.93),
-                    legend=dict(orientation="h", yanchor="middle", y=1.14 if _is_multi_kid else 1.12, xanchor="center", x=0.5,
+                    legend=dict(orientation="h", yanchor="middle", y=1.18 if _is_multi_kid else 1.16, xanchor="center", x=0.5,
                                 font=dict(size=_leg_fs, family="Microsoft YaHei"),
                                 itemsizing="constant", itemwidth=_leg_iw),
                 )
             else:
                 # 均价/单点：margin 与柱状图一致(115)，图例与左侧柱状图图例水平对齐
                 _mt = 135 if _is_multi_kid else 115
-                _leg_y = (1.14 if _is_multi_kid else (1.12 if _n < 6 else 1.10))
+                _leg_y = (1.18 if _is_multi_kid else (1.16 if _n < 6 else 1.14))
                 _figs[_lk].update_layout(
                     margin=dict(t=_mt, b=48),
                     title=dict(y=0.95 if _is_multi_kid else 0.93),
@@ -5259,7 +5259,7 @@ def render_charts(metric_df, cat_label):
                 )
         # 柱状图(bar1/bar2)：标题位置与折线图一致（更靠上、与图例拉开），横向居中
         for _bk in ("bar1", "bar2"):
-            _figs[_bk].update_layout(title=dict(y=0.93, x=0.5, xanchor="center"), legend=dict(y=1.10, yanchor="middle"))
+            _figs[_bk].update_layout(title=dict(y=0.93, x=0.5, xanchor="center"), legend=dict(y=1.14, yanchor="middle"))
         st.session_state[_cache_key] = _figs
         st.session_state[f"{_cache_key}_h"] = _data_hash
 
