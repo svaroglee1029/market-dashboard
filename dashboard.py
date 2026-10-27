@@ -376,9 +376,9 @@ YM_LABS = [ym_lab(m) for m in ind_months]
 st.markdown("""
 <style>
     html, body, [class*="css"] { font-size: 14px !important; font-family: "Microsoft YaHei", Arial, sans-serif; }
-    .block-container { padding-top: 0.4rem; background: #F7F9FC; max-width: 100% !important; }
-    .main .block-container { max-width: 100% !important; padding: 0.4rem 1.2rem 0.6rem !important; background: #F7F9FC; }
-    div.block-container { max-width: 100% !important; padding: 0.4rem 1.2rem !important; }
+    .block-container { padding-top: 0.5rem; background: #F7F9FC; max-width: 100% !important; }
+    .main .block-container { max-width: 100% !important; padding: 0.6rem 1.35rem 1rem !important; background: #F7F9FC; }
+    div.block-container { max-width: 100% !important; padding: 0.5rem 1.5rem !important; }
 
     /* 侧边栏精致小巧 */
     section[data-testid="stSidebar"] {
@@ -416,8 +416,8 @@ st.markdown("""
         border-radius: 8px; overflow: hidden;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     }
-    .dt th, .dt td { border: 1px solid #E4E9F0; padding: 5px 8px; text-align: center; vertical-align: middle; font-family: Arial, "Microsoft YaHei", sans-serif; height: 28px; }
-    .dt th { background: #EEF2FA; font-weight: 600; color: #1A1A2E; font-size: 14px; height: 28px; }
+    .dt th, .dt td { border: 1px solid #E4E9F0; padding: 8px 10px; text-align: center; vertical-align: middle; font-family: Arial, "Microsoft YaHei", sans-serif; height: 42px; }
+    .dt th { background: #EEF2FA; font-weight: 600; color: #1A1A2E; font-size: 14px; height: 42px; }
     .dt td:first-child { text-align: left; font-weight: 600; }
     .dt tr:hover td { background: #F0F4FF; }
 
@@ -427,9 +427,9 @@ st.markdown("""
         border-radius: 8px; overflow: hidden;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         table-layout: fixed;
-        height: 310px;
+        height: 460px;
     }
-    .dt-p2 tr { height: calc(310px / 6); }
+    .dt-p2 tr { height: calc(460px / 6); }
     .dt-p2 th { border: 1px solid #E4E9F0; background: #EEF2FA; font-weight: 600; color: #1A1A2E; font-size: 16px; padding: 6px 6px; line-height: 1.2; text-align: center; vertical-align: middle; }
     .dt-p2 td { border: 1px solid #E4E9F0; padding: 6px 10px; text-align: center; vertical-align: middle; font-size: 16px; }
     .dt-p2 td:first-child { text-align: left; font-weight: 600; }
@@ -547,7 +547,7 @@ st.markdown("""
     }
     div[data-testid="stVerticalBlock"] { height: 100%; }
     /* 页面标题 */
-    .page-title { background: linear-gradient(135deg, #1B4F8E 0%, #102F57 100%); color: white; padding: 9px 16px; border-radius: 0 0 10px 10px; font-size: 19px; font-weight: 800; letter-spacing: 0.03em; margin-bottom: 8px; }
+    .page-title { background: linear-gradient(135deg, #1B4F8E 0%, #102F57 100%); color: white; padding: 12px 18px; border-radius: 0 0 10px 10px; font-size: 19px; font-weight: 800; letter-spacing: 0.03em; margin-bottom: 12px; }
     /* 品类按钮 */
     .stButton > button { height: 38px !important; border-radius: 11px !important; font-size: 16px !important; letter-spacing: 0.02em !important; transition: all 0.18s ease-in-out !important; }
     .stButton > button[kind="primary"], .stButton > button[data-testid="stBaseButton-primary"] {
@@ -940,7 +940,7 @@ st.markdown("""
 
     /* ====== 全局顶部留白，让标题下移 ====== */
     .main .block-container {
-        padding-top: 3rem !important;
+        padding-top: 4rem !important;
     }
 
     /* ====== 时间选择器 & 滚轴美化 ====== */
@@ -1280,7 +1280,7 @@ def page1(sel_ym, SEL_M):
     cpT, lpT = uprice(cT, cqT), uprice(lT, lqT)
     g_pv = gr(cpv, lpv); g_po = gr(cpo, lpo); g_pT = gr(cpT, lpT)
 
-    H = 195
+    H = 280
     FZ = 16
     BW = 0.75
     BASE = dict(
@@ -1300,7 +1300,7 @@ def page1(sel_ym, SEL_M):
         with lgc:
             # 图例盒（静态展示，不可勾选），垂直居中放置在图表左侧
             st.markdown(
-                f"""<div style="display:flex;align-items:center;justify-content:center;height:195px;">
+                f"""<div style="display:flex;align-items:center;justify-content:center;height:305px;">
                 <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;">
                     <div style="display:flex;align-items:center;gap:8px;"><span style="width:13px;height:13px;background:{C_VDS};display:inline-block;"></span><span style="font-size:13px;color:{C_TXT};font-weight:500;">VDS</span></div>
                     <div style="display:flex;align-items:center;gap:8px;"><span style="width:13px;height:13px;background:{C_OTC};display:inline-block;"></span><span style="font-size:13px;color:{C_TXT};font-weight:500;">OTC</span></div>
@@ -1588,7 +1588,7 @@ def page2(sel_month, trend_months):
 
             _y_max = max(cr5_ly, cr5_ytd) * 1.12
             fig.update_layout(
-                height=310,
+                height=460,
                 barmode="stack",
                 bargap=0.35,
                 margin=dict(t=30, b=25, l=10, r=55),
@@ -1663,7 +1663,7 @@ def page2(sel_month, trend_months):
             ))
 
         fig2.update_layout(
-            height=310,
+            height=460,
             margin=dict(t=55, b=25, l=40, r=20),
             paper_bgcolor="white",
             plot_bgcolor="white",
@@ -1837,7 +1837,7 @@ def page3(sel_ym, SEL_MONTHS):
     )
 
     fig.update_layout(
-        height=270,
+        height=400,
         barmode="stack",
         bargap=0.15,
         margin=dict(t=60, b=30, l=0, r=0),
@@ -2203,7 +2203,7 @@ def page4(selected_month):
     """
 
     st.markdown(f'<div class="table-wrapper"><div class="table-footer-wrapper">{header_html}{rows_html}{footer_note}</div></div>', unsafe_allow_html=True)
-    st.markdown("<div style='height:40px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:120px'></div>", unsafe_allow_html=True)
 
 # ========================================================================
 # PART B: 重点品类汤臣市场表现 (来自 merged_dashboard)
@@ -3214,7 +3214,7 @@ def make_trend_chart(cat_label, cat, brands, months):
                 break
     fig.update_layout(
         title=dict(text=f"{cat_label}-重点品牌份额(%)趋势", x=0.5, font=dict(size=16, color="#666")),
-        height=190,
+        height=280,
         margin=dict(t=46, b=48, l=0, r=0),
         paper_bgcolor="white",
         plot_bgcolor="white",
@@ -5186,12 +5186,12 @@ def render_charts(metric_df, cat_label):
         _hide_seg = dict(OTC=["25M10", "25M11", "25M12", "26M1", "26M2"]) if cat_label == "氨糖" else None
         _name_lbl_color = dict(青少年多维60s="white") if cat_label == "儿童多维" else None
         _figs = {
-            "bar1": make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=sales_dec, height=230, brand_total_name=_btn, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar1_dec_kwargs),
-            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=230, y_max=share_ymax, brand_total_name=_btn, label_color=_share_lbl_color, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, hide_below_value={"液体钙12袋": 0.1} if cat_label == "儿童钙" else None, force_show_names=["钙镁90片"] if cat_label == "儿童钙" else None, **_bar_gap_kwargs, **_bar2_dec_kwargs),
-            "line_wd": make_line_chart(metric_df, "dist", "WD动销铺货率（%）", dist_names, colors, decimals=0, height=230, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"], **_wd_dec_kw),
-            "line_nd": make_line_chart(metric_df, "nd", "ND数值铺货率（%）", nd_names, colors, decimals=0, height=230, label_mode="alternate", cat_label=cat_label, dashed=True, margin_l=_LM["l"], margin_r=_LM["r"], **_nd_dec_kw),
-            "line_price": make_line_chart(metric_df, "price", "重点SKU均价（元/盒）", price_names, price_colors, decimals=0, height=230, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
-            "line_power": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=230, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
+            "bar1": make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=sales_dec, height=285, brand_total_name=_btn, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar1_dec_kwargs),
+            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=285, y_max=share_ymax, brand_total_name=_btn, label_color=_share_lbl_color, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, hide_below_value={"液体钙12袋": 0.1} if cat_label == "儿童钙" else None, force_show_names=["钙镁90片"] if cat_label == "儿童钙" else None, **_bar_gap_kwargs, **_bar2_dec_kwargs),
+            "line_wd": make_line_chart(metric_df, "dist", "WD动销铺货率（%）", dist_names, colors, decimals=0, height=285, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"], **_wd_dec_kw),
+            "line_nd": make_line_chart(metric_df, "nd", "ND数值铺货率（%）", nd_names, colors, decimals=0, height=285, label_mode="alternate", cat_label=cat_label, dashed=True, margin_l=_LM["l"], margin_r=_LM["r"], **_nd_dec_kw),
+            "line_price": make_line_chart(metric_df, "price", "重点SKU均价（元/盒）", price_names, price_colors, decimals=0, height=285, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
+            "line_power": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=285, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
         }
         _line_names = {"line_wd": dist_names, "line_nd": nd_names, "line_price": price_names, "line_power": power_names}
         for _lk in ("line_wd", "line_nd", "line_price", "line_power"):
@@ -5232,7 +5232,8 @@ def render_charts(metric_df, cat_label):
     left, mid, right = st.columns([0.34, 0.33, 0.33], gap="medium")
     with left:
         st.plotly_chart(_figs["bar1"], width='stretch', config=_PCFG)
-        st.plotly_chart(_figs["bar2"], width='stretch', config=_PCFG)
+        with st.expander("展开更多：销售额份额柱状图", expanded=False):
+            st.plotly_chart(_figs["bar2"], width='stretch', config=_PCFG)
     with mid:
         st.plotly_chart(_figs["line_wd"], width='stretch', config=_PCFG)
         st.plotly_chart(_figs["line_nd"], width='stretch', config=_PCFG)
