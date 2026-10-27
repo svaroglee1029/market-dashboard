@@ -325,69 +325,23 @@ def _save_conclusion(page_key, month, text):
         pass
 
 def render_conclusion(page_key, month):
-    """渲染结论输入框（带持久化和历史展示）- 放在内容概况下方，自适应高度"""
+    """固定显示本页结论框：有内容显示结论，无内容保留占位空间。"""
     all_conclusions = _load_conclusions()
     page_conclusions = all_conclusions.get(page_key, {})
     current_text = page_conclusions.get(month, "")
 
-    widget_key = f"concl_{page_key}_{month}"
-    month_label = ym_lab(month) if month else ""
-
-    # 初始化 session_state
-    if widget_key not in st.session_state:
-        st.session_state[widget_key] = current_text
-
-    # 动态计算高度：根据文本内容自适应，不需要滑动
-    _text_for_height = st.session_state.get(widget_key, current_text)
-    if _text_for_height and _text_for_height.strip():
-        char_per_line = 42
-        _lines = _text_for_height.strip().split('\n')
-        total_lines = sum(max(1, (len(line) + char_per_line - 1) // char_per_line) for line in _lines)
-        calc_height = max(50, total_lines * 32 + 24)
+    if current_text and current_text.strip():
+        body = _parse_conclusion_markup(current_text)
+        min_h = ""
     else:
-        calc_height = 50
-
-    # 已按需求移除“结论 (26M7)”标题，直接展示结论内容框
-    # Use latest text from session_state for immediate display update
-    display_text = st.session_state.get(widget_key, current_text)
-    # Show formatted HTML display if text exists, otherwise show text_area
-    if display_text and display_text.strip():
-        formatted_html = _parse_conclusion_markup(display_text)
-        st.markdown(
-            f'<div style="background:linear-gradient(135deg,#FFFBF0,#FFF8E1);border:2px solid #FFB300;'
-            'border-radius:8px;padding:8px 14px;font-size:17px;line-height:1.4;color:#002060;font-family:Arial,Microsoft YaHei,微软雅黑,sans-serif;margin:16px 0 14px 0;">'
-            f'{formatted_html}</div>',
-            unsafe_allow_html=True
-        )
-        # Editable area inside expander
-        with st.expander("编辑结论", expanded=False):
-            st.text_area(
-                f"结论 ({month_label})",
-                height=calc_height,
-                key=widget_key,
-                placeholder="请输入本页结论...",
-                label_visibility="collapsed"
-            )
-    elif not (display_text and display_text.strip()):
-        st.text_area(
-            f"结论 ({month_label})",
-            height=calc_height,
-            key=widget_key,
-            placeholder="请输入本页结论...",
-            label_visibility="collapsed"
-        )
-
-    # 自动保存：仅在非首次渲染时保存（防止页面刷新时清空结论）
-    first_render_key = f"_fr_{widget_key}"
-    is_first_render = first_render_key not in st.session_state
-    st.session_state[first_render_key] = True
-
-    if not is_first_render:
-        new_text = st.session_state.get(widget_key, current_text)
-        if new_text != current_text and new_text and new_text.strip():
-            _save_conclusion(page_key, month, new_text)
-
-    # 历史结论不再显示，只显示当月结论
+        body = ""
+        min_h = "min-height:60px;"
+    st.markdown(
+        f'<div style="{min_h}background:linear-gradient(135deg,#FFFBF0,#FFF8E1);border:2px solid #FFB300;'
+        'border-radius:8px;padding:8px 14px;font-size:17px;line-height:1.4;color:#002060;font-family:Arial,Microsoft YaHei,微软雅黑,sans-serif;margin:16px 0 30px 0;">'
+        f'{body}</div>',
+        unsafe_allow_html=True
+    )
 
 # ====================== v2 Helper: sparse x-axis labels ======================
 
@@ -1826,8 +1780,8 @@ def page3(sel_ym, SEL_MONTHS):
             yref="paper",
             x0=first_idx - 0.5,
             x1=last_idx + 0.5,
-            y0=1.12,
-            y1=1.16,
+            y0=1.02,
+            y1=1.08,
             fillcolor="#f0f0f0",
             line=dict(color="#ddd", width=1),
             layer="above"
@@ -1835,10 +1789,10 @@ def page3(sel_ym, SEL_MONTHS):
 
         fig.add_annotation(
             x=mid_idx,
-            y=1.14,
+            y=1.05,
             xref="x",
             yref="paper",
-            text=f"{year}年",
+            text=f"<b>{year}年</b>",
             showarrow=False,
             font=dict(size=13, color="#555"),
             align="center",
@@ -1848,8 +1802,8 @@ def page3(sel_ym, SEL_MONTHS):
 
     bar_max = df_data["汤臣倍健集团"].max()
     share_max = df_data["市场份额"].max()
-    y1_max = bar_max * 1.5 if not pd.isna(bar_max) and bar_max > 0 else None
-    y2_max = share_max * 1.1 if not pd.isna(share_max) and share_max > 0 else None
+    y1_max = bar_max * 1.9 if not pd.isna(bar_max) and bar_max > 0 else None
+    y2_max = share_max * 1.45 if not pd.isna(share_max) and share_max > 0 else None
 
     # ===== YTD 摘要（右上角黄底框）=====
     _ytd_m = period_months("YTD", sel_ym)
@@ -1869,12 +1823,13 @@ def page3(sel_ym, SEL_MONTHS):
     _main_sh_diff = _main_sh_ytd - _main_sh_ly
     def _c(v): return "#E53935" if v < 0 else "#00B050"
     def _s(v): return f"+{v:.1f}pts" if v >= 0 else f"{v:.1f}pts"
+    def _yoy(v): return f"<span style='color:{_c(v)}'>{v:+.0f}%</span>"
     fig.add_annotation(
         xref="paper", yref="paper",
-        x=0.99, y=0.90,
-        text=(f"<b>集团：</b>同比{_grp_yoy:+.0f}%，份额{_grp_sh_ytd:.1f}%"
+        x=0.99, y=0.96,
+        text=(f"<b>集团：</b>同比{_yoy(_grp_yoy)}，份额{_grp_sh_ytd:.1f}%"
               f"（<span style='color:{_c(_grp_sh_diff)}'>{_s(_grp_sh_diff)}</span>）<br>"
-              f"<b>主品牌：</b>同比{_main_yoy:+.0f}%，份额{_main_sh_ytd:.1f}%"
+              f"<b>主品牌：</b>同比{_yoy(_main_yoy)}，份额{_main_sh_ytd:.1f}%"
               f"（<span style='color:{_c(_main_sh_diff)}'>{_s(_main_sh_diff)}</span>）"),
         showarrow=False, xanchor="right", yanchor="top",
         align="left", font=dict(size=13, color="#333", family="Microsoft YaHei"),
@@ -1882,10 +1837,10 @@ def page3(sel_ym, SEL_MONTHS):
     )
 
     fig.update_layout(
-        height=420,
+        height=400,
         barmode="stack",
         bargap=0.15,
-        margin=dict(t=170, b=30, l=0, r=0),
+        margin=dict(t=60, b=30, l=0, r=0),
         paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(size=15, family="Microsoft YaHei, sans-serif"),
@@ -1911,7 +1866,7 @@ def page3(sel_ym, SEL_MONTHS):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=1.28,
+            y=1.10,
             xanchor="center",
             x=0.5,
             font=dict(size=11),
@@ -3127,6 +3082,10 @@ def make_trend_chart(cat_label, cat, brands, months):
             if pd.isna(_my_val):
                 _tp.append("top center")
                 continue
+            # 成人多维-汤臣倍健：从25M4开始数据标签始终放在折线下方
+            if cat_label == "成人多维" and "汤臣倍健" in _bn and m >= "202504":
+                _tp.append("bottom center")
+                continue
             # Check for overlap with other brands at this month
             _overlap = False
             _am_higher = True
@@ -3147,6 +3106,10 @@ def make_trend_chart(cat_label, cat, brands, months):
                 # No overlap: use existing default rules
                 if (cat_label == "氨糖" and "九力" in _bn and _lbl in ["25M10", "25M11", "25M12", "26M2"]):
                     _tp.append("top center")
+                elif (cat_label == "氨糖" and "健力多" in _bn and _lbl == "25M10"):
+                    _tp.append("bottom center")
+                elif (cat_label == "氨糖" and "健力多" in _bn and _lbl == "25M12"):
+                    _tp.append("top center")
                 elif (cat_label == "儿童多维" and "汤臣倍健" in _bn and _lbl == "25M2"):
                     _tp.append("top center")
                 elif (cat_label == "氨糖" and "九力" in _bn):
@@ -3156,7 +3119,8 @@ def make_trend_chart(cat_label, cat, brands, months):
                 elif (cat_label == "儿童钙" and "汤臣倍健" in _bn):
                     _tp.append("bottom center")
                 elif (cat_label == "儿童多维" and "汤臣倍健" in _bn):
-                    _tp.append("bottom center")
+                    # 25M1 标签放上方避免与其他标签重叠；其余放下方
+                    _tp.append("top center" if _lbl == "25M1" else "bottom center")
                 elif (cat_label == "益生菌" and "Life-Space" in _bn):
                     _tp.append("bottom center")
                 else:
@@ -3170,12 +3134,50 @@ def make_trend_chart(cat_label, cat, brands, months):
                 name=_bn,
                 line=dict(width=3, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], shape="spline", smoothing=1.3),
                 marker=dict(size=6),
-                text=_text,
+                text=["" for _ in months],
                 textposition=_tp,
                 textfont=dict(size=14, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], family="Arial, sans-serif", weight="bold"),
                 hovertemplate="%{fullData.name}<br>%{x}份额：%{y:.3f}%<extra></extra>",
             )
         )
+        # 数据标签改为带偏移量的 annotation，确保不贴合/压住折线
+        for _j, _m in enumerate(months):
+            _t = _text[_j]
+            if not _t:
+                continue
+            _yv = vals[_j]
+            if pd.isna(_yv):
+                continue
+            _ys = 18 if str(_tp[_j]).startswith("top") else -18
+            _xs = 0
+            # 氨糖-健力多：25M10 标签放折线下方；25M12 放折线上方（往上移，避免与朗迪/其他折线标签重叠）
+            if cat_label == "氨糖" and "健力多" in _bn:
+                _lbl = ym_lab(_m)
+                if _lbl == "25M10":
+                    _ys = -18
+                elif _lbl == "25M12":
+                    _ys = 18
+            # 氨糖-九力：26M8 标签放对应点位置右侧（与圆点同高）
+            if cat_label == "氨糖" and "九力" in _bn:
+                _lbl = ym_lab(_m)
+                if _lbl == "26M8":
+                    _xs = 18
+                    _ys = 0
+            # 成人多维-汤臣倍健 25M4起：标签放折线下方但收小下移量，避免与下方月份刻度重叠
+            if cat_label == "成人多维" and "汤臣倍健" in _bn and _m >= "202504":
+                _ys = -8
+            # 成人钙-励全：首尾月标签手动偏移（25M1 左下、26M8 右移）
+            if cat_label == "成人钙" and "励全" in _bn:
+                _lbl = ym_lab(_m)
+                if _lbl == "25M1":
+                    _xs, _ys = -14, -4
+                elif _lbl == "26M8":
+                    _xs, _ys = 18, 8
+            fig.add_annotation(
+                x=ym_lab(_m), y=_yv, text=_t,
+                showarrow=False, yshift=_ys, xshift=_xs,
+                font=dict(size=14, color=COLOR_PALETTE[i % len(COLOR_PALETTE)], family="Arial, sans-serif", weight="bold"),
+            )
     # Custom annotation: 九力 25M10 label moved ~0.1cm higher (yshift=18)
     if cat_label == "氨糖":
         for i, brand in enumerate(brands):
@@ -3244,10 +3246,10 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
             table_brands.append("汤臣倍健")
     # Calculate left chart height to match right side (table + gap + trend chart)
     n_table_rows = len(table_brands) + 3  # +1 category row, +2 header rows
-    table_row_h = 30  # brand-table row height - reduced to align with trend chart bottom
+    table_row_h = 33
     table_height = n_table_rows * table_row_h
     trend_chart_h = 280  # make_trend_chart height
-    streamlit_gap_ba = 18  # gap between table and trend chart
+    streamlit_gap_ba = 18
     left_chart_height = table_height + streamlit_gap_ba + trend_chart_h
 
     left_col, right_col = st.columns([0.28, 0.72], gap="medium")
@@ -3718,7 +3720,7 @@ NEW_PRODUCTS = {
 }
 
 
-def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=380, legend_y=1.08, y_max=None, brand_total_name=None, label_color=None, min_gap_ratio=None, min_gap_abs=None, name_decimals=None, total_decimals=None, hide_seg_months=None, name_label_color=None):
+def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=380, legend_y=1.08, y_max=None, brand_total_name=None, label_color=None, min_gap_ratio=None, min_gap_abs=None, name_decimals=None, total_decimals=None, hide_seg_months=None, name_label_color=None, hide_below_value=None, force_show_names=None):
     fig = go.Figure()
     labels = df["label"].drop_duplicates().tolist()
 
@@ -3778,6 +3780,8 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                 continue
             if hide_seg_months and name in hide_seg_months and lbl in hide_seg_months[name]:
                 continue
+            if hide_below_value and name in hide_below_value and v < hide_below_value[name]:
+                continue
             _line_dec = text_decimals
             if name_decimals and name in name_decimals:
                 _line_dec = name_decimals[name]
@@ -3809,6 +3813,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                 "is_total": False,
                 "is_top": _is_top,
                 "x_label": lbl,
+                "name": name,
             })
 
     # 收集顶部合计标签（支持 brand_total_name）
@@ -3831,10 +3836,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
         _totals_display.append(_t_display)
         if _t_display > 0:
             _total_label_y = _t_pos + max(1.5, _t_pos * 0.03)
-            _t_color = "#E53935"
-            if label_color and y_max is not None and _t_pos > float(y_max) - 1.0:
-                # 总和标签超出柱状图范围：改为黑色
-                _t_color = "black"
+            _t_color = "#E53935"  # total 总和标签统一用红色强调（需要时即红色）
             # <0.5 强制1位小数，否则按品类配置
             if abs(_t_display) < 0.5:
                 _t_text = f"{_t_display:.1f}"
@@ -3862,7 +3864,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
         _lbl_list.sort(key=lambda x: x["y"], reverse=True)
         _last_shown_y = None
         for item in _lbl_list:
-            if item.get("is_total") or item.get("is_top"):
+            if item.get("is_total") or item.get("is_top") or (force_show_names and item.get("name") in force_show_names):
                 item["show"] = True
                 _last_shown_y = item["y"]
                 continue
@@ -3944,7 +3946,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                 y_cursor += float(last_v.iloc[0]) if last_v.notna().any() else 0
     fig = _chart_base(fig, title, height, legend_y, show_yaxis=False, legend_below=True)
     # 柱图绘图区向两边拉长：左右边距与下方线图一致（l=24/r=24），柱子整体更宽
-    fig.update_layout(margin=dict(t=110, b=48, l=24, r=24))
+    fig.update_layout(margin=dict(t=80, b=48, l=24, r=24))
     fig.update_layout(showlegend=True)
     fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
     if metric == "share":
@@ -4339,13 +4341,13 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         },
         ("益生菌", "power"): {
             "y_max": 60,
-            # 蓝帽48袋、益倍适总体、畅护10袋、B420：首尾+隔月；蓝帽20袋：前三月+后三月；益君康：仅首尾
+            # 蓝帽48袋、益倍适总体、畅护10袋、B420：首尾+隔月；蓝帽20袋、益君康30片：仅首尾
             "product_mode": {
                 "蓝帽48袋": "alternate",
                 "益倍适总体": "alternate",
                 "畅护10袋": "alternate",
                 "B420 20袋": "alternate",
-                "蓝帽20袋": "first3last3",
+                "蓝帽20袋": "endpoints",
                 "益君康30片": "endpoints",
             },
             "product_side": {
@@ -4600,7 +4602,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             _side_rank = _rank // 2
 
         # 规则化标签：默认 top 12px（拉开与折线距离）；月度避让在下方统一处理
-        yshift = 12
+        yshift = 22
         _xshift = 0
 
         for i in sorted(annotate_indices):
@@ -4627,7 +4629,9 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                 name=name, is_endpoint=(i == valid[0] or i == valid[-1]),
             ))
     fig = _chart_base(fig, title, height, 1.08, legend_below=True)
-    fig.update_layout(margin=dict(t=110, b=48, l=margin_l, r=margin_r))
+    # 图例行数自适应：SKU 较多时顶部水平图例会换行成两行，需更大顶部 margin，避免两行图例贴近标题
+    _mt_legend = 100 if len(names) >= 6 else 80
+    fig.update_layout(margin=dict(t=_mt_legend, b=48, l=margin_l, r=margin_r))
     fig.update_xaxes(tickangle=-45, tickfont=dict(size=10, family="Microsoft YaHei"))
 
     # ===== 月度级别智能避让：确保同一月标签不重叠 =====
@@ -4637,11 +4641,11 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
             _ymin0, _ymax0 = float(_allv.min()), float(_allv.max())
             _dr = _ymax0 - _ymin0
             if _dr < 20:
-                _pct = 0.05
+                _pct = 0.12
             elif _dr < 50:
-                _pct = 0.04
+                _pct = 0.10
             else:
-                _pct = 0.03
+                _pct = 0.08
             _pad = _dr * _pct if _ymax0 > _ymin0 else max(1.0, abs(_ymax0) * 0.06)
             _y_upper = _ymax0 + _pad
             if "y_max" in cfg:
@@ -4657,7 +4661,7 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
         # 计算像素空间中的标签尺寸和位置
         _n = len(labels)
         _W, _H = 430, height
-        _mt, _mb = 110, 48
+        _mt, _mb = _mt_legend, 48
         _ml, _mr = margin_l, margin_r
         _pw = _W - _ml - _mr
         _ph = _H - _mt - _mb
@@ -4694,45 +4698,443 @@ def make_line_chart(df, metric, title, names, colors, decimals=0, height=380, la
                     if not s.get("is_endpoint"):
                         s["xshift"] = 0
                     if s["name"] in product_side:
-                        s["yshift"] = -6 if product_side[s["name"]] == "below" else 6
+                        s["yshift"] = -18 if product_side[s["name"]] == "below" else 18
                     else:
-                        s["yshift"] = 6
+                        s["yshift"] = 18
                 continue
             _month_labels.sort(key=lambda s: s["yval"], reverse=True)
             _is_ep_month = (_mi in _ep_months)
             _dir = -1 if _mi == _first_ep else 1  # 首月外侧=左，末月外侧=右
             _prev_side = None
             _near_seq = 0
+            _cursor = None
             for _idx, s in enumerate(_month_labels):
-                _dy = 6
-                if _idx == 0:
-                    # 最高的那条线：标签放圆点上方
-                    _prev_side = "top"
+                _pt = _ypx(s["yval"])
+                # 标签用适中偏移（既避开折线、又贴近圆点不飘远），数值高者在上、低者在下
+                _label_top = _pt - 18 - _label_h * 0.5
+                if _cursor is None or _label_top >= _cursor:
+                    # 圆点上方放得下：标签放在圆点上方，与折线拉开距离
+                    _py = _pt - 18
+                    _cursor = _py + _label_h * 0.5 + 2
                 else:
-                    _prev_s = _month_labels[_idx - 1]
-                    # 过近判定：两条线标签的像素间距小于阈值（16px标签高 + 4px间隔）
-                    _gap_px = _ypx(_prev_s["yval"]) - _ypx(s["yval"])
-                    if _gap_px < 20:
-                        # 第一条(高)标签放上方，第二条(低)标签放下方，逐对交替
-                        _dy = -6 if _prev_side == "top" else 6
-                        _prev_side = "bottom" if _prev_side == "top" else "top"
-                        _near_seq += 1
-                    else:
-                        _dy = 6
-                        _prev_side = "top"
-                        _near_seq = 0
-                if s["name"] in product_side:
-                    _dy = -6 if product_side[s["name"]] == "below" else 6
+                    # 上方放不下：放圆点下方，并确保不压到上一个标签（必要时往下错开）
+                    _py = max(_pt + 18, _cursor + _label_h * 0.5)
+                    _cursor = _py + _label_h * 0.5 + 2
+                s["yshift"] = _pt - _py
                 if not s.get("is_endpoint"):
                     s["xshift"] = 0
-                elif _is_ep_month and _near_seq > 0:
-                    # 端点月接近：一个向左移6px，其余略微往外侧移（每次再外移4px）
-                    s["xshift"] = _dir * (6 + 4 * (_near_seq - 1))
-                s["yshift"] = _dy
+                elif _is_ep_month and _idx > 0:
+                    # 端点月：仅当与上方标签竖直距离过近(几乎水平重叠)时才向外侧微移，其余一律贴近数据点
+                    _gap = (_month_labels[_idx - 1]["yval"] - s["yval"]) / (_yrange[1] - _yrange[0]) * _ph
+                    if _gap < 12:
+                        s["xshift"] = _dir * (2 + 2 * (_idx - 1))
+                    else:
+                        s["xshift"] = 0
     else:
         _yrange = None
 
     # ===== 添加数据标签 =====
+    # 全局避让基线已在上方固定，不再全局普调。
+    # 此处只做单点/单线覆盖，优先于全局算法，且完全不影响其他月份：
+    #   key = "线名"          → 整条线标签左右放置（{"mode":"h","amp":N}）
+    #   key = ("线名", 月份下标) → 该线该月单独指定标签偏移 (xshift, yshift)
+    _SPECIAL_LABEL_FIX = {
+        "新白金礼盒": {"mode": "h", "amp": 6},   # 新白金礼盒：标签左右放置，避开折线
+        # 蛋白粉：标签拥挤处按 (cat_label, metric, 线名, 月份) 单点左右错开，不影响其他品类/月份
+        ("蛋白粉", "dist", "E钙", 16): (-10, 0),
+        ("蛋白粉", "dist", "金装", 18): (0, 12),  # 金装 26M7 上移
+        ("蛋白粉", "dist", "新白金礼盒", 18): (-10, 0),
+        ("蛋白粉", "power", "E钙", 3): (10, 0),
+        # 蛋白粉-旧品：25M9 起 WD/ND 铺货率跌至 1-4，低值标签贴底折线，小幅向上移开（贴近折线、不重叠）
+        ("蛋白粉", "dist", "旧品", 2): (0, -12),  # 25M3 下移一些，避开折线
+        ("蛋白粉", "dist", "旧品", 4): (0, 8),  # 25M5 上移一些
+        ("蛋白粉", "dist", "旧品", 8): (0, 10), ("蛋白粉", "dist", "旧品", 9): (0, 10),
+        ("蛋白粉", "dist", "旧品", 10): (0, 10), ("蛋白粉", "dist", "旧品", 11): (0, 10),
+        ("蛋白粉", "dist", "旧品", 12): (0, 10), ("蛋白粉", "dist", "旧品", 13): (0, 10),
+        ("蛋白粉", "dist", "旧品", 14): (0, 10), ("蛋白粉", "dist", "旧品", 15): (0, 10),
+        ("蛋白粉", "dist", "旧品", 16): (0, 10), ("蛋白粉", "dist", "旧品", 17): (0, 10),
+        ("蛋白粉", "dist", "旧品", 18): (0, 10), ("蛋白粉", "dist", "旧品", 19): (0, 10),
+        ("蛋白粉", "nd", "旧品", 8): (0, 10), ("蛋白粉", "nd", "旧品", 9): (0, 10),
+        ("蛋白粉", "nd", "旧品", 10): (0, 10), ("蛋白粉", "nd", "旧品", 11): (0, 10),
+        ("蛋白粉", "nd", "旧品", 12): (0, 10), ("蛋白粉", "nd", "旧品", 13): (0, 10),
+        ("蛋白粉", "nd", "旧品", 14): (0, 10), ("蛋白粉", "nd", "旧品", 15): (0, 10),
+        ("蛋白粉", "nd", "旧品", 16): (0, 10), ("蛋白粉", "nd", "旧品", 17): (0, 10),
+        ("蛋白粉", "nd", "旧品", 18): (0, 10), ("蛋白粉", "nd", "旧品", 19): (0, 10),
+        # 蛋白粉-单点卖力：26M7/26M8 新白金礼盒与 E钙 值几乎重合，小幅左右错开
+        ("蛋白粉", "power", "新白金礼盒", 18): (10, 4), ("蛋白粉", "power", "新白金礼盒", 19): (10, 0),
+        ("蛋白粉", "power", "E钙", 18): (-10, 0), ("蛋白粉", "power", "E钙", 19): (-10, -4),
+        # 蛋白粉-均价：金装450 与 白金480 值接近（25M2-25M9 及部分 26M），小幅左右错开
+        ("蛋白粉", "price", "金装450g", 1): (-10, 0), ("蛋白粉", "price", "白金480g", 1): (10, 0),
+        ("蛋白粉", "price", "金装450g", 2): (-10, 0), ("蛋白粉", "price", "白金480g", 2): (10, 0),
+        ("蛋白粉", "price", "金装450g", 3): (-10, 0), ("蛋白粉", "price", "白金480g", 3): (10, 0),
+        ("蛋白粉", "price", "金装450g", 4): (-10, 0), ("蛋白粉", "price", "白金480g", 4): (10, 0),
+        ("蛋白粉", "price", "金装450g", 5): (-10, 0), ("蛋白粉", "price", "白金480g", 5): (10, 0),
+        ("蛋白粉", "price", "金装450g", 6): (-10, 0), ("蛋白粉", "price", "白金480g", 6): (10, 0),
+        ("蛋白粉", "price", "金装450g", 7): (-10, 0), ("蛋白粉", "price", "白金480g", 7): (10, 0),
+        ("蛋白粉", "price", "金装450g", 8): (-10, 0), ("蛋白粉", "price", "白金480g", 8): (10, 0),
+        ("蛋白粉", "price", "金装450g", 13): (-10, 0), ("蛋白粉", "price", "白金480g", 13): (10, 0),
+        ("蛋白粉", "price", "金装450g", 16): (-10, 0), ("蛋白粉", "price", "白金480g", 16): (10, 0),
+        # 蛋白粉-WD：金装 26M8 右下一丢丢；E钙 26M8 上移；新白金礼盒 26M8 右移
+        ("蛋白粉", "dist", "金装", 19): (5, -4),
+        ("蛋白粉", "dist", "E钙", 19): (0, 12),
+        ("蛋白粉", "dist", "新白金礼盒", 19): (10, 0),
+        # 蛋白粉-ND：E钙、白金 26M8 下移一丢丢；新白金礼盒 26M7 右移、26M8 右移一丢丢
+        ("蛋白粉", "nd", "E钙", 19): (0, -4),
+        ("蛋白粉", "nd", "白金", 19): (0, -4),
+        ("蛋白粉", "nd", "新白金礼盒", 18): (10, -4),
+        ("蛋白粉", "nd", "新白金礼盒", 19): (6, 0),
+        # 蛋白粉-均价：金装礼盒装300g*2p 部分月份上下移；白金480/金装450 25M1 上移；末月右上；新白金 26M7 左移、26M8 右移
+        ("蛋白粉", "price", "金装礼盒装300g*2p", 0): (0, 12),
+        ("蛋白粉", "price", "金装礼盒装300g*2p", 2): (0, 12),
+        ("蛋白粉", "price", "金装礼盒装300g*2p", 4): (0, 12),
+        ("蛋白粉", "price", "金装礼盒装300g*2p", 16): (0, -12),
+        ("蛋白粉", "price", "金装礼盒装300g*2p", 18): (0, 12),
+        ("蛋白粉", "price", "金装礼盒装300g*2p", 19): (0, 12),
+        ("蛋白粉", "price", "白金480g", 0): (-10, 0),
+        ("蛋白粉", "price", "金装450g", 0): (-10, 0),
+        ("蛋白粉", "price", "白金480g", 19): (16, 14),
+        ("蛋白粉", "price", "金装450g", 19): (16, 4),
+        ("蛋白粉", "price", "E钙蛋520g", 19): (0, 12),
+        ("蛋白粉", "price", "新白金礼盒", 18): (-20, 0),
+        ("蛋白粉", "price", "新白金礼盒", 19): (10, 0),
+        # 蛋白粉-单点卖力：金装、白金 26M8 右上方移动
+        ("蛋白粉", "power", "金装", 19): (8, 12),
+        ("蛋白粉", "power", "白金", 19): (8, 12),
+        # 成人钙：焕动力120粒后期跌至0/1/2，低值标签向上移开底部折线（靠近折线、不重叠）
+        ("成人钙", "dist", "焕动力120粒", 8): (0, 16),
+        ("成人钙", "dist", "焕动力120粒", 9): (0, 16),
+        ("成人钙", "dist", "焕动力120粒", 10): (0, 16),
+        ("成人钙", "dist", "焕动力120粒", 11): (0, 16),
+        ("成人钙", "nd", "焕动力120粒", 13): (0, -4),
+        ("成人钙", "nd", "焕动力120粒", 17): (0, 4),
+        ("成人钙", "nd", "焕动力120粒", 19): (0, 4),
+        # 成人钙：WD/ND 120粒 26M5/26M7/26M8 下移一丢丢；均价 120粒 26M7 右上；钙尔奇D600 60片 26M8 上移一丢
+        ("成人钙", "dist", "120粒", 16): (0, 8),
+        ("成人钙", "dist", "120粒", 18): (0, 8),
+        ("成人钙", "dist", "120粒", 19): (0, 8),
+        ("成人钙", "nd", "120粒", 16): (0, 8),
+        ("成人钙", "nd", "120粒", 18): (0, 8),
+        ("成人钙", "nd", "120粒", 19): (0, 8),
+        ("成人钙", "price", "120粒", 18): (0, 20),
+        ("成人钙", "price", "120粒", 19): (16, 12),
+        ("成人钙", "price", "钙尔奇D600 60片", 19): (10, -16),
+        # 儿童钙：牛初乳/钙镁90 首尾上移；液体钙12袋 25M7 下移
+        ("儿童钙", "dist", "牛初乳60片*2", 0): (-6, 4),
+        ("儿童钙", "dist", "牛初乳60片*2", 19): (0, -12),
+        ("儿童钙", "dist", "钙镁90片", 0): (-6, -6),
+        ("儿童钙", "dist", "钙镁90片", 19): (4, 2),
+        ("儿童钙", "dist", "液体钙12袋", 6): (0, -10),
+        ("儿童钙", "dist", "钙铁锌60片", 19): (4, 10),
+        ("儿童钙", "nd", "牛初乳60片*2", 0): (-6, 4),
+        ("儿童钙", "nd", "牛初乳60片*2", 19): (0, 4),
+        ("儿童钙", "nd", "钙铁锌60片", 19): (0, 12),
+        ("儿童钙", "nd", "钙镁90片", 0): (-6, -6),
+        ("儿童钙", "nd", "钙镁90片", 19): (10, -9),
+        ("儿童钙", "nd", "液体钙12袋", 6): (0, -10),
+        # 儿童钙-单点卖力：液体钙12袋 26M4/26M8 往下移一丢丢；钙镁90片 25M1/26M8 往下移；钙铁锌60片 25M1/26M8 往上移
+        ("儿童钙", "power", "液体钙12袋", 15): (0, 12),
+        ("儿童钙", "power", "液体钙12袋", 19): (0, 12),
+        ("儿童钙", "power", "钙镁90片", 0): (0, -6),
+        ("儿童钙", "power", "钙镁90片", 19): (0, -6),
+        ("儿童钙", "power", "钙铁锌60片", 0): (-15, -7),
+        ("儿童钙", "power", "钙铁锌60片", 19): (15, -7),
+        # 成人多维-WD：25M1 往左上方；26M8 往右上方水平错开（高值上低值下，不过上不过下）
+        ("成人多维", "dist", "女维60片", 0): (-10, 4),
+        ("成人多维", "dist", "女维60片", 19): (16, 2),
+        ("成人多维", "dist", "女维120片", 0): (-4, -4),
+        ("成人多维", "dist", "女维120片", 19): (12, -4),
+        ("成人多维", "dist", "男维60片", 0): (-16, -4),
+        ("成人多维", "dist", "男维60片", 19): (8, -8),
+        ("成人多维", "dist", "男维120片", 0): (-10, 0),
+        ("成人多维", "dist", "男维120片", 19): (4, -12),
+        ("成人多维", "dist", "男维120片", 3): (0, -20),   # 25M4 中间标签往下
+        ("成人多维", "dist", "男维120片", 8): (0, -20),   # 25M9 中间标签往下
+        ("成人多维", "dist", "男维120片", 14): (0, -20),  # 26M3 中间标签往下
+        ("成人多维", "dist", "男维120片", 18): (0, -20),  # 26M7 中间标签往下
+        # 鱼油-WD：26M7/26M8 数据标签往右上方移（水平错开）
+        ("鱼油", "dist", "200粒", 18): (14, 12),
+        ("鱼油", "dist", "200粒", 19): (14, 12),
+        ("鱼油", "dist", "100粒", 18): (10, 12),
+        ("鱼油", "dist", "100粒", 19): (10, 12),
+        ("鱼油", "dist", "晶纯60粒", 18): (6, 12),
+        ("鱼油", "dist", "晶纯60粒", 19): (6, 12),
+        ("鱼油", "dist", "汤臣鱼油总体", 18): (18, 12),
+        ("鱼油", "dist", "汤臣鱼油总体", 19): (18, 12),
+        # 鱼油-ND：200粒 25M1 放在折线对应位置水平线左边
+        ("鱼油", "nd", "200粒", 0): (-16, 0),
+        # 鱼油-单点卖力：200粒 25M1 数据标签放折线下方
+        ("鱼油", "power", "200粒", 0): (0, -16),
+        # 鱼油-单点卖力：200粒 25M2 放折线上方
+        ("鱼油", "power", "200粒", 1): (0, 18),
+        # 鱼油-单点卖力：200粒 26M2 数据标签放折线上方（略右移，避免与同月其他标签重叠）
+        ("鱼油", "power", "200粒", 13): (10, 18),
+        # 成人多维-ND：女维120片、女维60片 25M1 往上移、放在对应线水平方向左侧
+        ("成人多维", "nd", "女维120片", 0): (-14, 12),
+        ("成人多维", "nd", "女维60片", 0): (-14, 12),
+        # 益生菌-WD：益君康30片 26M8 往右边移动一些
+        ("益生菌", "dist", "益君康30片", 19): (10, 8),
+        # 益生菌-ND：益君康30片 25M11/26M3 往下移动一丢、26M1 往上移动一些
+        ("益生菌", "nd", "益君康30片", 10): (0, -5),
+        ("益生菌", "nd", "益君康30片", 12): (0, 10),
+        ("益生菌", "nd", "益君康30片", 14): (0, -5),
+        # 益生菌-单点卖力：益君康30片、蓝帽20袋 首尾月标签与对应点同一水平线、留一点间隙
+        ("益生菌", "power", "益君康30片", 0): (20, 0),
+        ("益生菌", "power", "益君康30片", 19): (20, 0),
+        ("益生菌", "power", "蓝帽20袋", 0): (20, 0),
+        ("益生菌", "power", "蓝帽20袋", 19): (20, 0),
+        # 益生菌-均价：蓝帽20袋 26M8 数据标签往右上移动
+        ("益生菌", "price", "蓝帽20袋", 19): (10, 12),
+    }
+    for _s in label_specs:
+        _cfg = _SPECIAL_LABEL_FIX.get(_s["name"])
+        if _cfg is not None and _cfg.get("mode") == "h":
+            _s["yshift"] = 0
+            _s["xshift"] = _cfg["amp"] if (_s["mi"] % 2 == 0) else -_cfg["amp"]
+        _fix = _SPECIAL_LABEL_FIX.get((_s["name"], _s["mi"]))
+        if _fix is not None:
+            _s["xshift"], _s["yshift"] = _fix
+        # 成人钙均价：钙尔奇D600 60片整线标签放折线下方
+        if cat_label == "成人钙" and metric == "price" and _s["name"] == "钙尔奇D600 60片":
+            _s["yshift"] = -16
+        _fx = _SPECIAL_LABEL_FIX.get((cat_label, metric, _s["name"], _s["mi"]))
+        if _fx is not None:
+            _s["xshift"], _s["yshift"] = _fx
+        # 儿童钙均价：锌钙特葡萄糖酸钙锌口服液24袋 整线标签放折线下方
+        if cat_label == "儿童钙" and metric == "price" and _s["name"] == "锌钙特葡萄糖酸钙锌口服液24袋":
+            _s["yshift"] = -16
+        # 成人多维-WD：男维60片 非首尾月数据标签放折线下方（首尾月按字典单独配置）
+        if cat_label == "成人多维" and metric == "dist" and _s["name"] == "男维60片" and not _s.get("is_endpoint"):
+            _s["yshift"] = -18
+        # 成人多维-ND：善存多维元素片(29)91sx2p 整线标签放折线下方
+        if cat_label == "成人多维" and metric == "nd" and _s["name"] == "善存多维元素片(29)91sx2p":
+            _s["yshift"] = -16
+        # 成人多维-单点卖力：善存多维元素片(29)91sx2p 整线标签放折线下方
+        if cat_label == "成人多维" and metric == "power" and _s["name"] == "善存多维元素片(29)91sx2p":
+            _s["yshift"] = -16
+        # 成人多维-ND：男维120片 中间日期标签大幅度往下（避开与男维60片线交叉）；首尾月水平放置
+        if cat_label == "成人多维" and metric == "nd" and _s["name"] == "男维120片" and not _s.get("is_endpoint"):
+            _s["yshift"] = -28
+        # 成人多维-ND：女维120片/女维60片/男维120片/男维60片 首尾月标签 y 与圆点同高（x 偏移在下方按 y 值排序错开）
+        if cat_label == "成人多维" and metric == "nd" and _s.get("is_endpoint") and _s["name"] in ("女维120片", "女维60片", "男维120片", "男维60片"):
+            _s["yshift"] = 0
+        # 鱼油-单点卖力：汤臣鱼油总体 整线标签放折线上方
+        if cat_label == "鱼油" and metric == "power" and _s["name"] == "汤臣鱼油总体":
+            _s["yshift"] = 18
+        # 氨糖-WD/ND：旧品 数据标签放折线上方、略微往下移动一丢丢（避免与折线/其他数据标签重叠）
+        if cat_label == "氨糖" and metric in ("dist", "nd") and _s["name"] == "旧品":
+            _s["yshift"] = 13
+        # 成人多维-均价：男维60片 首尾月 y 与圆点同高（x 偏移在下方水平左右放置）
+        if cat_label == "成人多维" and metric == "price" and _s.get("is_endpoint") and _s["name"] == "男维60片":
+            _s["yshift"] = 0
+        # 成人多维-均价：女维60片 整线标签放折线下方
+        if cat_label == "成人多维" and metric == "price" and _s["name"] == "女维60片":
+            _s["yshift"] = -16
+        # 成人多维-单点卖力：4 个产品 首尾月 y 与圆点同高（x 偏移在下方按 y 值排序错开）
+        if cat_label == "成人多维" and metric == "power" and _s.get("is_endpoint") and _s["name"] in ("女维120片", "女维60片", "男维120片", "男维60片"):
+            _s["yshift"] = 0
+        # 成人钙单点卖力：标签与折线保持适当距离（默认±14，避免交叉重叠）
+        if cat_label == "成人钙" and metric == "power":
+            _s["yshift"] = 14 if _s["yshift"] > 0 else (-14 if _s["yshift"] < 0 else 0)
+            # 120粒整线放折线下方；焕动力120粒 26M6 上移
+            if _s["name"] == "120粒":
+                _s["yshift"] = -14
+                if _s["mi"] == 2:  # 25M3 再往下
+                    _s["yshift"] = -20
+            elif _s["name"] == "焕动力120粒" and _s["mi"] == 17:
+                _s["yshift"] = 20
+        # 益生菌 WD 整线：所有标签贴近折线（±8）；畅护10袋 25M5 例外往下
+        if cat_label == "益生菌" and metric == "dist":
+            if _s["name"] in ("益君康30片", "畅护10袋"):
+                if _s["name"] == "畅护10袋" and _s["mi"] == 4:
+                    _s["yshift"] = -10   # 25M5 往下移动一些
+                else:
+                    _s["yshift"] = 8
+            elif _s["name"] in ("蓝帽20袋", "蓝帽48袋", "B420 20袋"):
+                _s["yshift"] = -8
+            else:
+                _s["yshift"] = 8 if _s["yshift"] > 0 else (-8 if _s["yshift"] < 0 else 0)
+        # 益生菌 ND 整线：畅护10袋 除25M11外放折线上方；B420/蓝帽20袋 放折线下方（B420 26M8 再往下移一丢丢）
+        if cat_label == "益生菌" and metric == "nd":
+            if _s["name"] == "畅护10袋":
+                _s["yshift"] = -8 if _s["mi"] == 10 else 13   # 25M11 放下方，其他往上移动一丢丢
+            elif _s["name"] in ("B420 20袋", "蓝帽20袋"):
+                if _s["name"] == "B420 20袋" and _s["mi"] == 19:
+                    _s["yshift"] = -13   # 26M8 往下移一丢丢
+                else:
+                    _s["yshift"] = -8
+        # 益生菌 均价：畅护10袋 整线放折线下方；益君康30片 整线放折线上方
+        if cat_label == "益生菌" and metric == "price":
+            if _s["name"] == "畅护10袋":
+                _s["yshift"] = -16
+            elif _s["name"] == "益君康30片":
+                _s["yshift"] = 8
+        # 益生菌 单点卖力：畅护10袋 整线放折线下方；25M5 往左上移动
+        if cat_label == "益生菌" and metric == "power" and _s["name"] == "畅护10袋":
+            if _s["mi"] == 4:   # 25M5 往左上移动
+                _s["xshift"] = -10
+                _s["yshift"] = 10
+            else:
+                _s["yshift"] = -8
+        # 儿童多维-WD/ND：仁合堂五维赖氨酸12袋 整线标签放折线下方
+        if cat_label == "儿童多维" and metric in ("dist", "nd") and _s["name"] == "仁合堂五维赖氨酸12袋":
+            _s["yshift"] = -16
+        # 儿童多维-WD/ND：汤臣青少年60片、草仙药业五维赖氨酸片36s 首尾月标签与圆点同高并水平外移（不紧贴折线）
+        if cat_label == "儿童多维" and metric in ("dist", "nd") and _s.get("is_endpoint") and _s["name"] in ("汤臣青少年60片", "草仙药业五维赖氨酸片36s"):
+            _s["yshift"] = 0
+            _s["xshift"] = -14 if _s["mi"] == 0 else 14
+        # 儿童多维-单点卖力：汤臣青少年60片 标签贴近折线下方（不要离折线太远、不重叠）
+        if cat_label == "儿童多维" and metric == "power" and _s["name"] == "汤臣青少年60片":
+            _s["yshift"] = -10
+        # 儿童多维-单点卖力：汤臣儿童60片 26M8 标签放在圆点水平右侧
+        if cat_label == "儿童多维" and metric == "power" and _s["name"] == "汤臣儿童60片" and _s.get("is_endpoint") and _s["mi"] == len(labels) - 1:
+            _s["yshift"] = 0
+            _s["xshift"] = 16
+        # 鱼油-晶纯60粒：WD/ND/SKU均价 整线标签放折线下方（贴近折线、不重叠）
+        if cat_label == "鱼油" and metric in ("dist", "nd", "price") and _s["name"] == "晶纯60粒":
+            _s["yshift"] = -12
+        # 鱼油-200粒 ND：标签放折线下方，留足空隙避免压线
+        if cat_label == "鱼油" and metric == "nd" and _s["name"] == "200粒":
+            _s["yshift"] = -14
+        # 鱼油-100粒 ND：标签放折线上方，留足空隙避免压线
+        if cat_label == "鱼油" and metric == "nd" and _s["name"] == "100粒":
+            _s["yshift"] = 16
+        # 鱼油-WD：200粒 标签放折线下方，100粒 标签放折线上方，留足空隙
+        if cat_label == "鱼油" and metric == "dist" and _s["name"] == "200粒":
+            _s["yshift"] = -14
+        if cat_label == "鱼油" and metric == "dist" and _s["name"] == "100粒":
+            _s["yshift"] = 16
+    # 鱼油-WD：200粒 26M7/26M8 标签放折线上方；晶纯60粒 26M8 往右上移动
+    if cat_label == "鱼油" and metric == "dist":
+        for s in label_specs:
+            if s["name"] == "200粒" and s["mi"] in (18, 19):
+                s["yshift"] = 16
+            if s["name"] == "晶纯60粒" and s["mi"] == 19:
+                s["xshift"] = 16
+                s["yshift"] = 12
+    # 鱼油-ND：100粒 26M7/26M8 标签放折线上方
+    if cat_label == "鱼油" and metric == "nd":
+        for s in label_specs:
+            if s["name"] == "100粒" and s["mi"] in (18, 19):
+                s["yshift"] = 16
+    # 成人多维-ND：首尾月 4 个产品标签按 y 值排序后递增错开 x（避免 y 值接近时重叠）
+    # 首月（25M1）：所有标签在圆点左侧，y 高者更靠左；末月（26M8）：所有标签在圆点右侧，y 低者更靠右
+    if cat_label == "成人多维" and metric == "nd":
+        _tgt_names = {"女维120片", "女维60片", "男维120片", "男维60片"}
+        for _ep_mi in ({0, len(labels) - 1}):
+            _ep_specs = [s for s in label_specs if s["mi"] == _ep_mi and s["name"] in _tgt_names and s.get("is_endpoint")]
+            if len(_ep_specs) <= 1:
+                continue
+            _ep_specs.sort(key=lambda s: s["yval"], reverse=True)  # y 高 → 低
+            _is_first = (_ep_mi == 0)
+            for _idx, s in enumerate(_ep_specs):
+                # 首月：y 高者 x=-24，依次 -16/-8/0；末月：y 高者 x=0，依次 +8/+16/+24
+                if _is_first:
+                    s["xshift"] = -24 + _idx * 8
+                else:
+                    s["xshift"] = _idx * 8
+    # 成人多维-单点卖力：首尾月 4 个产品标签按 y 值排序后上下错开（避免 y 值接近时重叠）
+    # 首月（25M1）标签在圆点左侧、末月（26M8）在圆点右侧；y 高者往上、y 低者往下
+    if cat_label == "成人多维" and metric == "power":
+        _tgt_names = {"女维120片", "女维60片", "男维120片", "男维60片"}
+        _y_steps = (15, 5, -5, -15)  # 按 y 高→低 顺序的 yshift
+        for _ep_mi in ({0, len(labels) - 1}):
+            _ep_specs = [s for s in label_specs if s["mi"] == _ep_mi and s["name"] in _tgt_names and s.get("is_endpoint")]
+            if len(_ep_specs) <= 1:
+                continue
+            _ep_specs.sort(key=lambda s: s["yval"], reverse=True)  # y 高 → 低
+            _is_first = (_ep_mi == 0)
+            for _idx, s in enumerate(_ep_specs):
+                s["xshift"] = -18 if _is_first else 18
+                s["yshift"] = _y_steps[_idx] if _idx < len(_y_steps) else 0
+    # 成人多维-均价：男维60片 首尾月标签水平左右放置（25M1 靠左、26M8 靠右，与圆点同高）
+    if cat_label == "成人多维" and metric == "price":
+        for s in label_specs:
+            if s["name"] == "男维60片" and s.get("is_endpoint"):
+                s["xshift"] = -18 if s["mi"] == 0 else 18
+    # 鱼油-WD/ND：逐月检测 200粒/100粒 相交情况，相交月份水平左右错开
+    # 晶纯60粒保持折线下方不被覆盖
+    if cat_label == "鱼油" and metric in ("dist", "nd"):
+        _pair_names = ["200粒", "100粒"]
+        for _mi in range(len(labels)):
+            _specs_at = [s for s in label_specs if s["mi"] == _mi and s["name"] in _pair_names]
+            if len(_specs_at) < 2:
+                continue
+            # 200粒 与 100粒 y 值差 < 8 视为相交
+            if abs(_specs_at[0]["yval"] - _specs_at[1]["yval"]) >= 8:
+                continue
+            # 相交：y 高者左移、y 低者右移，并配合 y 微调避免压线（与整线距离一致）
+            _specs_at.sort(key=lambda s: s["yval"], reverse=True)
+            _specs_at[0]["xshift"] = -20
+            _specs_at[0]["yshift"] = 16
+            _specs_at[1]["xshift"] = 20
+            _specs_at[1]["yshift"] = -14
+    # 鱼油-单点卖力：晶纯60粒 与 汤臣鱼油总体 相交处上下分离避免重叠（晶纯60粒上、总体下）
+    if cat_label == "鱼油" and metric == "power":
+        _purp = None
+        _green = None
+        for s in label_specs:
+            if s["name"] == "汤臣鱼油总体":
+                _purp = s
+            elif s["name"] == "晶纯60粒":
+                _green = s
+        # 按月检查两者是否接近（同月 y 值差 < 6），接近时上下分离
+        for _mi in range(len(labels)):
+            _p = [s for s in label_specs if s["mi"] == _mi and s["name"] == "汤臣鱼油总体"]
+            _g = [s for s in label_specs if s["mi"] == _mi and s["name"] == "晶纯60粒"]
+            if _p and _g:
+                _pv, _gv = _p[0]["yval"], _g[0]["yval"]
+                if abs(_pv - _gv) < 6:
+                    # y 高者放上方、y 低者放下方，错开避免重叠
+                    if _pv >= _gv:
+                        _p[0]["yshift"] = 10
+                        _g[0]["yshift"] = -10
+                    else:
+                        _p[0]["yshift"] = -10
+                        _g[0]["yshift"] = 10
+    # 鱼油-单点卖力：晶纯60粒 25M5 放折线下方；25M11 往下移动；汤臣鱼油总体放折线下方(晶纯60粒上方位置)
+    if cat_label == "鱼油" and metric == "power":
+        for s in label_specs:
+            if s["name"] == "晶纯60粒":
+                if s["mi"] == 4:   # 25M5
+                    s["yshift"] = -16
+                elif s["mi"] == 10: # 25M11
+                    s["yshift"] = -24
+            if s["name"] == "汤臣鱼油总体":
+                # 整线放折线上方（覆盖前面的晶纯/总体分离逻辑，确保总体的标签都在上方）
+                s["yshift"] = 18
+    # 氨糖-WD/ND/SKU均价：OTC 与 OTC60粒 数据标签统一放折线下方
+    if cat_label == "氨糖" and metric in ("dist", "nd", "price"):
+        for s in label_specs:
+            if s["name"] in ("OTC", "OTC60粒"):
+                s["yshift"] = -16
+    # 氨糖-单点卖力：OTC 标签放折线上方避免与其他标签/折线重叠
+    if cat_label == "氨糖" and metric == "power":
+        for s in label_specs:
+            if s["name"] == "OTC":
+                s["yshift"] = 18
+    # 氨糖-单点卖力：白金、旧品 26M8 标签放在对应位置水平线右侧（留一点空隙）
+    if cat_label == "氨糖" and metric == "power":
+        _last_mi = len(labels) - 1
+        for s in label_specs:
+            if s["name"] in ("白金", "旧品") and s["mi"] == _last_mi and s.get("is_endpoint"):
+                s["xshift"] = 20
+                s["yshift"] = 0
+    # 氨糖-单点卖力：OTC 与 金装 相交处上下分离避免重叠（OTC 下、金装 上）
+    if cat_label == "氨糖" and metric == "power":
+        for _mi in range(len(labels)):
+            _o = [s for s in label_specs if s["mi"] == _mi and s["name"] == "OTC"]
+            _j = [s for s in label_specs if s["mi"] == _mi and s["name"] == "金装"]
+            if _o and _j:
+                _ov, _jv = _o[0]["yval"], _j[0]["yval"]
+                if abs(_ov - _jv) < 6:
+                    # OTC 放折线上方、金装放折线下方，错开避免重叠
+                    _o[0]["yshift"] = 18
+                    _j[0]["yshift"] = -18
+    # 氨糖-单点卖力：金装、OTC 25M11/26M1 数据标签往下移动一丢丢（贴近折线、不压折线）
+    if cat_label == "氨糖" and metric == "power":
+        for s in label_specs:
+            if s["name"] in ("金装", "OTC") and s["mi"] in (10, 12):
+                s["yshift"] = 8
     for s in label_specs:
         fig.add_annotation(
             x=labels[s["mi"]], y=s["yval"], text=s["text"],
@@ -4785,18 +5187,43 @@ def render_charts(metric_df, cat_label):
         _name_lbl_color = dict(青少年多维60s="white") if cat_label == "儿童多维" else None
         _figs = {
             "bar1": make_stacked_bar(metric_df, "sales_m", "销售额（百万元）", bar_names, colors, text_decimals=sales_dec, height=340, brand_total_name=_btn, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar1_dec_kwargs),
-            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=340, y_max=share_ymax, brand_total_name=_btn, label_color=_share_lbl_color, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, **_bar_gap_kwargs, **_bar2_dec_kwargs),
+            "bar2": make_stacked_bar(metric_df, "share", "销售额份额（%）", bar_names, colors, text_decimals=share_dec, height=340, y_max=share_ymax, brand_total_name=_btn, label_color=_share_lbl_color, hide_seg_months=_hide_seg, name_label_color=_name_lbl_color, hide_below_value={"液体钙12袋": 0.1} if cat_label == "儿童钙" else None, force_show_names=["钙镁90片"] if cat_label == "儿童钙" else None, **_bar_gap_kwargs, **_bar2_dec_kwargs),
             "line_wd": make_line_chart(metric_df, "dist", "WD动销铺货率（%）", dist_names, colors, decimals=0, height=340, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"], **_wd_dec_kw),
             "line_nd": make_line_chart(metric_df, "nd", "ND数值铺货率（%）", nd_names, colors, decimals=0, height=340, label_mode="alternate", cat_label=cat_label, dashed=True, margin_l=_LM["l"], margin_r=_LM["r"], **_nd_dec_kw),
             "line_price": make_line_chart(metric_df, "price", "重点SKU均价（元/盒）", price_names, price_colors, decimals=0, height=340, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
             "line_power": make_line_chart(metric_df, "power", "单点卖力", power_names, colors, decimals=0, height=340, label_mode="alternate", cat_label=cat_label, margin_l=_LM["l"], margin_r=_LM["r"]),
         }
+        _line_names = {"line_wd": dist_names, "line_nd": nd_names, "line_price": price_names, "line_power": power_names}
         for _lk in ("line_wd", "line_nd", "line_price", "line_power"):
-            _figs[_lk].update_layout(
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5,
-                            font=dict(size=10, family="Microsoft YaHei"),
-                            itemsizing="constant", itemwidth=30),
-            )
+            _n = len(_line_names[_lk])
+            # 儿童钙5条线但图例三行，需更小字体压成两行；且需更大顶部margin避免标题与图例重叠
+            _is_kid = (cat_label == "儿童钙")
+            _leg_fs = 9 if _is_kid else 10
+            _leg_iw = 30
+            # 儿童钙：长线名缩短，图例压成两行
+            if _is_kid:
+                for _tr in _figs[_lk].data:
+                    if _tr.name == "锌钙特葡萄糖酸钙锌口服液24袋":
+                        _tr.name = "锌钙特口服液24袋"
+            if _lk in ("line_wd", "line_nd"):
+                # WD/ND：margin 与柱状图一致(80)，图例与左侧柱状图图例水平对齐
+                _mt_wd = 80
+                _figs[_lk].update_layout(
+                    margin=dict(t=_mt_wd, b=48),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5,
+                                font=dict(size=_leg_fs, family="Microsoft YaHei"),
+                                itemsizing="constant", itemwidth=_leg_iw),
+                )
+            else:
+                # 均价/单点：margin 与柱状图一致(80)，图例与左侧柱状图图例水平对齐
+                _mt = 80
+                _leg_y = 1.02 if _n < 6 else 1.005
+                _figs[_lk].update_layout(
+                    margin=dict(t=_mt, b=48),
+                    legend=dict(orientation="h", yanchor="bottom", y=_leg_y, xanchor="center", x=0.5,
+                                font=dict(size=_leg_fs, family="Microsoft YaHei"),
+                                itemsizing="constant", itemwidth=_leg_iw),
+                )
         st.session_state[_cache_key] = _figs
         st.session_state[f"{_cache_key}_h"] = _data_hash
 
