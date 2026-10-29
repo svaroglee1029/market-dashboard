@@ -484,8 +484,8 @@ st.markdown("""
     /* 多维系：图表外的「标题 + HTML 图例」 */
     .sa-head { display: flex; flex-direction: column; text-align: center; padding: 0; min-height: 62px; }
     .sa-head .sa-title { font-size: 14px; font-weight: 700; color: #333; line-height: 1.25; margin: 0 0 4px; }
-    .sa-head .sa-leg { display: flex; flex-direction: column; justify-content: center; align-items: stretch; flex: 1; gap: 8px; max-width: 100%; }
-    .sa-head .sa-leg-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 15px; }
+    .sa-head .sa-leg { display: flex; flex-direction: column; justify-content: center; align-items: stretch; flex: 1; gap: 6px; width: 66%; max-width: 66%; margin: 0 auto; }
+    .sa-head .sa-leg-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; height: 15px; }
     .sa-head .sa-li { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; color: #333; white-space: nowrap; line-height: 1.35; }
     .sa-head .sw-sq { width: 10px; height: 10px; border-radius: 1px; display: inline-block; flex: 0 0 10px; }
     .sa-head .sw-ln { width: 18px; height: 0; display: inline-block; flex: 0 0 20px; border-top: 2.5px solid #333; }
