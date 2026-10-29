@@ -3984,8 +3984,9 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
         _share_top = max(_max_pos * (top_mult if top_mult else 1.10), _share_floor)
         # 表头改成单行、贴绘图区最顶部，避免和柱子上的合计标签叠在一起
         fig.add_annotation(
-            x=last_label, y=_share_top * 0.998, text=f"<b>{month_num}月环比<br>(pts)</b>", showarrow=False,
-            xshift=38, yshift=0, yanchor="top", align="center", font=dict(size=10, color="#333"),
+            x=last_label, y=0.88, text=f"<b>{month_num}月环比<br>(pts)</b>", showarrow=False,
+            xshift=38, yshift=0, yanchor="bottom", align="center", font=dict(size=10, color="#333"),
+            xref="x", yref="paper",
         )
         y_cursor = 0.0
         for _hb_idx, name in enumerate(names):
