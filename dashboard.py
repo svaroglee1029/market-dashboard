@@ -482,10 +482,10 @@ st.markdown("""
         border: none !important;
     }
     /* 多维系：图表外的「标题 + HTML 图例」 */
-    .sa-head { text-align: center; padding: 0; min-height: 62px; }
-    .sa-head .sa-title { font-size: 14px; font-weight: 700; color: #333; line-height: 1.25; margin: 0 0 6px; }
-    .sa-head .sa-leg { display: inline-flex; flex-direction: column; align-items: stretch; gap: 2px; max-width: 100%; }
-    .sa-head .sa-leg-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; height: 15px; }
+    .sa-head { display: flex; flex-direction: column; text-align: center; padding: 0; min-height: 62px; }
+    .sa-head .sa-title { font-size: 14px; font-weight: 700; color: #333; line-height: 1.25; margin: 0 0 4px; }
+    .sa-head .sa-leg { display: flex; flex-direction: column; justify-content: center; align-items: center; flex: 1; gap: 4px; max-width: 100%; }
+    .sa-head .sa-leg-row { display: flex; justify-content: center; align-items: center; gap: 12px; height: 15px; }
     .sa-head .sa-li { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; color: #333; white-space: nowrap; line-height: 1.35; }
     .sa-head .sw-sq { width: 10px; height: 10px; border-radius: 1px; display: inline-block; flex: 0 0 10px; }
     .sa-head .sw-ln { width: 18px; height: 0; display: inline-block; flex: 0 0 20px; border-top: 2.5px solid #333; }
@@ -3216,12 +3216,12 @@ def make_trend_chart(cat_label, cat, brands, months):
                     _ys = -18
                 elif _lbl == "25M12":
                     _ys = 14
-            # 氨糖-九力：26M8 标签放对应点位置右侧（与圆点同高）
+            # 氨糖-九力：26M8 标签放折线下方（不与其他折线标签重叠）
             if cat_label == "氨糖" and "九力" in _bn:
                 _lbl = ym_lab(_m)
                 if _lbl == "26M8":
-                    _xs = 18
-                    _ys = 0
+                    _xs = 0
+                    _ys = -18
             # 成人多维-汤臣倍健 25M4起：标签放折线下方但收小下移量，避免与下方月份刻度重叠
             if cat_label == "成人多维" and "汤臣倍健" in _bn and _m >= "202504":
                 _ys = -8
@@ -3984,8 +3984,8 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
         _share_top = max(_max_pos * (top_mult if top_mult else 1.10), _share_floor)
         # 表头改成单行、贴绘图区最顶部，避免和柱子上的合计标签叠在一起
         fig.add_annotation(
-            x=last_label, y=_share_top * 0.998, text=f"<b>{month_num}月环比(pts)</b>", showarrow=False,
-            xshift=46, yshift=0, yanchor="top", font=dict(size=11, color="#333"),
+            x=last_label, y=_share_top * 0.998, text=f"<b>{month_num}月环比<br>(pts)</b>", showarrow=False,
+            xshift=38, yshift=0, yanchor="top", align="center", font=dict(size=10, color="#333"),
         )
         y_cursor = 0.0
         for _hb_idx, name in enumerate(names):
@@ -4007,7 +4007,7 @@ def make_stacked_bar(df, metric, title, names, colors, text_decimals=0, height=3
                     _hb_dec = 2 if abs(diff) < 0.05 else 1
                     fig.add_annotation(
                         x=last_label, y=y_center, text=f"{diff:+.{_hb_dec}f}", showarrow=False,
-                        xshift=36, yshift=_hb_yshift,
+                        xshift=30, yshift=_hb_yshift,
                         font=dict(size=13, color="#00A85A" if diff >= 0 else "#E53935", family="Microsoft YaHei", weight="bold"),
                     )
                 y_cursor += val
@@ -5444,7 +5444,7 @@ def render_charts(metric_df, cat_label):
         # 图例分行：按品类指定（bar=柱图，line=折线图）；未指定则 ≤3 一行、其余 3 个一行
         _LEG_ROW_SPEC = {
             "成人多维": {"bar": [4], "line": [4, 2]},
-            "益生菌":   {"line": [3, 3]},
+            "益生菌":   {"bar": [99], "line": [3, 3]},
         }
 
         def _head_html(_key):
