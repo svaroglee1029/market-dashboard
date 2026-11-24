@@ -2744,10 +2744,16 @@ def render_first_page(selected_cat, selected_month, display_months):
 
 
 # ====================== Part B BA_CATEGORY_CONFIG, AFFILIATE_BRANDS, BRAND_ALIAS, COLOR_PALETTE ======================
+
+# 仁合益康厂家特殊配置（儿童钙品类）——放在 BA_CATEGORY_CONFIG 之前，让 focus 可引用
+RENHE_MANUFACTURER = "河北仁合益康药业有限公司"
+RENHE_VIRTUAL_PREFIX = "[厂家]"
+RENHE_VIRTUAL_BRAND = "[厂家]仁合益康[Total]"
+
 BA_CATEGORY_CONFIG = {
     "蛋白粉": {"cat": "蛋白粉", "focus": ["汤臣倍健", "维诺健"]},
     "成人钙": {"cat": "钙-成人", "focus": ["钙尔奇", "迪巧", "励全", "汤臣倍健"]},
-    "儿童钙": {"cat": "钙-儿童", "focus": ["锌钙特", "仁合益康", "汤臣倍健"]},
+    "儿童钙": {"cat": "钙-儿童", "focus": ["锌钙特", RENHE_VIRTUAL_BRAND, "汤臣倍健"]},
     "成人多维": {"cat": "多维-成人", "focus": ["善存", "汤臣倍健", "海神药业"]},
     "儿童多维": {"cat": "多维-儿童", "focus": ["草仙药业", "汤臣倍健"]},
     "鱼油": {"cat": "鱼油", "focus": ["汤臣倍健", "维诺健"]},
@@ -2770,11 +2776,6 @@ COLOR_PALETTE = [
 ]
 
 # ====================== Part B brand_analysis 函数 ======================
-
-# 仁合益康厂家特殊配置（儿童钙品类）
-RENHE_MANUFACTURER = "河北仁合益康药业有限公司"
-RENHE_VIRTUAL_PREFIX = "[厂家]"
-RENHE_VIRTUAL_BRAND = "[厂家]仁合益康[Total]"
 
 
 def _is_virtual_brand(brand):
@@ -3054,7 +3055,10 @@ def get_brand_attribute(cat, brand, ytd_months):
         return ("VDS", vds_pct)
 
 
-def build_table_html(cat_label, cat, table_brands, current_ym):
+def build_table_html(cat_label, cat, table_brands, current_ym, sub_brand_numbers=None):
+    """构建品牌 Top10 表格 HTML。sub_brand_numbers: {brand: "①"} 给子品牌加序号."""
+    if sub_brand_numbers is None:
+        sub_brand_numbers = {}
     ytd_label, _, _, _, _ = period_labels(current_ym)
     rows = [row_metrics(cat_label, cat, None, current_ym)]
     rows.extend([row_metrics(brand_name(b), cat, b, current_ym) for b in table_brands])
@@ -3076,7 +3080,11 @@ def build_table_html(cat_label, cat, table_brands, current_ym):
         ):
             classes.append("share-growth-row")
         html.append(f"<tr class='{' '.join(classes)}'>")
-        html.append(td(r["label"], "plain"))
+        # 品牌名前加子品牌序号（如 ①双鲸）
+        _lbl = r["label"]
+        if idx > 0 and r["brand"] in sub_brand_numbers:
+            _lbl = f"<span style='color:#E53935;font-weight:700;margin-right:2px'>{sub_brand_numbers[r['brand']]}</span>{_lbl}"
+        html.append(td(_lbl, "plain"))
         attr = get_brand_attribute(cat, r["brand"], ytd_months)
         if isinstance(attr, tuple):
             attr_type, attr_pct = attr
@@ -3408,15 +3416,9 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
     ytd_months = period_months("YTD", selected_month)
     table_brands = build_top10(source_cat, ytd_months, cat_label=selected_cat)
 
-    # 图表用品牌列表：儿童钙时去掉仁合益康子品牌（避免与 Total 重复）
-    chart_brands = list(table_brands)
-    if selected_cat == "儿童钙" and RENHE_VIRTUAL_BRAND in table_brands:
-        total_idx = table_brands.index(RENHE_VIRTUAL_BRAND)
-        # Total 后面紧跟的子品牌（都属于仁合厂家），从图表列表中移除
-        sub_brands = [b for b in table_brands[total_idx + 1:]
-                      if ba_calc_agg(ytd_months, cat=source_cat, brand=b)["sales"] > 0
-                      and _is_renhe_sub_brand(b, source_cat, ytd_months)]
-        chart_brands = [b for b in table_brands if b not in sub_brands]
+    # 图表用品牌列表：退回普通 top10，不做厂家聚合（让仁合益康等品牌各自正常显示）
+    cat_df_all = sku_df[sku_df["year_month"].isin(ytd_months) & sku_df["品类"].eq(source_cat)]
+    chart_brands = cat_df_all.groupby("品牌", dropna=False)["sales_m"].sum().sort_values(ascending=False).head(10).index.tolist()
 
     if selected_cat in ("氨糖", "益生菌"):
         # 氨糖&益生菌：品牌表格中去掉汤臣倍健
@@ -3424,6 +3426,17 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
     else:
         if "汤臣倍健" not in table_brands and ba_calc_agg(ytd_months, cat=source_cat, brand="汤臣倍健")["sales"] > 0:
             table_brands.append("汤臣倍健")
+
+    # 儿童钙：找到仁合 Total 后面的子品牌，给它们加 ①②③④ 序号
+    sub_brand_numbers = {}
+    if selected_cat == "儿童钙" and RENHE_VIRTUAL_BRAND in table_brands:
+        total_idx = table_brands.index(RENHE_VIRTUAL_BRAND)
+        _circle_nums = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"]
+        _n = 0
+        for b in table_brands[total_idx + 1:]:
+            if _is_renhe_sub_brand(b, source_cat, ytd_months) and _n < len(_circle_nums):
+                sub_brand_numbers[b] = _circle_nums[_n]
+                _n += 1
     # Calculate left chart height to match right side (table + gap + trend chart)
     n_table_rows = len(table_brands) + 3  # +1 category row, +2 header rows
     table_row_h = 33
@@ -3436,7 +3449,7 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
     with left_col:
         st.plotly_chart(make_top10_share_chart(selected_cat, source_cat, chart_brands, selected_month, left_chart_height), width='stretch')
     with right_col:
-        st.markdown(build_table_html(selected_cat, source_cat, table_brands, selected_month), unsafe_allow_html=True)
+        st.markdown(build_table_html(selected_cat, source_cat, table_brands, selected_month, sub_brand_numbers=sub_brand_numbers), unsafe_allow_html=True)
         st.plotly_chart(make_trend_chart(selected_cat, source_cat, config["focus"], display_months), width='stretch')
 
 
