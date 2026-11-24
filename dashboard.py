@@ -93,7 +93,8 @@ GITHUB_REPO = "svaroglee1029/market-dashboard"
 _GH_CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".gh_data_cache")
 
 def _try_github_release():
-    """尝试从 GitHub Release 拉最新 data.zip；成功返回 True 并解压到 _GH_CACHE_DIR。"""
+    """尝试从 GitHub Release 拉最新 data.zip；成功返回 True 并解压到 _GH_CACHE_DIR。
+    每次调用都会对比远端 asset 的 updated_at，同 tag 覆盖时自动重下。"""
     if not GITHUB_REPO:
         return False
     try:
@@ -107,15 +108,15 @@ def _try_github_release():
         if not _asset:
             return False
         _zip_url = _asset["browser_download_url"]
-        # 用 tag + asset updated_at 做版本指纹（同一 tag 覆盖时 updated_at 会变，自动触发重下）
+        # tag + asset updated_at 做指纹（同 tag 覆盖时 updated_at 变 → 自动重下）
         _remote_fp = f"{_rl.get('tag_name','?')}|{_asset.get('updated_at','?')}"
 
-        _md5_file = os.path.join(_GH_CACHE_DIR, "data.zip.fp")
-        if os.path.exists(_md5_file):
-            with open(_md5_file, "r") as _f:
+        _fp_file = os.path.join(_GH_CACHE_DIR, "data.zip.fp")
+        if os.path.exists(_fp_file):
+            with open(_fp_file, "r") as _f:
                 if _f.read().strip() == _remote_fp and os.path.exists(os.path.join(_GH_CACHE_DIR, "sku.parquet")):
-                    return True  # 缓存命中：tag 和更新时间都没变
-
+                    return True  # 缓存命中：指纹一致
+        # 指纹变了（更新过 Release）或第一次 → 重下
         os.makedirs(_GH_CACHE_DIR, exist_ok=True)
         _zip_path = os.path.join(_GH_CACHE_DIR, "data.zip")
         with _req.get(_zip_url, stream=True, timeout=60) as _r:
@@ -124,7 +125,6 @@ def _try_github_release():
                 for _chunk in _r.iter_content(chunk_size=1 << 20):
                     if _chunk:
                         _f.write(_chunk)
-        # 解压
         with zipfile.ZipFile(_zip_path, "r") as _z:
             for _n in _z.namelist():
                 if _n.endswith(".parquet") or _n.endswith("manifest.json"):
@@ -132,17 +132,19 @@ def _try_github_release():
                     with _z.open(_n) as _src, open(_target, "wb") as _dst:
                         _dst.write(_src.read())
         os.remove(_zip_path)
-        with open(_md5_file, "w") as _f:
+        with open(_fp_file, "w") as _f:
             _f.write(_remote_fp)
         return True
     except Exception:
         return False
 
-_GH_OK = _try_github_release()
+# 注意：_try_github_release() 不再在模块级调用，
+# 改为每次 _read_parquet_smart() 调用时按需检查（受 st.cache_data ttl 管控自动刷新）
 
 
 # ====================== 4. Data Loading ======================
 # 数据源优先级：GitHub Release（云端）→ 本机 MySQL（本地开发）→ data/*.parquet（兜底）
+# 自动刷新机制：st.cache_data(ttl=1800) 过期 → load_* 重跑 → _read_parquet_smart → 查 GitHub 指纹
 try:
     from sqlalchemy import create_engine, text as _sql_text
     _DB_ENGINE = create_engine(
@@ -168,8 +170,9 @@ def _read_db_table(table_name):
 
 
 def _read_parquet_smart(table_name):
-    """按优先级找 parquet：GitHub Release 缓存 → 本地 data/ → 不存在则返回 None。"""
-    if _GH_OK:
+    """按优先级找 parquet：GitHub Release → 本地 data/ → 返回 None。
+    每次调用都会对比 GitHub Release 的 updated_at，自动刷新。"""
+    if GITHUB_REPO and _try_github_release():   # 每次都查 GitHub（受上层 ttl=1800 节流）
         _p = os.path.join(_GH_CACHE_DIR, f"{table_name}.parquet")
         if os.path.exists(_p):
             try:
