@@ -330,9 +330,9 @@ def period_labels(ym_str):
     elif mo == 6:
         ytd = f"{yy}H1"; ly = f"{lyy}H1"; l3m = f"{yy}Q1"
     elif mo == 9:
-        ytd = f"{yy}Q1-Q3"; ly = f"{lyy}Q1-Q3"; l3m = f"{yy}Q2"
+        ytd = "YTD"; ly = "LY"; l3m = f"{yy}Q2"
     elif mo == 12:
-        ytd = f"{yy}H2"; ly = f"{lyy}H2"; l3m = f"{yy}Q3"
+        ytd = f"Y{yy}"; ly = f"Y{lyy}"; l3m = f"{yy}Q3"
     else:
         ytd = "YTD"; ly = "LY"; l3m = "L3M"
     return ytd, ly, l3m, yy, lyy
@@ -2050,15 +2050,15 @@ def page4(selected_month):
         L3M_MONTHS = get_months(CUR_YEAR, CUR_MONTH, 3)
         L3M_LY_MONTHS = get_months(CUR_YEAR - 1, CUR_MONTH, 3)
 
-    # YTD label: H1 at M6, H2 at M12, Q1 at M3, etc.
+    # YTD label: Q1 at M3, H1 at M6, YTD at M9 (cumulative), Y26 at M12
     if CUR_MONTH == 3:
         ytd_label = f"{yy}Q1"
     elif CUR_MONTH == 6:
         ytd_label = f"{yy}H1"
     elif CUR_MONTH == 9:
-        ytd_label = f"{yy}Q1-Q3"
+        ytd_label = "YTD"
     elif CUR_MONTH == 12:
-        ytd_label = f"{yy}H2"
+        ytd_label = f"Y{yy}"
     else:
         ytd_label = "YTD"
 
@@ -2068,9 +2068,9 @@ def page4(selected_month):
     elif CUR_MONTH == 6:
         ytd_ly_label = f"{lyy}H1"
     elif CUR_MONTH == 9:
-        ytd_ly_label = f"{lyy}Q1-Q3"
+        ytd_ly_label = "LY"
     elif CUR_MONTH == 12:
-        ytd_ly_label = f"{lyy}H2"
+        ytd_ly_label = f"Y{lyy}"
     else:
         ytd_ly_label = "LY"
 
@@ -2770,7 +2770,37 @@ COLOR_PALETTE = [
 ]
 
 # ====================== Part B brand_analysis 函数 ======================
+
+# 仁合益康厂家特殊配置（儿童钙品类）
+RENHE_MANUFACTURER = "河北仁合益康药业有限公司"
+RENHE_VIRTUAL_PREFIX = "[厂家]"
+RENHE_VIRTUAL_BRAND = "[厂家]仁合益康[Total]"
+
+
+def _is_virtual_brand(brand):
+    """判断是否为虚拟厂家聚合品牌."""
+    return isinstance(brand, str) and brand.startswith(RENHE_VIRTUAL_PREFIX)
+
+
+def _manufacturer_for_virtual(brand):
+    """虚拟品牌名 -> 厂家名."""
+    return RENHE_MANUFACTURER if brand == RENHE_VIRTUAL_BRAND else None
+
+
+def _is_renhe_sub_brand(brand, cat, ytd_months):
+    """判断一个品牌是否属于仁合益康厂家（在指定品类和月份范围内）."""
+    if brand is None or _is_virtual_brand(brand):
+        return False
+    mask = (sku_df["year_month"].isin(ytd_months)
+            & sku_df["品类"].eq(cat)
+            & sku_df["厂家"].eq(RENHE_MANUFACTURER)
+            & sku_df["品牌"].isin(brand_filter_values(brand)))
+    return sku_df.loc[mask, "sales_m"].sum() > 0
+
+
 def brand_name(name):
+    if isinstance(name, str) and name.startswith(RENHE_VIRTUAL_PREFIX):
+        return name[len(RENHE_VIRTUAL_PREFIX):]
     return BRAND_ALIAS.get(str(name), str(name))
 
 
@@ -2822,7 +2852,12 @@ def ba_calc_agg(months, cat=None, brand=None):
     if cat is not None:
         mask &= sku_df["品类"].eq(cat)
     if brand is not None:
-        mask &= sku_df["品牌"].isin(brand_filter_values(brand))
+        mfr = _manufacturer_for_virtual(brand)
+        if mfr is not None:
+            # 虚拟品牌：按厂家聚合
+            mask &= sku_df["厂家"].eq(mfr)
+        else:
+            mask &= sku_df["品牌"].isin(brand_filter_values(brand))
     sub = sku_df.loc[mask]
     sales = sub["sales_m"].sum()
     qty = sub["qty_h"].sum()
@@ -2894,8 +2929,55 @@ def td(value, css="plain", title=None):
     return f"<td class='{css}'{title_attr}>{value}</td>"
 
 
-def build_top10(cat, ytd_months):
+def build_top10(cat, ytd_months, cat_label=None):
+    """构建 Top10 品牌列表；儿童钙品类时，仁合益康厂家聚合为 Total + top4 子品牌."""
     cat_df = sku_df[sku_df["year_month"].isin(ytd_months) & sku_df["品类"].eq(cat)]
+
+    # ---- 儿童钙特殊处理：仁合益康厂家聚合 ----
+    if cat_label == "儿童钙":
+        # 仁合厂家下的所有品牌（YTD 销额排序）
+        renhe_mask = cat_df["厂家"].eq(RENHE_MANUFACTURER)
+        renhe_brands_df = cat_df[renhe_mask].groupby("品牌", dropna=False)["sales_m"].sum().sort_values(ascending=False)
+        renhe_top4 = renhe_brands_df.head(4).index.tolist()
+
+        # 正常 top10，但去掉仁合系品牌
+        normal_top = cat_df[~renhe_mask].groupby("品牌", dropna=False)["sales_m"].sum().sort_values(ascending=False)
+        normal_top10 = normal_top.head(10).index.tolist()
+
+        # 计算仁合厂家总销额，确定 Total 在列表中的位置
+        renhe_total_sales = renhe_brands_df.sum()
+        # 把 Total 插入到 normal_top 中销额 < renhe_total 的第一个位置之后
+        all_brands_with_sales = normal_top.to_dict()
+        # 找到 Total 应该插入的排名
+        insert_pos = 0
+        for i, (b, s) in enumerate(all_brands_with_sales.items()):
+            if renhe_total_sales < s:
+                insert_pos = i + 1
+            else:
+                break
+        # 构建最终列表：Total 在 insert_pos，后面跟 top4 子品牌
+        # 但 total 本体已经包含了子品牌的销额，所以正常品牌列表长度可能需要缩减
+        # 为保持总数约 10 行：取前 (10 - 1 - 4) = 5 个正常品牌 + Total + 4 子品牌
+        keep_normal = 10 - 1 - len(renhe_top4)  # 通常是 5
+        result = list(normal_top.head(keep_normal).index)
+        # 找到 Total 在 result 中的合理插入位置
+        renhe_rank = 0
+        for i, b in enumerate(result):
+            if renhe_total_sales >= all_brands_with_sales.get(b, 0):
+                renhe_rank = i
+            else:
+                renhe_rank = i + 1
+                break
+        else:
+            renhe_rank = len(result)
+        result.insert(renhe_rank, RENHE_VIRTUAL_BRAND)
+        # Total 后面插入子品牌
+        total_idx = result.index(RENHE_VIRTUAL_BRAND)
+        for j, sb in enumerate(renhe_top4):
+            result.insert(total_idx + 1 + j, sb)
+        return result
+
+    # ---- 普通品类：按品牌销额排序取 top10 ----
     return cat_df.groupby("品牌", dropna=False)["sales_m"].sum().sort_values(ascending=False).head(10).index.tolist()
 
 
@@ -2943,7 +3025,12 @@ def get_brand_attribute(cat, brand, ytd_months):
     """Get brand attribute (VDS/OTC/mixed) based on 处方性质 distribution."""
     if brand is None:
         return "-"
-    mask = sku_df["year_month"].isin(ytd_months) & sku_df["品类"].eq(cat) & sku_df["品牌"].isin(brand_filter_values(brand))
+    mask = sku_df["year_month"].isin(ytd_months) & sku_df["品类"].eq(cat)
+    mfr = _manufacturer_for_virtual(brand)
+    if mfr is not None:
+        mask &= sku_df["厂家"].eq(mfr)
+    else:
+        mask &= sku_df["品牌"].isin(brand_filter_values(brand))
     sub = sku_df.loc[mask]
     otc_sales = sub[sub["处方性质"] == "OTC"]["sales_m"].sum()
     vds_sales = sub[sub["处方性质"] != "OTC"]["sales_m"].sum()
@@ -3319,8 +3406,18 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
     render_conclusion(f"ba_{selected_cat}", selected_month)
 
     ytd_months = period_months("YTD", selected_month)
-    top10_brands = build_top10(source_cat, ytd_months)
-    table_brands = list(top10_brands)
+    table_brands = build_top10(source_cat, ytd_months, cat_label=selected_cat)
+
+    # 图表用品牌列表：儿童钙时去掉仁合益康子品牌（避免与 Total 重复）
+    chart_brands = list(table_brands)
+    if selected_cat == "儿童钙" and RENHE_VIRTUAL_BRAND in table_brands:
+        total_idx = table_brands.index(RENHE_VIRTUAL_BRAND)
+        # Total 后面紧跟的子品牌（都属于仁合厂家），从图表列表中移除
+        sub_brands = [b for b in table_brands[total_idx + 1:]
+                      if ba_calc_agg(ytd_months, cat=source_cat, brand=b)["sales"] > 0
+                      and _is_renhe_sub_brand(b, source_cat, ytd_months)]
+        chart_brands = [b for b in table_brands if b not in sub_brands]
+
     if selected_cat in ("氨糖", "益生菌"):
         # 氨糖&益生菌：品牌表格中去掉汤臣倍健
         table_brands = [b for b in table_brands if b != "汤臣倍健"]
@@ -3337,7 +3434,7 @@ def render_brand_analysis(selected_cat, selected_month, display_months):
 
     left_col, right_col = st.columns([0.28, 0.72], gap="medium")
     with left_col:
-        st.plotly_chart(make_top10_share_chart(selected_cat, source_cat, top10_brands, selected_month, left_chart_height), width='stretch')
+        st.plotly_chart(make_top10_share_chart(selected_cat, source_cat, chart_brands, selected_month, left_chart_height), width='stretch')
     with right_col:
         st.markdown(build_table_html(selected_cat, source_cat, table_brands, selected_month), unsafe_allow_html=True)
         st.plotly_chart(make_trend_chart(selected_cat, source_cat, config["focus"], display_months), width='stretch')
