@@ -107,14 +107,14 @@ def _try_github_release():
         if not _asset:
             return False
         _zip_url = _asset["browser_download_url"]
+        # 用 tag + asset updated_at 做版本指纹（同一 tag 覆盖时 updated_at 会变，自动触发重下）
+        _remote_fp = f"{_rl.get('tag_name','?')}|{_asset.get('updated_at','?')}"
 
-        # 本地缓存 md5，避免重复下载同一个 zip
-        _md5_file = os.path.join(_GH_CACHE_DIR, "data.zip.md5")
-        _cur_md5 = _hashlib.md5(_zip_url.encode()).hexdigest()
+        _md5_file = os.path.join(_GH_CACHE_DIR, "data.zip.fp")
         if os.path.exists(_md5_file):
             with open(_md5_file, "r") as _f:
-                if _f.read().strip() == _cur_md5 and os.path.exists(os.path.join(_GH_CACHE_DIR, "sku.parquet")):
-                    return True  # 缓存命中
+                if _f.read().strip() == _remote_fp and os.path.exists(os.path.join(_GH_CACHE_DIR, "sku.parquet")):
+                    return True  # 缓存命中：tag 和更新时间都没变
 
         os.makedirs(_GH_CACHE_DIR, exist_ok=True)
         _zip_path = os.path.join(_GH_CACHE_DIR, "data.zip")
@@ -124,7 +124,7 @@ def _try_github_release():
                 for _chunk in _r.iter_content(chunk_size=1 << 20):
                     if _chunk:
                         _f.write(_chunk)
-        # 解压（zip 内是 data/*.parquet，我们直接放到 _GH_CACHE_DIR）
+        # 解压
         with zipfile.ZipFile(_zip_path, "r") as _z:
             for _n in _z.namelist():
                 if _n.endswith(".parquet") or _n.endswith("manifest.json"):
@@ -133,7 +133,7 @@ def _try_github_release():
                         _dst.write(_src.read())
         os.remove(_zip_path)
         with open(_md5_file, "w") as _f:
-            _f.write(_cur_md5)
+            _f.write(_remote_fp)
         return True
     except Exception:
         return False
