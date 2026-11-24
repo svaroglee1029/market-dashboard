@@ -3083,7 +3083,7 @@ def build_table_html(cat_label, cat, table_brands, current_ym, sub_brand_numbers
         # 品牌名前加子品牌序号（如 ①双鲸）
         _lbl = r["label"]
         if idx > 0 and r["brand"] in sub_brand_numbers:
-            _lbl = f"<span style='color:#E53935;font-weight:700;margin-right:2px'>{sub_brand_numbers[r['brand']]}</span>{_lbl}"
+            _lbl = f"<span style='color:rgb(47,45,43);font-weight:700;margin-right:2px'>{sub_brand_numbers[r['brand']]}</span>{_lbl}"
         html.append(td(_lbl, "plain"))
         attr = get_brand_attribute(cat, r["brand"], ytd_months)
         if isinstance(attr, tuple):
@@ -3264,6 +3264,10 @@ def make_trend_chart(cat_label, cat, brands, months):
                 continue
             # 成人多维-汤臣倍健：从25M4开始数据标签始终放在折线下方
             if cat_label == "成人多维" and "汤臣倍健" in _bn and m >= "202504":
+                _tp.append("bottom center")
+                continue
+            # 儿童钙-仁合益康[Total]：整条线标签放下方，避免与锌钙特（上方）视觉重叠
+            if cat_label == "儿童钙" and "仁合益康" in _bn:
                 _tp.append("bottom center")
                 continue
             # Check for overlap with other brands at this month
