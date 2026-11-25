@@ -453,11 +453,13 @@ ind_months = sorted(df_ind["year_month"].unique())
 ym_id_map = dict(zip(sku_df["year_month"], sku_df["ym_id"]))
 YM_LABS = [ym_lab(m) for m in ind_months]
 
-# ---- v2 改动：UI 层时间框截断为 25M1 起（同比计算不受影响）----
+# ---- v2 改动 ----
 _UI_MIN_YM = "202501"
-ind_months = [m for m in ind_months if m >= _UI_MIN_YM]
-YM_LABS = [ym_lab(m) for m in ind_months]
-all_months = [m for m in all_months if m >= _UI_MIN_YM]
+ind_months_full = list(ind_months)          # 完整备份（page3 循环用）
+all_months_full = list(all_months)
+ind_months = [m for m in ind_months if m >= _UI_MIN_YM]   # UI 层截断
+all_months = [m for m in all_months if m >= _UI_MIN_YM]   # UI 层截断
+YM_LABS = [ym_lab(m) for m in ind_months]                  # 同步截断（与 ind_months 1:1）
 
 # ====================== 7. Merged CSS ======================
 st.markdown("""
@@ -1779,7 +1781,7 @@ def page3(sel_ym, SEL_MONTHS):
     render_conclusion("p3", sel_ym)
 
     all_records = []
-    for m in ind_months:
+    for m in ind_months_full:
         vds_total = ind_sales(m, {"品类": "VDS"})
         # 汤臣倍健集团（industry 表 CHC 品类；品牌=汤臣倍健 行数值 = 集团权益=汤臣倍健 的集团总额）
         tang_group_total = ind_sales(m, {"品类": "CHC(营养补充剂)", "品牌": "汤臣倍健"})
