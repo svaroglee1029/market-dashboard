@@ -454,12 +454,17 @@ ym_id_map = dict(zip(sku_df["year_month"], sku_df["ym_id"]))
 YM_LABS = [ym_lab(m) for m in ind_months]
 
 # ---- v2 改动 ----
-_UI_MIN_YM = "202501"
+_SLIDER_MIN_YM = "202501"      # 滑块：25M1 起
+_SELECT_MIN_YM = "202601"      # selectbox 下拉：26M1 起
 ind_months_full = list(ind_months)          # 完整备份（page3 循环用）
 all_months_full = list(all_months)
-ind_months = [m for m in ind_months if m >= _UI_MIN_YM]   # UI 层截断
-all_months = [m for m in all_months if m >= _UI_MIN_YM]   # UI 层截断
-YM_LABS = [ym_lab(m) for m in ind_months]                  # 同步截断（与 ind_months 1:1）
+# 滑块层（25M1 起）
+ind_months = [m for m in ind_months if m >= _SLIDER_MIN_YM]
+all_months = [m for m in all_months if m >= _SLIDER_MIN_YM]
+YM_LABS = [ym_lab(m) for m in ind_months]
+# selectbox 层（26M1 起）
+ind_months_select = [m for m in ind_months_full if m >= _SELECT_MIN_YM]
+all_months_select = [m for m in all_months_full if m >= _SELECT_MIN_YM]
 
 # ====================== 7. Merged CSS ======================
 st.markdown("""
@@ -5435,7 +5440,7 @@ with tab_a:
     st.markdown('<div class="time-selector-label"><span class="dot"></span>时间范围选择</div>', unsafe_allow_html=True)
     tc1, tc2 = st.columns([0.25, 0.75], gap="small")
     with tc1:
-        sel_ym_a = st.selectbox("统计截止月份", options=list(reversed(ind_months)), index=0, label_visibility="collapsed", key="tab_a_month")
+        sel_ym_a = st.selectbox("统计截止月份", options=list(reversed(ind_months_select)), index=0, label_visibility="collapsed", key="tab_a_month")
     with tc2:
         # 默认从25M1开始到最新月份
         _target_left_a = "202501"
@@ -5470,7 +5475,7 @@ with tab_b:
     st.markdown('<div class="partb-filter">', unsafe_allow_html=True)
     cf1, cf2 = st.columns([0.28, 0.72], gap="small")
     with cf1:
-        selected_month = st.selectbox("选择报告月份", options=list(reversed(all_months)), index=0, label_visibility="collapsed")
+        selected_month = st.selectbox("选择报告月份", options=list(reversed(all_months_select)), index=0, label_visibility="collapsed")
     with cf2:
         # 默认从25M1开始到最新月份
         _target_left = "202501"
