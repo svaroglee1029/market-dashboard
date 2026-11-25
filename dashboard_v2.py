@@ -23,6 +23,10 @@ st.markdown("""
 .stDeployButton { display: none !important; }
 [data-testid="stToolbar"] { display: none !important; }
 footer { display: none !important; }
+/* v2: 强制所有 columns 子列等高 */
+.st-emotion-cache-1s6c9x0 { align-items: stretch !important; }
+div[data-testid="stColumns"] { align-items: stretch !important; }
+div[data-testid="stColumns"] > div { height: 100% !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -521,11 +525,10 @@ st.markdown("""
         border-radius: 8px; overflow: hidden;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         table-layout: fixed;
-        height: 460px;
+        height: 540px;
     }
-    .dt-p2 tr { height: calc(460px / 6); }
-    .dt-p2 th { border: 1px solid #E4E9F0; background: #EEF2FA; font-weight: 600; color: #1A1A2E; font-size: 16px; padding: 6px 6px; line-height: 1.2; text-align: center; vertical-align: middle; }
-    .dt-p2 td { border: 1px solid #E4E9F0; padding: 6px 10px; text-align: center; vertical-align: middle; font-size: 16px; }
+    .dt-p2 th { border: 1px solid #E4E9F0; background: #EEF2FA; font-weight: 600; color: #1A1A2E; font-size: 16px; padding: 4px 6px; line-height: 1.2; text-align: center; vertical-align: middle; height: 90px; }
+    .dt-p2 td { border: 1px solid #E4E9F0; padding: 4px 10px; text-align: center; vertical-align: middle; font-size: 16px; height: 90px; }
     .dt-p2 td:first-child { text-align: left; font-weight: 600; }
     .dt-p2 tbody tr:hover td { background: #F0F4FF; }
 
@@ -1630,108 +1633,104 @@ def page2(sel_month, trend_months):
 
     metrics_df = pd.DataFrame(metrics)
 
-    cL, cR = st.columns([0.5, 0.5], gap="medium")
+    c1, c2, c3 = st.columns([0.23, 0.27, 0.5], gap="small")
 
-    with cL:
-        cL_chart, cL_table = st.columns([0.46, 0.54], gap="small")
+    # ====== 左列: 堆叠柱图 ======
+    with c1:
+        st.markdown("<b class='chart-title'>VDS-Top5 企业市场份额 (%)</b>", unsafe_allow_html=True)
+        fig = go.Figure()
+        for b in top5_brands:
+            m = metrics_df[metrics_df["品牌"] == b].iloc[0]
+            fig.add_trace(go.Bar(
+                x=[ly_label], y=[m["LY份额"]], name=b,
+                marker_color=color_map[b], width=0.6,
+                text=[f"{m['LY份额']:.1f}"], textposition="inside",
+                insidetextanchor="middle", textfont=dict(size=16, color="white", family="Arial, sans-serif"),
+                showlegend=False
+            ))
+            fig.add_trace(go.Bar(
+                x=[ytd_label], y=[m["YTD份额"]], name=b,
+                marker_color=color_map[b], width=0.6,
+                text=[f"{m['YTD份额']:.1f}"], textposition="inside",
+                insidetextanchor="middle", textfont=dict(size=16, color="white", family="Arial, sans-serif"),
+                showlegend=False
+            ))
 
-        with cL_chart:
-            st.markdown("<b class='chart-title'>VDS-Top5 企业市场份额 (%)</b>", unsafe_allow_html=True)
-            fig = go.Figure()
-            for b in top5_brands:
-                m = metrics_df[metrics_df["品牌"] == b].iloc[0]
-                fig.add_trace(go.Bar(
-                    x=[ly_label], y=[m["LY份额"]], name=b,
-                    marker_color=color_map[b], width=0.6,
-                    text=[f"{m['LY份额']:.1f}"], textposition="inside",
-                    insidetextanchor="middle", textfont=dict(size=16, color="white", family="Arial, sans-serif"),
-                    showlegend=False
-                ))
-                fig.add_trace(go.Bar(
-                    x=[ytd_label], y=[m["YTD份额"]], name=b,
-                    marker_color=color_map[b], width=0.6,
-                    text=[f"{m['YTD份额']:.1f}"], textposition="inside",
-                    insidetextanchor="middle", textfont=dict(size=16, color="white", family="Arial, sans-serif"),
-                    showlegend=False
-                ))
+        cr5_ly = metrics_df["LY份额"].sum()
+        cr5_ytd = metrics_df["YTD份额"].sum()
+        fig.add_annotation(x=ly_label, y=cr5_ly, text=f"<b>{cr5_ly:.1f}</b>",
+                           showarrow=False, font=dict(size=16, color=C_TXT, family="Arial, sans-serif"), yshift=12)
+        fig.add_annotation(x=ytd_label, y=cr5_ytd, text=f"<b>{cr5_ytd:.1f}</b>",
+                           showarrow=False, font=dict(size=16, color=C_TXT, family="Arial, sans-serif"), yshift=12)
 
-            cr5_ly = metrics_df["LY份额"].sum()
-            cr5_ytd = metrics_df["YTD份额"].sum()
-            fig.add_annotation(x=ly_label, y=cr5_ly, text=f"<b>{cr5_ly:.1f}</b>",
-                               showarrow=False, font=dict(size=16, color=C_TXT, family="Arial, sans-serif"), yshift=12)
-            fig.add_annotation(x=ytd_label, y=cr5_ytd, text=f"<b>{cr5_ytd:.1f}</b>",
-                               showarrow=False, font=dict(size=16, color=C_TXT, family="Arial, sans-serif"), yshift=12)
+        _total_diff = cr5_ytd - cr5_ly
+        if not pd.isna(_total_diff):
+            _tclr = "#00B050" if _total_diff >= 0 else "#E53935"
+            _tarr = "\u2191" if _total_diff >= 0 else "\u2193"
+            _tmax = max(cr5_ly, cr5_ytd)
+            fig.add_annotation(x=0.5, y=_tmax, text=f"<b>{_tarr}</b>",
+                               showarrow=False,
+                               font=dict(size=34, color=_tclr, family="Arial, sans-serif"),
+                               xshift=-40, yshift=24, xanchor="center")
+            fig.add_annotation(x=0.5, y=_tmax, text=f"<b>{_total_diff:+.1f}</b>",
+                               showarrow=False,
+                               font=dict(size=22, color=_tclr, family="Arial, sans-serif"),
+                               xshift=0, yshift=22, xanchor="center")
+            fig.update_layout(xaxis=dict(range=[-0.5, 1.5]))
 
-            # Single total share change annotation between LY and YTD (dynamic labels)
-            _total_diff = cr5_ytd - cr5_ly
-            if not pd.isna(_total_diff):
-                _tclr = "#00B050" if _total_diff >= 0 else "#E53935"
-                _tarr = "\u2191" if _total_diff >= 0 else "\u2193"
-                _tmax = max(cr5_ly, cr5_ytd)
-                # Arrow annotation - large and bold
-                fig.add_annotation(x=0.5, y=_tmax, text=f"<b>{_tarr}</b>",
-                                   showarrow=False,
-                                   font=dict(size=34, color=_tclr, family="Arial, sans-serif"),
-                                   xshift=-40, yshift=24, xanchor="center")
-                # Value annotation - bold
-                fig.add_annotation(x=0.5, y=_tmax, text=f"<b>{_total_diff:+.1f}</b>",
-                                   showarrow=False,
-                                   font=dict(size=22, color=_tclr, family="Arial, sans-serif"),
-                                   xshift=0, yshift=22, xanchor="center")
-                fig.update_layout(xaxis=dict(range=[-0.5, 1.5]))
+        _y_max = max(cr5_ly, cr5_ytd) * 1.12
+        fig.update_layout(
+            height=540,
+            barmode="stack",
+            bargap=0.35,
+            margin=dict(t=30, b=25, l=10, r=55),
+            paper_bgcolor="white",
+            plot_bgcolor="white",
+            font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
+            xaxis=dict(showgrid=False, tickfont=dict(size=8)),
+            yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[0, _y_max]),
+            showlegend=False,
+            uniformtext=dict(mode="show", minsize=16),
+        )
+        st.plotly_chart(fig, width='stretch')
 
-            _y_max = max(cr5_ly, cr5_ytd) * 1.12
-            fig.update_layout(
-                height=540,
-                barmode="stack",
-                bargap=0.35,
-                margin=dict(t=30, b=25, l=10, r=55),
-                paper_bgcolor="white",
-                plot_bgcolor="white",
-                font=dict(size=13, family="Microsoft YaHei, Arial, sans-serif"),
-                xaxis=dict(showgrid=False, tickfont=dict(size=8)),
-                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False, range=[0, _y_max]),
-                showlegend=False,
-                uniformtext=dict(mode="show", minsize=16),
+    # ====== 中列: 表格 ======
+    with c2:
+        st.markdown(f"<b class='chart-title'>{ytd_label} 规模同比 & 份额变化</b>", unsafe_allow_html=True)
+        table_rows = []
+        for _, r in metrics_df[::-1].iterrows():
+            sy = r["YTD规模同比"]
+            ss = r["YTD份额同比"]
+            sr = r["份额环比"]
+            c = color_map[r['品牌']]
+            ss_str, ss_color = fmt_share_change(ss)
+            sr_str, sr_color = fmt_share_change(sr)
+            if pd.isna(sy):
+                sy_str, sy_color = "-", C_TXT
+            else:
+                sy_str = (f"{sy:+.0f}%" if sy < 0 else f"{sy:.0f}%") if sy != 0 else "0%"
+                sy_color = "#00B050" if sy > 0 else "#FF0000"
+            table_rows.append(
+                f"<tr><td style='color:{c};font-weight:600;'>"
+                f"<span style='display:inline-flex;align-items:center;'>"
+                f"<span style='width:10px;height:10px;border-radius:2px;background:{c};margin-right:6px;flex-shrink:0;'></span>"
+                f"{brand_display_name(r['品牌'])}</span></td>"
+                f"<td style='color:{sy_color};font-weight:700'>{sy_str}</td>"
+                f"<td style='color:{ss_color};font-weight:700'>{ss_str}</td>"
+                f"<td style='color:{sr_color};font-weight:700'>{sr_str}</td></tr>"
             )
-            st.plotly_chart(fig, width='stretch')
 
-        with cL_table:
-            st.markdown(f"<b class='chart-title'>{ytd_label} 规模同比 & 份额变化</b>", unsafe_allow_html=True)
-            table_rows = []
-            for _, r in metrics_df[::-1].iterrows():
-                sy = r["YTD规模同比"]
-                ss = r["YTD份额同比"]
-                sr = r["份额环比"]
-                c = color_map[r['品牌']]
-                ss_str, ss_color = fmt_share_change(ss)
-                sr_str, sr_color = fmt_share_change(sr)
-                if pd.isna(sy):
-                    sy_str, sy_color = "-", C_TXT
-                else:
-                    sy_str = (f"{sy:+.0f}%" if sy < 0 else f"{sy:.0f}%") if sy != 0 else "0%"
-                    sy_color = "#00B050" if sy > 0 else "#FF0000"
-                table_rows.append(
-                    f"<tr><td style='color:{c};font-weight:600;'>"
-                    f"<span style='display:inline-flex;align-items:center;'>"
-                    f"<span style='width:10px;height:10px;border-radius:2px;background:{c};margin-right:6px;flex-shrink:0;'></span>"
-                    f"{brand_display_name(r['品牌'])}</span></td>"
-                    f"<td style='color:{sy_color};font-weight:700'>{sy_str}</td>"
-                    f"<td style='color:{ss_color};font-weight:700'>{ss_str}</td>"
-                    f"<td style='color:{sr_color};font-weight:700'>{sr_str}</td></tr>"
-                )
+        table_html = (
+            f"<table class='dt-p2'>"
+            f"<colgroup><col style='width:35%'><col style='width:21.67%'><col style='width:21.67%'><col style='width:21.67%'></colgroup>"
+            f"<thead><tr><th>品牌</th><th>{ytd_label}<br>规模同比</th><th>{ytd_label}<br>份额同比</th><th>{sel_month[2:4]}M{sel_mon}<br>份额环比</th></tr></thead>"
+            f"<tbody>{''.join(table_rows)}</tbody></table>"
+        )
+        st.markdown(table_html, unsafe_allow_html=True)
 
-            table_html = (
-                f"<table class='dt-p2'>"
-                f"<colgroup><col style='width:35%'><col style='width:21.67%'><col style='width:21.67%'><col style='width:21.67%'></colgroup>"
-                f"<thead><tr><th>品牌</th><th>{ytd_label}<br>规模同比</th><th>{ytd_label}<br>份额同比</th><th>{sel_month[2:4]}M{sel_mon}<br>份额环比</th></tr></thead>"
-                f"<tbody>{''.join(table_rows)}</tbody></table>"
-            )
-            st.markdown(table_html, unsafe_allow_html=True)
-
-    with cR:
+    # ====== 右列: 趋势线 ======
+    with c3:
         st.markdown("<b class='chart-title'>VDS-Top5 企业市场份额月度趋势 (%)</b>", unsafe_allow_html=True)
-
         fig2 = go.Figure()
         for b in top5_brands:
             shares = []
